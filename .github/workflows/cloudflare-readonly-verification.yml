@@ -1,0 +1,82 @@
+name: Cloudflare read-only verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-readonly-verification
+  cancel-in-progress: false
+
+jobs:
+  verify-cloudflare:
+    name: Verify Cloudflare credential (read-only)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      deployment: false
+
+    steps:
+      - name: Verify trusted source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main"
+          echo "Source ref: main"
+
+      - name: Verify required credentials are present
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${CF_API_TOKEN}"
+          test -n "${CF_ACCOUNT_ID}"
+          echo "Cloudflare credential variables are present; secret values are not printed."
+
+      - name: Verify Cloudflare token status
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error \
+            --request GET \
+            --url "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            --header "Authorization: Bearer ${CF_API_TOKEN}")"
+          status="$(printf '%s' "${response}" | jq -r '.result.status // empty')"
+          success="$(printf '%s' "${response}" | jq -r '.success // false')"
+          test "${success}" = "true"
+          test "${status}" = "active"
+          echo "Cloudflare API token verification: active."
+          unset response status success
+
+      - name: Verify scoped Worker read access
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error \
+            --request GET \
+            --url "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts" \
+            --header "Authorization: Bearer ${CF_API_TOKEN}" \
+            --header "Content-Type: application/json")"
+          success="$(printf '%s' "${response}" | jq -r '.success // false')"
+          test "${success}" = "true"
+          count="$(printf '%s' "${response}" | jq '.result | length')"
+          echo "Cloudflare Worker read verification: PASS (${count} Worker(s) visible to the token)."
+          unset response success count
+
+      - name: Security guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Read-only verification only."
+          echo "No wrangler deploy, Worker mutation, DNS mutation, R2 bucket mutation, Supabase operation, migration, or production-data change is performed."
