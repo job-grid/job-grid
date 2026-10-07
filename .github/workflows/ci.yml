@@ -1,0 +1,124 @@
+name: Phase 0 CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  repository-integrity:
+    name: Repository integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify Phase 0 control-plane files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/database-migrations.md
+          test -f scripts/validate-migrations.sh
+          test -f supabase/tests/phase_0_rls_auto_enable.sql
+          test -f .github/workflows/ci.yml
+          echo "Phase 0 control-plane files are present."
+
+  secret-scan:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Dependency scanning
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Dependency review
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+
+  migration-validation:
+    name: Database migration validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Validate migration conventions
+        shell: bash
+        run: bash scripts/validate-migrations.sh
+      - name: Verify security regression definition
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f supabase/tests/phase_0_rls_auto_enable.sql
+          grep -q 'has_function_privilege' supabase/tests/phase_0_rls_auto_enable.sql
+          grep -q 'ensure_rls' supabase/tests/phase_0_rls_auto_enable.sql
+          grep -q 'relrowsecurity' supabase/tests/phase_0_rls_auto_enable.sql
+          echo "Security regression definition is present. Live execution is deferred until a non-production CI database target is approved."
+
+  application-validation:
+    name: Application validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Detect application implementation
+        id: detect
+        shell: bash
+        run: |
+          if [[ -f package.json ]]; then
+            echo "has_app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_app=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup Node
+        if: steps.detect.outputs.has_app == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        if: steps.detect.outputs.has_app == 'true'
+        run: npm ci
+      - name: Typecheck
+        if: steps.detect.outputs.has_app == 'true'
+        shell: bash
+        run: |
+          if npm run | grep -qE '^  typecheck'; then npm run typecheck; else echo 'Typecheck: SKIPPED — no typecheck script.'; fi
+      - name: Lint
+        if: steps.detect.outputs.has_app == 'true'
+        shell: bash
+        run: |
+          if npm run | grep -qE '^  lint'; then npm run lint; else echo 'Lint: SKIPPED — no lint script.'; fi
+      - name: Tests
+        if: steps.detect.outputs.has_app == 'true'
+        shell: bash
+        run: |
+          if npm run | grep -qE '^  test'; then npm test --if-present; else echo 'Tests: SKIPPED — no test script.'; fi
+      - name: Production build
+        if: steps.detect.outputs.has_app == 'true'
+        shell: bash
+        run: |
+          if npm run | grep -qE '^  build'; then npm run build; else echo 'Production build: SKIPPED — no build script.'; fi
+      - name: No application implementation yet
+        if: steps.detect.outputs.has_app == 'false'
+        run: >-
+          echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
