@@ -120,4 +120,5 @@ jobs:
           if npm run | grep -qE '^  build'; then npm run build; else echo 'Production build: SKIPPED — no build script.'; fi
       - name: No application implementation yet
         if: steps.detect.outputs.has_app == 'false'
-        run: echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
+        run: >-
+          echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
