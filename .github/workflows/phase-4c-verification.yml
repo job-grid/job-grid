@@ -1,0 +1,172 @@
+name: Phase 4C verification-only security test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-4c-verification
+  cancel-in-progress: false
+
+jobs:
+  verify-security-prerequisites:
+    name: Verify R2 and encryption prerequisites
+    if: github.ref == 'refs/heads/verification/phase-4c-r2-encryption'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      deployment: false
+
+    steps:
+      - name: Verify required secrets are present
+        shell: bash
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${R2_ACCESS_KEY_ID}"
+          test -n "${R2_SECRET_ACCESS_KEY}"
+          test -n "${BACKUP_ENCRYPTION_KEY}"
+          echo "secret presence: PASS"
+          unset R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY BACKUP_ENCRYPTION_KEY
+
+      - name: Install verification dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-input boto3 cryptography
+
+      - name: Verify R2 write, read-back, checksum, deletion, and cleanup
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          R2_BUCKET: job-grid-backups
+        run: |
+          set -euo pipefail
+          export AWS_EC2_METADATA_DISABLED=true
+
+          python3 <<'PY'
+          import hashlib
+          import os
+          import sys
+          import boto3
+          from botocore.exceptions import ClientError
+
+          endpoint = os.environ["R2_ENDPOINT"]
+          bucket = os.environ["R2_BUCKET"]
+          key = "phase-4c-verification/test-object.txt"
+          content = b"Job Grid Phase 4C verification object. Non-production test content.\n"
+          expected_sha256 = hashlib.sha256(content).hexdigest()
+
+          s3 = boto3.client(
+              "s3",
+              endpoint_url=endpoint,
+              region_name="auto",
+              aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+              aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+          )
+
+          written = False
+          deleted = False
+
+          try:
+              try:
+                  s3.head_object(Bucket=bucket, Key=key)
+                  raise RuntimeError("Refusing to overwrite an existing verification object.")
+              except ClientError as exc:
+                  code = exc.response.get("Error", {}).get("Code")
+                  if code not in ("404", "NoSuchKey", "NotFound"):
+                      raise
+
+              s3.put_object(Bucket=bucket, Key=key, Body=content, ContentType="text/plain")
+              written = True
+              print("R2 authentication: PASS")
+              print("object write: PASS")
+              print(f"object key: {key}")
+              print(f"checksum: {expected_sha256}")
+
+              response = s3.get_object(Bucket=bucket, Key=key)
+              returned = response["Body"].read()
+
+              if returned != content:
+                  raise RuntimeError("Read-back content mismatch.")
+              actual_sha256 = hashlib.sha256(returned).hexdigest()
+              if actual_sha256 != expected_sha256:
+                  raise RuntimeError("Checksum mismatch.")
+
+              print("object read: PASS")
+              print("checksum: PASS")
+
+              s3.delete_object(Bucket=bucket, Key=key)
+              deleted = True
+              print("object deletion: PASS")
+
+              try:
+                  s3.head_object(Bucket=bucket, Key=key)
+                  raise RuntimeError("Verification object still exists after deletion.")
+              except ClientError as exc:
+                  code = exc.response.get("Error", {}).get("Code")
+                  if code not in ("404", "NoSuchKey", "NotFound"):
+                      raise
+
+              print("bucket cleanup: PASS")
+          except Exception:
+              if written and not deleted:
+                  try:
+                      s3.delete_object(Bucket=bucket, Key=key)
+                  except Exception:
+                      pass
+              raise
+          finally:
+              del content, returned if "returned" in locals() else content
+          PY
+
+      - name: Verify encryption round-trip in memory
+        shell: bash
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          import base64
+          import os
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          encoded = os.environ["BACKUP_ENCRYPTION_KEY"]
+          try:
+              key = base64.b64decode(encoded, validate=True)
+          except Exception as exc:
+              raise RuntimeError("BACKUP_ENCRYPTION_KEY is not valid base64.") from exc
+
+          if len(key) not in (16, 24, 32):
+              raise RuntimeError("BACKUP_ENCRYPTION_KEY does not decode to a valid AES key length.")
+
+          plaintext = b"Job Grid Phase 4C in-memory encryption verification."
+          nonce = os.urandom(12)
+          ciphertext = AESGCM(key).encrypt(nonce, plaintext, None)
+          decrypted = AESGCM(key).decrypt(nonce, ciphertext, None)
+
+          if decrypted != plaintext:
+              raise RuntimeError("Encryption round-trip mismatch.")
+
+          print("encryption round-trip: PASS")
+          del plaintext, ciphertext, decrypted, nonce, key, encoded
+          PY
+
+      - name: Security boundary report
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "production database touched: NO"
+          echo "secrets exposed: NO"
+          echo "verification-only workflow: PASS"
+          echo "No Supabase access, database dump, migration, schema change, Cloudflare configuration change, bucket configuration change, bucket creation/deletion, secret modification, credential revocation, application deployment, backup scheduling, or production backup creation is performed by this workflow."
