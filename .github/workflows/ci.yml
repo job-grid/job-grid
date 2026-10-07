@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   repository-integrity:
-    name: Repository integrity
+    name: Phase 0 CI / Repository integrity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,7 +31,7 @@ jobs:
           echo "Phase 0 control-plane files are present."
 
   secret-scan:
-    name: Secret scanning
+    name: Phase 0 CI / Secret scanning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -56,7 +56,7 @@ jobs:
           fail-on-severity: high
 
   migration-validation:
-    name: Database migration validation
+    name: Phase 0 CI / Database migration validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -75,11 +75,13 @@ jobs:
           echo "Security regression definition is present. Live execution is deferred until a non-production CI database target is approved."
 
   application-validation:
-    name: Application validation
+    name: Phase 0 CI / Application Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Detect application implementation
         id: detect
         shell: bash
