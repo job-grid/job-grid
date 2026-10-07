@@ -1,0 +1,29 @@
+name: Production deployment control
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  production-deployment-gate:
+    name: Production deployment gate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Verify production source is main
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          echo "Production deployment is restricted to main by workflow logic."
+      - name: Deployment intentionally not implemented
+        run: |
+          echo "STOP: application deployment is not configured in Phase 0."
+          echo "This workflow establishes the production environment/concurrency boundary only."
+          exit 1
