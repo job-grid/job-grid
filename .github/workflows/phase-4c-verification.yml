@@ -24,16 +24,16 @@ jobs:
       - name: Verify required secrets are present
         shell: bash
         env:
-          R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
-          test -n "${R2_ACCESS_KEY_ID}"
-          test -n "${R2_SECRET_ACCESS_KEY}"
+          test -n "${BACKUP_R2_ACCESS_KEY_ID}"
+          test -n "${BACKUP_R2_SECRET_ACCESS_KEY}"
           test -n "${BACKUP_ENCRYPTION_KEY}"
           echo "secret presence: PASS"
-          unset R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY BACKUP_ENCRYPTION_KEY
+          unset BACKUP_R2_ACCESS_KEY_ID BACKUP_R2_SECRET_ACCESS_KEY BACKUP_ENCRYPTION_KEY
 
       - name: Install verification dependencies
         shell: bash
@@ -47,7 +47,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          R2_ENDPOINT: https://6952ddf46cc39605326ecf0583cde02e.r2.cloudflarestorage.com
           R2_BUCKET: job-grid-backups
         run: |
           set -euo pipefail
@@ -56,7 +56,6 @@ jobs:
           python3 <<'PY'
           import hashlib
           import os
-          import sys
           import boto3
           from botocore.exceptions import ClientError
 
@@ -126,7 +125,10 @@ jobs:
                       pass
               raise
           finally:
-              del content, returned if "returned" in locals() else content
+              if "returned" in locals():
+                  del returned
+              del content
+
           PY
 
       - name: Verify encryption round-trip in memory
