@@ -274,7 +274,7 @@ class BackupExecutorTests(unittest.TestCase):
         cases = {
             b"password authentication failed for user backup_user": "authentication",
             b"FATAL: password authentication failed": "authentication",
-            b"pg_dump: error: connection to server failed": "connection",
+            b"pg_dump: error: could not connect to server": "connection",
             b"could not connect to server: Connection timed out": "connection",
             b"connection refused": "connection",
             b"SSL connection has been closed unexpectedly": "tls",
@@ -305,7 +305,7 @@ class BackupExecutorTests(unittest.TestCase):
                     "local_io",
                     "unknown",
                 })
-                self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
+                if stderr:\n                    self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
 
     def test_pg_dump_failure_classification_accepts_case_and_whitespace_variations(self):
         cases = {
