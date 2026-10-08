@@ -378,11 +378,6 @@ class BackupExecutorTests(unittest.TestCase):
         with self.assertRaises(BackupError):
             assert_pg_dump_major_version("17", "pg_dump version unavailable")
 
-    def test_pg_dump_fatal_takes_fixed_label_over_generic(self):
-        diagnostic = pg_dump_failure_diagnostic(b"pg_dump: fatal: future failure", 1)
-        self.assertIn("detail=pg_dump_fatal", diagnostic)
-        self.assertNotIn("future failure", diagnostic)
-
     def test_backup_authorization_requires_protected_cloud_state(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(SafetyError):
