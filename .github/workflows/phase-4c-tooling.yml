@@ -1,0 +1,41 @@
+name: Phase 4C tooling validation
+
+on:
+  push:
+    branches:
+      - phase-4c-implementation
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  tooling-only:
+    name: Phase 4C tooling-only static/unit validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python syntax check
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/test_phase4c_tooling.py
+
+      - name: Unit tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/phase4c -p 'test_*.py' -v
+
+      - name: Implementation-stage boundary
+        run: |
+          set -euo pipefail
+          python3 scripts/phase4c/phase4c_tooling.py --self-check
+          ! grep -R --line-number --fixed-strings "pg_dump" scripts/phase4c
+          ! grep -R --line-number --fixed-strings "pg_restore" scripts/phase4c
+          ! grep -R --line-number --fixed-strings "boto3" scripts/phase4c
+          echo "backup creation: NOT RUN"
+          echo "restore: NOT RUN"
