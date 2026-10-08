@@ -1,0 +1,57 @@
+name: Phase 4C production foundation validation
+
+on:
+  push:
+    branches:
+      - "feat/phase4c-production-backup-foundation"
+    paths:
+      - "scripts/phase4c/**"
+      - "docs/phase4c-production-backup-foundation.md"
+      - ".github/workflows/phase4c-production-foundation-validation.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/phase4c/**"
+      - "docs/phase4c-production-backup-foundation.md"
+      - ".github/workflows/phase4c-production-foundation-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Phase 4C / production foundation synthetic validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: scripts/phase4c
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned dependencies
+        run: python -m pip install -r scripts/phase4c/requirements-backup.txt
+
+      - name: Compile foundation
+        run: |
+          set -euo pipefail
+          python -m py_compile             scripts/phase4c/phase4c_tooling.py             scripts/phase4c/production_preflight.py             scripts/phase4c/backup_executor.py             scripts/phase4c/recovery_procedure.py
+
+      - name: Run synthetic foundation tests
+        run: |
+          set -euo pipefail
+          python -m unittest             scripts/phase4c/test_backup_executor.py             scripts/phase4c/test_production_foundation.py -v
+
+      - name: Verify CI has no production credentials or production execution
+        run: |
+          set -euo pipefail
+          ! grep -R "BACKUP_SOURCE_POSTGRES_PASSWORD" .github/workflows/phase4c-production-foundation-validation.yml
+          ! grep -R "BACKUP_R2_SECRET_ACCESS_KEY" .github/workflows/phase4c-production-foundation-validation.yml
+          ! grep -R -- "--backup" .github/workflows/phase4c-production-foundation-validation.yml
+          ! grep -R -- "--backup-id" .github/workflows/phase4c-production-foundation-validation.yml
+          echo "Synthetic CI contains no production backup or recovery invocation."
