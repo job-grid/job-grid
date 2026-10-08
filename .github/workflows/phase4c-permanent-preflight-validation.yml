@@ -1,0 +1,46 @@
+name: Phase 4C permanent preflight validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/phase4c/**"
+      - ".github/workflows/phase4c-permanent-preflight-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backup-preflight-validation:
+    name: Phase 4C / permanent preflight validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: scripts/phase4c
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned backup dependencies
+        run: python -m pip install -r scripts/phase4c/requirements-backup.txt
+
+      - name: Compile Phase 4C modules
+        run: |
+          set -euo pipefail
+          python -m py_compile             scripts/phase4c/phase4c_tooling.py             scripts/phase4c/backup_preflight.py             scripts/phase4c/backup_executor.py
+
+      - name: Run synthetic Phase 4C tests
+        run: |
+          set -euo pipefail
+          python -m unittest scripts/phase4c/test_backup_executor.py -v
+
+      - name: Assert validation workflow cannot execute a real backup
+        run: |
+          set -euo pipefail
+          ! grep -q -- "--backup" .github/workflows/phase4c-permanent-preflight-validation.yml
+          echo "Validation workflow contains no production backup invocation."
