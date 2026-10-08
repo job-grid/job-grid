@@ -665,22 +665,18 @@ class BackupExecutor:
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def create_backup(self) -> BackupResult:
-        try:
-            from production_preflight import PreflightConfig, PreflightFailure
-            self._preflight.run(
-                PreflightConfig(
-                    host=self._config.source.host,
-                    port=int(self._config.source.port),
-                    database=self._config.source.database,
-                    username=self._config.source.username,
-                    password=self._config.source.password,
-                    major_version=self._config.source.major_version,
-                    work_dir=self._config.work_dir,
-                    encryption_key=self._config.encryption_key,
-                )
+        self._preflight.run(
+            __import__("production_preflight").PreflightConfig(
+                host=self._config.source.host,
+                port=int(self._config.source.port),
+                database=self._config.source.database,
+                username=self._config.source.username,
+                password=self._config.source.password,
+                major_version=self._config.source.major_version,
+                work_dir=self._config.work_dir,
+                encryption_key=self._config.encryption_key,
             )
-        except PreflightFailure:
-            raise
+        )
 
         backup_id = _new_backup_id(self._clock())
         self._config.work_dir.mkdir(parents=True, exist_ok=True)
