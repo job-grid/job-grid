@@ -655,18 +655,21 @@ class BackupExecutor:
             access_key_id=config.r2.access_key_id,
             secret_access_key=config.r2.secret_access_key,
         )
+        self._preflight_config_factory = None
         if preflight is None:
-            from production_preflight import BackupPreflight
+            from production_preflight import BackupPreflight, PreflightConfig
             preflight = BackupPreflight(
                 r2_client=self._r2,
                 bucket=config.r2.bucket,
             )
+            self._preflight_config_factory = PreflightConfig
         self._preflight = preflight
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def create_backup(self) -> BackupResult:
-        self._preflight.run(
-            __import__("production_preflight").PreflightConfig(
+        preflight_config = None
+        if self._preflight_config_factory is not None:
+            preflight_config = self._preflight_config_factory(
                 host=self._config.source.host,
                 port=int(self._config.source.port),
                 database=self._config.source.database,
@@ -676,7 +679,7 @@ class BackupExecutor:
                 work_dir=self._config.work_dir,
                 encryption_key=self._config.encryption_key,
             )
-        )
+        self._preflight.run(preflight_config)
 
         backup_id = _new_backup_id(self._clock())
         self._config.work_dir.mkdir(parents=True, exist_ok=True)
