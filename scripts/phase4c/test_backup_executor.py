@@ -377,6 +377,56 @@ class BackupExecutorTests(unittest.TestCase):
                 self.assertEqual(detail, expected)
                 self.assertNotIn(stderr.decode("utf-8", errors="replace"), detail)
 
+    def test_pg_dump_failure_detail_new_fixed_labels(self):
+        cases = {
+            b"pg_dump: error: permission denied for database": "permission_denied",
+            b'pg_dump: error: database "example" does not exist': "database_not_found",
+            b'pg_dump: error: relation "jobs" does not exist': "relation_not_found",
+            b'pg_dump: error: role "backup_user" does not exist': "role_not_found",
+            b"pg_dump: error: invalid connection option: bad_option": "connection_parameter_error",
+            b"pg_dump: error: invalid connection parameter": "connection_parameter_error",
+            b"pg_dump: error: invalid connection string": "connection_parameter_error",
+            b"pg_dump: error: SSL connection is required": "ssl_required",
+            b"pg_dump: error: server requires SSL": "ssl_required",
+            b"pg_dump: error: SSL is not enabled": "ssl_disabled",
+            b"pg_dump: error: SSL connection is not enabled": "ssl_disabled",
+            b'pg_dump: error: unrecognized configuration parameter "bad_parameter"': "unsupported_parameter",
+            b"pg_dump: error: parameter is not supported": "unsupported_parameter",
+            b"pg_dump: error: unsupported parameter": "unsupported_parameter",
+            b"pg_dump: fatal: could not read from input file": "pg_dump_fatal",
+            b"pg_dump: error: future PostgreSQL failure": "generic_pg_dump_error",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(stderr=stderr):
+                detail = classify_pg_dump_failure_detail(stderr)
+                self.assertEqual(detail, expected)
+                self.assertNotIn(stderr.decode("utf-8", errors="replace"), detail)
+
+    def test_pg_dump_failure_detail_new_labels_never_expose_adversarial_values(self):
+        adversarial = (
+            b'pg_dump: error: database "secret_database" does not exist; '
+            b'postgresql://secret_user:SUPER_SECRET_PASSWORD@db.example.invalid:5432/secret_database '
+            b'token=SECRET_TOKEN encryption_key=SECRET_ENCRYPTION_KEY host=db.example.invalid '
+            b'user=secret_user'
+        )
+        diagnostic = pg_dump_failure_diagnostic(adversarial, 1)
+        self.assertIn("detail=database_not_found", diagnostic)
+        for value in (
+            "SUPER_SECRET_PASSWORD",
+            "secret_database",
+            "secret_user",
+            "db.example.invalid",
+            "SECRET_TOKEN",
+            "SECRET_ENCRYPTION_KEY",
+        ):
+            self.assertNotIn(value, diagnostic)
+        self.assertNotIn(adversarial.decode(), diagnostic)
+
+    def test_pg_dump_fatal_takes_fixed_label_over_generic(self):
+        diagnostic = pg_dump_failure_diagnostic(b"pg_dump: fatal: future failure", 1)
+        self.assertIn("detail=pg_dump_fatal", diagnostic)
+        self.assertNotIn("future failure", diagnostic)
+
     def test_pg_dump_failure_diagnostic_includes_only_safe_detail_label(self):
         stderr = (
             b"pg_dump: error: server closed the connection unexpectedly "
