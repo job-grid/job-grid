@@ -39,6 +39,11 @@ from backup_executor import (
 from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, SafetyError
 
 
+class FakePreflight:
+    def run(self, config):
+        return None
+
+
 class FakeRunner:
     def __init__(self):
         self.calls = []
@@ -60,6 +65,9 @@ class FakeBody:
 
 
 class FakeR2:
+    def head_bucket(self, *, Bucket):
+        return {}
+
     def __init__(self):
         self.objects = {}
 
@@ -134,6 +142,7 @@ class BackupExecutorTests(unittest.TestCase):
             self.make_config(root),
             command_runner=FakeRunner(),
             r2_client=r2,
+            preflight=FakePreflight(),
             clock=lambda: __import__("datetime").datetime(
                 2026, 10, 8, tzinfo=__import__("datetime").timezone.utc
             ),
