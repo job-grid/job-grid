@@ -281,6 +281,8 @@ def _upload_and_verify(
             Body=body,
             ContentLength=path.stat().st_size,
         )
+    if created_objects is not None:
+        created_objects.append(object_key)
 
     head = client.head_object(Bucket=bucket, Key=object_key)
     remote_size = int(head.get("ContentLength", -1))
