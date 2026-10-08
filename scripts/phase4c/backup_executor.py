@@ -191,7 +191,7 @@ def classify_pg_dump_failure(stderr: bytes | str) -> str:
         or "permission denied" in message and ("output file" in message or "directory" in message)
     ):
         return "local_io"
-    if "pg_dump: error: query failed:" in message or "pg_dump: error: query failed" in message:
+    if "pg_dump: error: query failed:" in message:
         return "server_query"
     if (
         "pg_dump: error:" in message
