@@ -29,7 +29,9 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from backup_preflight import PreflightRunner, PreflightFailure, build_preflight_config\n\nfrom phase4c_tooling import (
+from backup_preflight import PreflightFailure, PreflightRunner, build_preflight_config
+
+from phase4c_tooling import (
     AES_GCM_NONCE_BYTES,
     PRODUCTION_PROJECT_REF,
     RECOVERY_PROJECT_REF,
