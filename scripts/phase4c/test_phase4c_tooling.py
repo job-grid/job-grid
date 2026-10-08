@@ -9,6 +9,7 @@ from phase4c_tooling import (
     assert_restore_target,
     assert_separate_credential_names,
     build_manifest,
+    decode_aes_key,
     canonical_json,
     encrypted_object_key,
     implementation_stage_must_not_backup,
@@ -74,9 +75,30 @@ class Phase4CSafetyTests(unittest.TestCase):
         encoded = canonical_json(manifest)
         self.assertIn(b"supabase_project_ref", encoded)
         self.assertNotIn(b"password", encoded.lower())
-        self.assertNotIn(b"password", encoded.lower())
         self.assertNotIn(b"access_key", encoded.lower())
+        self.assertNotIn(b"authorization", encoded.lower())
         self.assertNotIn(b"key_material", encoded.lower())
+
+    def test_decode_aes_key_accepts_16_bytes(self):
+        encoded = base64.b64encode(b"0" * 16).decode("ascii")
+        self.assertEqual(len(decode_aes_key(encoded)), 16)
+
+    def test_decode_aes_key_accepts_24_bytes(self):
+        encoded = base64.b64encode(b"1" * 24).decode("ascii")
+        self.assertEqual(len(decode_aes_key(encoded)), 24)
+
+    def test_decode_aes_key_accepts_32_bytes(self):
+        encoded = base64.b64encode(b"2" * 32).decode("ascii")
+        self.assertEqual(len(decode_aes_key(encoded)), 32)
+
+    def test_decode_aes_key_rejects_invalid_base64(self):
+        with self.assertRaises(SafetyError):
+            decode_aes_key("not-valid-base64!!!")
+
+    def test_decode_aes_key_rejects_invalid_length(self):
+        encoded = base64.b64encode(b"short").decode("ascii")
+        with self.assertRaises(SafetyError):
+            decode_aes_key(encoded)
 
     def test_r2_object_layout(self):
         self.assertEqual(
