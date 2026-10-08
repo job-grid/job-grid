@@ -52,7 +52,7 @@ class FakeR2:
 
     def head_object(self, *, Bucket, Key):
         if Key not in self.objects:
-            raise Exception("not found")
+            raise KeyError(Key)
         return {"ContentLength": len(self.objects[Key])}
 
     def put_object(self, *, Bucket, Key, Body, ContentLength):
@@ -75,6 +75,7 @@ class BackupExecutorTests(unittest.TestCase):
                 database="postgres",
                 username="backup_user",
                 password="synthetic-password",
+                major_version="17",
             ),
             r2=R2Config(
                 endpoint_url="https://r2.example.invalid",
