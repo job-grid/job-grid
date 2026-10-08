@@ -365,6 +365,8 @@ def assert_backup_authorized() -> None:
         raise SafetyError("Real backup execution requires GitHub Actions.")
     if os.environ.get("GITHUB_ENVIRONMENT") != PROTECTED_EXECUTION_ENVIRONMENT:
         raise SafetyError("Real backup execution requires the protected production environment.")
+    if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch":
+        raise SafetyError("Real backup execution requires a manual workflow dispatch.")
     if os.environ.get(PROTECTED_AUTHORIZATION_ENV) != "true":
         raise SafetyError("Protected backup authorization is not present.")
 
