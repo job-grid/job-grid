@@ -16,10 +16,18 @@ jobs:
   tooling-only:
     name: Phase 4C tooling-only static/unit validation
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Phase 4C test dependencies
+        run: python3 -m pip install -r scripts/phase4c/requirements-backup.txt
 
       - name: Python syntax check
         run: |
