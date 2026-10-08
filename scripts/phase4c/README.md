@@ -12,7 +12,8 @@ A real backup is fail-closed behind `assert_backup_authorized()`. The executor r
 
 1. `GITHUB_ACTIONS=true`
 2. `GITHUB_ENVIRONMENT=phase4c-production-approved`
-3. `PHASE4C_BACKUP_AUTHORIZED=true`
+3. `GITHUB_EVENT_NAME=workflow_dispatch`
+4. `PHASE4C_BACKUP_AUTHORIZED=true`
 
 The intended eventual production workflow must reference a protected GitHub Environment named `phase4c-production-approved` with required reviewers. GitHub requires the environment's protection rules to pass before a job using that environment starts, and environment secrets are unavailable until approval. citeturn0search0turn0search3 This PR does **not** create that real backup workflow or configure the environment.
 
