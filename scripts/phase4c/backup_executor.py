@@ -29,7 +29,7 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from phase4c_tooling import (
+from backup_preflight import PreflightRunner, PreflightFailure, build_preflight_config\n\nfrom phase4c_tooling import (
     AES_GCM_NONCE_BYTES,
     PRODUCTION_PROJECT_REF,
     RECOVERY_PROJECT_REF,
@@ -71,13 +71,19 @@ class CommandRunner(Protocol):
 
 
 class R2Client(Protocol):
+    def head_bucket(self, *, Bucket: str) -> object:
+        ...
+
     def head_object(self, *, Bucket: str, Key: str) -> Mapping[str, object]:
         ...
 
-    def put_object(self, *, Bucket: str, Key: str, Body: BinaryIO, ContentLength: int) -> object:
+    def put_object(self, *, Bucket: str, Key: str, Body: BinaryIO | bytes, ContentLength: int) -> object:
         ...
 
     def get_object(self, *, Bucket: str, Key: str) -> Mapping[str, object]:
+        ...
+
+    def delete_object(self, *, Bucket: str, Key: str) -> object:
         ...
 
 
@@ -113,160 +119,6 @@ def verify_pg_dump_major_version(expected_major: str) -> None:
     assert_pg_dump_major_version(expected_major, completed.stdout)
 
 
-PG_DUMP_FAILURE_CATEGORIES = frozenset({
-    "authentication",
-    "authorization",
-    "connection",
-    "tls",
-    "server_query",
-    "pg_dump_error",
-    "option_usage",
-    "client_compatibility",
-    "local_io",
-    "unknown",
-})
-
-
-def classify_pg_dump_failure(stderr: bytes | str) -> str:
-    """Return only a controlled, non-secret pg_dump failure category.
-
-    Precedence is deterministic: authentication, tls, connection,
-    client_compatibility, option_usage, authorization, local_io, server_query,
-    pg_dump_error, unknown. The classifier never returns stderr content.
-    """
-    if isinstance(stderr, bytes):
-        message = stderr.decode("utf-8", errors="replace").lower()
-    else:
-        message = stderr.lower()
-
-    if (
-        "password authentication failed" in message
-        or "authentication failed" in message
-        or "no password supplied" in message
-        or "password required" in message
-    ):
-        return "authentication"
-    if (
-        "ssl" in message
-        or "tls" in message
-        or "certificate verify failed" in message
-        or "certificate verification failed" in message
-    ):
-        return "tls"
-    if (
-        "could not connect" in message
-        or "connection refused" in message
-        or "connection timed out" in message
-        or "could not translate host name" in message
-        or "name or service not known" in message
-    ):
-        return "connection"
-    if (
-        "server version:" in message and "pg_dump version:" in message
-        or "server version mismatch" in message
-        or "server version is incompatible" in message
-    ):
-        return "client_compatibility"
-    if (
-        "unrecognized option" in message
-        or "invalid option" in message
-        or "unknown option" in message
-        or "option --" in message and "requires an argument" in message
-        or re.search(r"(^|\\n)\\s*usage:", message) is not None
-    ):
-        return "option_usage"
-    if (
-        "permission denied" in message
-        or "must be owner" in message
-        or "not authorized" in message
-        or "insufficient privilege" in message
-        or "privilege" in message and "denied" in message
-    ):
-        return "authorization"
-    if (
-        "could not open" in message
-        or "could not write" in message
-        or "no space left on device" in message
-        or "input/output error" in message
-        or "permission denied" in message and ("output file" in message or "directory" in message)
-    ):
-        return "local_io"
-    if "pg_dump: error: query failed:" in message:
-        return "server_query"
-    if (
-        "pg_dump: error:" in message
-        or "pg_dump: fatal:" in message
-        or re.search(r"(^|\\n)\\s*error:", message) is not None
-        or re.search(r"(^|\\n)\\s*fatal:", message) is not None
-    ):
-        return "pg_dump_error"
-    return "unknown"
-
-
-def classify_pg_dump_failure_detail(stderr: bytes | str) -> str:
-    """Return a fixed diagnostic detail label; never return stderr content."""
-    if isinstance(stderr, bytes):
-        message = stderr.decode("utf-8", errors="replace").lower()
-    else:
-        message = stderr.lower()
-
-    detail_signatures = (
-        ("server_closed_connection", "server closed the connection unexpectedly"),
-        ("connection_lost", "connection to server was lost"),
-        ("connection_send_failed", "could not send data to server"),
-        ("connection_receive_failed", "could not receive data from server"),
-        ("server_version_mismatch", "server version mismatch"),
-        ("server_version_newer_than_client", "server version is newer than pg_dump"),
-        ("permission_denied", "permission denied"),
-        ("database_not_found", "database does not exist"),
-        ("relation_not_found", "relation does not exist"),
-        ("role_not_found", "role does not exist"),
-        ("connection_parameter_error", "invalid connection option"),
-        ("connection_parameter_error", "invalid connection parameter"),
-        ("connection_parameter_error", "invalid connection string"),
-        ("ssl_required", "ssl connection is required"),
-        ("ssl_required", "server requires ssl"),
-        ("ssl_disabled", "ssl is not enabled"),
-        ("ssl_disabled", "ssl connection is not enabled"),
-        ("unsupported_parameter", "unrecognized configuration parameter"),
-        ("unsupported_parameter", "parameter is not supported"),
-        ("unsupported_parameter", "unsupported parameter"),
-        ("query_failed", "pg_dump: error: query failed:"),
-        ("output_open_failed", "could not open output file"),
-        ("output_write_failed", "could not write to output file"),
-        ("disk_full", "no space left on device"),
-        ("io_error", "input/output error"),
-        ("authentication_failed", "password authentication failed"),
-        ("no_password", "no password supplied"),
-        ("tls_certificate", "certificate verify failed"),
-        ("ssl_error", "ssl error"),
-        ("connection_refused", "connection refused"),
-        ("connection_timeout", "connection timed out"),
-        ("dns_failure", "could not translate host name"),
-        ("option_usage", "unrecognized option"),
-    )
-    for detail, signature in detail_signatures:
-        if signature in message:
-            return detail
-    if "pg_dump: fatal:" in message:
-        return "pg_dump_fatal"
-    if "pg_dump: error:" in message:
-        return "generic_pg_dump_error"
-    return "unclassified"
-
-
-def pg_dump_failure_diagnostic(stderr: bytes | str, exit_code: int) -> str:
-    """Return only safe pg_dump failure diagnostics; never return stderr content."""
-    raw = stderr if isinstance(stderr, bytes) else stderr.encode("utf-8")
-    category = classify_pg_dump_failure(raw)
-    detail = classify_pg_dump_failure_detail(raw)
-    fingerprint = hashlib.sha256(raw).hexdigest()
-    return (
-        f"pg_dump failed: category={category} detail={detail} exit_code={exit_code} "
-        f"stderr_sha256={fingerprint} stderr_bytes={len(raw)}"
-    )
-
-
 class SubprocessCommandRunner:
     """Runs pg_dump without placing the database password in argv."""
 
@@ -287,9 +139,9 @@ class SubprocessCommandRunner:
         except FileNotFoundError as exc:
             raise BackupError("pg_dump is not installed on the execution host.") from exc
         if completed.returncode != 0:
-            # stderr can contain connection details; classify it locally and never forward it.
-            diagnostic = pg_dump_failure_diagnostic(completed.stderr, completed.returncode)
-            raise BackupError(diagnostic)
+            # Raw stderr is deliberately discarded. The preflight architecture is the
+            # primary diagnostic mechanism; pg_dump contributes only a fixed failure code.
+            raise BackupError("PG_DUMP_FAILED")
 
 
 class BotoR2Client:
@@ -304,6 +156,9 @@ class BotoR2Client:
             region_name="auto",
             config=BotoConfig(signature_version="s3v4"),
         )
+
+    def head_bucket(self, **kwargs):
+        return self._client.head_bucket(**kwargs)
 
     def head_object(self, **kwargs):
         return self._client.head_object(**kwargs)
@@ -409,6 +264,7 @@ class BackupResult:
     manifest_artifact_size: int
     database_object_key: str
     manifest_object_key: str
+    status: str = "BACKUP_COMPLETE"
 
 
 def _required(name: str) -> str:
@@ -575,6 +431,7 @@ class BackupExecutor:
         command_runner: CommandRunner | None = None,
         r2_client: R2Client | None = None,
         clock=None,
+        preflight_runner: PreflightRunner | None = None,
     ):
         config.validate()
         self._config = config
@@ -585,8 +442,15 @@ class BackupExecutor:
             secret_access_key=config.r2.secret_access_key,
         )
         self._clock = clock or (lambda: datetime.now(timezone.utc))
+        self._preflight = preflight_runner or PreflightRunner(r2_client=self._r2)
 
     def create_backup(self) -> BackupResult:
+        try:
+            self._preflight.run(
+                build_preflight_config(self._config, work_dir=self._config.work_dir)
+            )
+        except PreflightFailure:
+            raise
         backup_id = _new_backup_id(self._clock())
         self._config.work_dir.mkdir(parents=True, exist_ok=True)
         work_root = self._config.work_dir / f"phase4c-{backup_id}"
@@ -598,20 +462,29 @@ class BackupExecutor:
         encrypted_manifest_sha = work_root / ARTIFACT_MANIFEST_SHA
         created_objects: list[str] = []
         try:
-            self._runner.run(
-                _build_dump_command(self._config.source, plaintext),
-                env=_child_env(self._config.source),
-                output_path=plaintext,
-            )
-            if not plaintext.is_file() or plaintext.stat().st_size == 0:
-                raise BackupError("pg_dump did not produce a non-empty dump.")
+            try:
+                self._runner.run(
+                    _build_dump_command(self._config.source, plaintext),
+                    env=_child_env(self._config.source),
+                    output_path=plaintext,
+                )
+                if not plaintext.is_file() or plaintext.stat().st_size == 0:
+                    raise RuntimeError
+            except Exception:
+                raise BackupError("PG_DUMP_FAILED") from None
 
-            _encrypt_file(plaintext, encrypted_dump, self._config.encryption_key)
-            plaintext.unlink(missing_ok=True)
+            try:
+                _encrypt_file(plaintext, encrypted_dump, self._config.encryption_key)
+                plaintext.unlink(missing_ok=True)
+            except Exception:
+                raise BackupError("ENCRYPTION_FAILED") from None
 
-            db_sha = _sha256_path(encrypted_dump)
-            db_size = encrypted_dump.stat().st_size
-            _write_checksum(encrypted_dump_sha, db_sha, ARTIFACT_DUMP)
+            try:
+                db_sha = _sha256_path(encrypted_dump)
+                db_size = encrypted_dump.stat().st_size
+                _write_checksum(encrypted_dump_sha, db_sha, ARTIFACT_DUMP)
+            except Exception:
+                raise BackupError("CHECKSUM_FAILED") from None
             manifest = build_manifest(
                 backup_id=backup_id,
                 created_at=self._clock().isoformat(),
@@ -621,15 +494,21 @@ class BackupExecutor:
                     {"name": ARTIFACT_DUMP, "size_bytes": db_size, "sha256": db_sha}
                 ],
             )
-            manifest_bytes = canonical_json(manifest)
-            manifest_plain = work_root / "manifest.json"
-            manifest_plain.write_bytes(manifest_bytes)
-            _encrypt_file(manifest_plain, encrypted_manifest, self._config.encryption_key)
-            manifest_plain.unlink(missing_ok=True)
+            try:
+                manifest_bytes = canonical_json(manifest)
+                manifest_plain = work_root / "manifest.json"
+                manifest_plain.write_bytes(manifest_bytes)
+                _encrypt_file(manifest_plain, encrypted_manifest, self._config.encryption_key)
+                manifest_plain.unlink(missing_ok=True)
+            except Exception:
+                raise BackupError("ENCRYPTION_FAILED") from None
 
-            manifest_sha = _sha256_path(encrypted_manifest)
-            manifest_size = encrypted_manifest.stat().st_size
-            _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
+            try:
+                manifest_sha = _sha256_path(encrypted_manifest)
+                manifest_size = encrypted_manifest.stat().st_size
+                _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
+            except Exception:
+                raise BackupError("CHECKSUM_FAILED") from None
 
             artifacts = [
                 (ARTIFACT_DUMP, encrypted_dump, db_sha),
@@ -637,16 +516,19 @@ class BackupExecutor:
                 (ARTIFACT_MANIFEST, encrypted_manifest, manifest_sha),
                 (ARTIFACT_MANIFEST_SHA, encrypted_manifest_sha, _sha256_path(encrypted_manifest_sha)),
             ]
-            for artifact_name, path, digest in artifacts:
-                key = encrypted_object_key(backup_id, artifact_name)
-                _upload_and_verify(
-                    self._r2,
-                    bucket=self._config.r2.bucket,
-                    object_key=key,
-                    path=path,
-                    expected_sha256=digest,
-                    created_objects=created_objects,
-                )
+            try:
+                for artifact_name, path, digest in artifacts:
+                    key = encrypted_object_key(backup_id, artifact_name)
+                    _upload_and_verify(
+                        self._r2,
+                        bucket=self._config.r2.bucket,
+                        object_key=key,
+                        path=path,
+                        expected_sha256=digest,
+                        created_objects=created_objects,
+                    )
+            except Exception:
+                raise BackupError("R2_UPLOAD_FAILED") from None
 
             return BackupResult(
                 backup_id=backup_id,
@@ -656,6 +538,7 @@ class BackupExecutor:
                 manifest_artifact_size=manifest_size,
                 database_object_key=encrypted_object_key(backup_id, ARTIFACT_DUMP),
                 manifest_object_key=encrypted_object_key(backup_id, ARTIFACT_MANIFEST),
+                status="BACKUP_COMPLETE",
             )
         except Exception as exc:
             if created_objects:
@@ -697,6 +580,7 @@ def main() -> int:
     config = BackupConfig.from_environment(work_dir=Path(tempfile.gettempdir()))
     result = BackupExecutor(config).create_backup()
     print(json.dumps({
+        "status": result.status,
         "backup_id": result.backup_id,
         "database_artifact_sha256": result.database_artifact_sha256,
         "manifest_artifact_sha256": result.manifest_artifact_sha256,
