@@ -418,6 +418,61 @@ class BackupExecutorTests(unittest.TestCase):
             content,
         )
 
+
+    def test_protected_workflow_persists_postgresql_17_path_for_later_steps(self):
+        workflow = (
+            Path(__file__).parents[2]
+            / ".github"
+            / "workflows"
+            / "phase4c-protected-production-backup.yml"
+        )
+        content = workflow.read_text(encoding="utf-8")
+        path_marker = 'echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"'
+        exact_path_marker = 'test "$resolved_pg_dump" = "/usr/lib/postgresql/17/bin/pg_dump"'
+        version_marker = 'echo "pg_dump version: $(pg_dump --version)"'
+        check_marker = 'PYTHONPATH=scripts/phase4c python -m backup_executor --check-pg-dump-version'
+        backup_marker = 'PYTHONPATH=scripts/phase4c python -m backup_executor --backup'
+
+        self.assertIn(path_marker, content)
+        self.assertIn(exact_path_marker, content)
+        self.assertIn(version_marker, content)
+        self.assertIn(check_marker, content)
+        self.assertIn(backup_marker, content)
+
+        path_index = content.index(path_marker)
+        exact_path_index = content.index(exact_path_marker)
+        version_index = content.index(version_marker)
+        check_index = content.index(check_marker)
+        backup_index = content.index(backup_marker)
+
+        self.assertLess(path_index, exact_path_index)
+        self.assertLess(path_index, version_index)
+        self.assertLess(path_index, check_index)
+        self.assertLess(check_index, backup_index)
+
+    def test_protected_workflow_keeps_executor_major_version_gate(self):
+        workflow = (
+            Path(__file__).parents[2]
+            / ".github"
+            / "workflows"
+            / "phase4c-protected-production-backup.yml"
+        )
+        content = workflow.read_text(encoding="utf-8")
+        self.assertIn(
+            'PYTHONPATH=scripts/phase4c python -m backup_executor --check-pg-dump-version',
+            content,
+        )
+
+        executor = Path(__file__).with_name("backup_executor.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("[PG_DUMP, PG_DUMP_VERSION_ARGUMENT]", executor)
+        self.assertIn("assert_pg_dump_major_version(expected_major, completed.stdout)", executor)
+        self.assertIn(
+            'verify_pg_dump_major_version(expected_major)',
+            executor,
+        )
+
     def test_ci_contains_no_secret_references_or_real_backup_invocation(self):
         workflow = (
             Path(__file__).parents[2]
