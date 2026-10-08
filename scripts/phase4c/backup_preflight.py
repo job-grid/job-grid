@@ -101,7 +101,7 @@ def _run_safely(argv: list[str], *, timeout: int) -> subprocess.CompletedProcess
             timeout=timeout,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise _fixed_failure(PreflightCode.CLIENT_FAILED) from exc
+        raise _fixed_failure(PreflightCode.CLIENT_FAILED) from None
 
 
 def check_postgres_client(expected_major: str) -> None:
