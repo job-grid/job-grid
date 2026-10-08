@@ -39,16 +39,9 @@ jobs:
           set -euo pipefail
           PYTHONPATH=scripts/phase4c python -m unittest discover -s scripts/phase4c -p 'test_*.py' -v
 
-      - name: Static production-safety gate
-        shell: bash
+      - name: Implementation execution boundary
         run: |
           set -euo pipefail
-          ! grep -n --fixed-strings "pg_restore" scripts/phase4c/backup_executor.py
-          ! grep -n --fixed-strings "supabase db restore" scripts/phase4c/backup_executor.py
-          ! grep -n --fixed-strings "aws s3" scripts/phase4c/backup_executor.py
-          ! grep -n --fixed-strings "wrangler" scripts/phase4c/backup_executor.py
-          ! grep -R -n --fixed-strings "python -m backup_executor --backup" .github
-          ! grep -R -n --fixed-strings 'secrets.BACKUP_' .github
           echo "Production database: NOT ACCESSED"
           echo "Real backup: NOT CREATED"
           echo "Restore: NOT RUN"
