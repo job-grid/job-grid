@@ -237,6 +237,27 @@ class BackupExecutorTests(unittest.TestCase):
     def test_pg_dump_client_major_version_accepts_approved_major(self):
         assert_pg_dump_major_version("17", "pg_dump (PostgreSQL) 17.6")
 
+    def test_pg_dump_client_major_version_accepts_normal_postgresql_output(self):
+        assert_pg_dump_major_version("17", "pg_dump (PostgreSQL) 17.6")
+
+    def test_pg_dump_client_major_version_accepts_package_build_suffix(self):
+        assert_pg_dump_major_version(
+            "17",
+            "pg_dump (PostgreSQL) 17.6-1.pgdg24.04+1",
+        )
+        assert_pg_dump_major_version(
+            "17",
+            "pg_dump (PostgreSQL) 17.6 (Ubuntu 17.6-1.pgdg24.04+1)",
+        )
+
+    def test_pg_dump_client_major_version_rejects_malformed_output(self):
+        with self.assertRaises(BackupError):
+            assert_pg_dump_major_version("17", "pg_dump PostgreSQL 17.6")
+
+    def test_pg_dump_client_major_version_rejects_missing_version(self):
+        with self.assertRaises(BackupError):
+            assert_pg_dump_major_version("17", "")
+
     def test_pg_dump_client_major_version_rejects_mismatch(self):
         with self.assertRaises(SafetyError):
             assert_pg_dump_major_version("17", "pg_dump (PostgreSQL) 16.10")
