@@ -540,12 +540,12 @@ class BackupExecutor:
                 manifest_object_key=encrypted_object_key(backup_id, ARTIFACT_MANIFEST),
                 status="BACKUP_COMPLETE",
             )
-        except Exception as exc:
+        except Exception:
             if created_objects:
                 try:
                     _reconcile_objects(self._r2, bucket=self._config.r2.bucket, keys=created_objects)
-                except BackupError as cleanup_exc:
-                    raise BackupError(f"{exc}; {cleanup_exc}") from exc
+                except BackupError:
+                    raise BackupError("R2_UPLOAD_FAILED") from None
             raise
         finally:
             # Best-effort cleanup only; this is not guaranteed secure deletion.
@@ -578,7 +578,11 @@ def main() -> int:
         parser.error("No action selected. Backup execution requires explicit --backup authorization.")
     assert_backup_authorized()
     config = BackupConfig.from_environment(work_dir=Path(tempfile.gettempdir()))
-    result = BackupExecutor(config).create_backup()
+    try:
+        result = BackupExecutor(config).create_backup()
+    except (BackupError, PreflightFailure) as exc:
+        print(str(exc))
+        return 1
     print(json.dumps({
         "status": result.status,
         "backup_id": result.backup_id,
