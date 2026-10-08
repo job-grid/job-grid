@@ -272,18 +272,78 @@ class BackupExecutorTests(unittest.TestCase):
 
     def test_pg_dump_failure_classification_is_safe(self):
         cases = {
-            "password authentication failed for user backup_user": "authentication",
-            "could not connect to server: Connection timed out": "connection",
-            "server version: 17.0; pg_dump version: 16.4": "server_compatibility",
-            "permission denied for table jobs": "authorization",
-            "SSL connection has been closed unexpectedly": "tls",
-            "pg_dump: error: unrecognized option '--bad'": "option_or_usage",
-            "pg_dump: error: could not open output file": "local_io",
-            "unexpected database error": "unknown",
+            b"password authentication failed for user backup_user": "authentication",
+            b"FATAL: password authentication failed": "authentication",
+            b"pg_dump: error: could not connect to server": "connection",
+            b"could not connect to server: Connection timed out": "connection",
+            b"connection refused": "connection",
+            b"SSL connection has been closed unexpectedly": "tls",
+            b"certificate verify failed: fake-key=super-secret": "tls",
+            b"server version: 17.0; pg_dump version: 16.4": "client_compatibility",
+            b"pg_dump: error: query failed: ERROR: permission denied for table jobs": "authorization",
+            b"pg_dump: error: query failed: ERROR: relation jobs does not exist": "server_query",
+            b"pg_dump: error: server closed the connection unexpectedly": "server_error",
+            b"pg_dump: error: unrecognized option '--bad'": "option_usage",
+            b'pg_dump: error: could not open output file "/tmp/dump"': "local_io",
+            b"pg_dump: error: could not write to output file: No space left on device": "local_io",
+            b"": "unknown",
+            b"something completely unrecognized": "unknown",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(stderr=stderr):
+                category = classify_pg_dump_failure(stderr)
+                self.assertEqual(category, expected)
+                self.assertIn(category, {
+                    "authentication",
+                    "authorization",
+                    "connection",
+                    "tls",
+                    "server_query",
+                    "server_error",
+                    "option_usage",
+                    "client_compatibility",
+                    "local_io",
+                    "unknown",
+                })
+                if stderr:
+                    self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
+
+    def test_pg_dump_failure_classification_accepts_case_and_whitespace_variations(self):
+        cases = {
+            b"  PASSWORD AUTHENTICATION FAILED for user backup_user  ": "authentication",
+            b"\\n\\tpg_dump: ERROR: QUERY FAILED: ERROR: relation missing\\n": "server_query",
+            b"\\n  pg_dump: ERROR: unexpected server failure\\n": "server_error",
+            b"\\tpg_dump: ERROR: UNRECOGNIZED OPTION '--bad'\\n": "option_usage",
         }
         for stderr, expected in cases.items():
             with self.subTest(stderr=stderr):
                 self.assertEqual(classify_pg_dump_failure(stderr), expected)
+
+    def test_pg_dump_failure_classification_precedence_is_deterministic(self):
+        cases = {
+            b"pg_dump: error: query failed: ERROR: permission denied; SSL connection failed": "tls",
+            b"pg_dump: error: query failed: ERROR: permission denied; connection refused": "connection",
+            b"server version: 17.0; pg_dump version: 16.0; unrecognized option '--bad'": "client_compatibility",
+            b"pg_dump: error: query failed: ERROR: permission denied for table jobs": "authorization",
+            b"pg_dump: error: query failed: ERROR: relation jobs does not exist": "server_query",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(stderr=stderr):
+                self.assertEqual(classify_pg_dump_failure(stderr), expected)
+
+    def test_pg_dump_failure_classifier_never_returns_original_stderr(self):
+        adversarial = (
+            b"pg_dump: error: query failed: ERROR: fake_password=SECRET123 "
+            b"postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres "
+            b"token=FAKE-TOKEN encryption_key=FAKE-KEY "
+        )
+        category = classify_pg_dump_failure(adversarial)
+        self.assertEqual(category, "server_query")
+        self.assertNotIn("SECRET123", category)
+        self.assertNotIn("db.example.invalid", category)
+        self.assertNotIn("FAKE-TOKEN", category)
+        self.assertNotIn("FAKE-KEY", category)
+        self.assertNotIn(adversarial.decode(), category)
 
     def test_backup_authorization_requires_protected_cloud_state(self):
         with patch.dict(os.environ, {}, clear=True):

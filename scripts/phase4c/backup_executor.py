@@ -113,22 +113,93 @@ def verify_pg_dump_major_version(expected_major: str) -> None:
     assert_pg_dump_major_version(expected_major, completed.stdout)
 
 
-def classify_pg_dump_failure(stderr: str) -> str:
-    message = stderr.lower()
-    if "password authentication failed" in message or "authentication failed" in message:
+PG_DUMP_FAILURE_CATEGORIES = frozenset({
+    "authentication",
+    "authorization",
+    "connection",
+    "tls",
+    "server_query",
+    "server_error",
+    "option_usage",
+    "client_compatibility",
+    "local_io",
+    "unknown",
+})
+
+
+def classify_pg_dump_failure(stderr: bytes | str) -> str:
+    """Return only a controlled, non-secret pg_dump failure category.
+
+    Precedence is deterministic: authentication, tls, connection,
+    client_compatibility, option_usage, authorization, local_io, server_query,
+    server_error, unknown. The classifier never returns stderr content.
+    """
+    if isinstance(stderr, bytes):
+        message = stderr.decode("utf-8", errors="replace").lower()
+    else:
+        message = stderr.lower()
+
+    if (
+        "password authentication failed" in message
+        or "authentication failed" in message
+        or "no password supplied" in message
+        or "password required" in message
+    ):
         return "authentication"
-    if "ssl" in message or "tls" in message:
+    if (
+        "ssl" in message
+        or "tls" in message
+        or "certificate verify failed" in message
+        or "certificate verification failed" in message
+    ):
         return "tls"
-    if "server version" in message and "pg_dump version" in message:
-        return "server_compatibility"
-    if "permission denied" in message or "must be owner" in message or "not authorized" in message:
-        return "authorization"
-    if "could not connect" in message or "connection refused" in message or "connection timed out" in message:
+    if (
+        "could not connect" in message
+        or "connection refused" in message
+        or "connection timed out" in message
+        or "could not translate host name" in message
+        or "name or service not known" in message
+    ):
         return "connection"
-    if "unrecognized option" in message or "invalid option" in message or "usage:" in message:
-        return "option_or_usage"
-    if "could not open" in message or "no space left on device" in message or "input/output error" in message:
+    if (
+        "server version:" in message and "pg_dump version:" in message
+        or "server version mismatch" in message
+        or "server version is incompatible" in message
+    ):
+        return "client_compatibility"
+    if (
+        "unrecognized option" in message
+        or "invalid option" in message
+        or "unknown option" in message
+        or "option --" in message and "requires an argument" in message
+        or re.search(r"(^|\\n)\\s*usage:", message) is not None
+    ):
+        return "option_usage"
+    if (
+        "permission denied" in message
+        or "must be owner" in message
+        or "not authorized" in message
+        or "insufficient privilege" in message
+        or "privilege" in message and "denied" in message
+    ):
+        return "authorization"
+    if (
+        "could not open" in message
+        or "could not write" in message
+        or "no space left on device" in message
+        or "input/output error" in message
+        or "permission denied" in message and ("output file" in message or "directory" in message)
+    ):
         return "local_io"
+    if "pg_dump: error: query failed:" in message or "pg_dump: error: query failed" in message:
+        return "server_query"
+    if (
+        "pg_dump: error:" in message
+        or "pg_dump: fatal:" in message
+        or re.search(r"(^|\\n)\\s*error:", message) is not None
+        or re.search(r"(^|\\n)\\s*fatal:", message) is not None
+    ):
+        return "server_error"
     return "unknown"
 
 
@@ -153,7 +224,7 @@ class SubprocessCommandRunner:
             raise BackupError("pg_dump is not installed on the execution host.") from exc
         if completed.returncode != 0:
             # stderr can contain connection details; classify it locally and never forward it.
-            category = classify_pg_dump_failure(completed.stderr.decode("utf-8", errors="replace"))
+            category = classify_pg_dump_failure(completed.stderr)
             raise BackupError(f"pg_dump failed: {category} (exit code {completed.returncode}).")
 
 
