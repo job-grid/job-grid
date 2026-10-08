@@ -271,6 +271,7 @@ def _upload_and_verify(
     object_key: str,
     path: Path,
     expected_sha256: str,
+    created_objects: list[str] | None = None,
 ) -> None:
     if _object_exists(client, bucket=bucket, key=object_key):
         raise BackupError(f"Refusing to overwrite existing backup object {object_key}.")
