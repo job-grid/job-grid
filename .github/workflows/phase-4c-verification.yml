@@ -13,7 +13,6 @@ concurrency:
 jobs:
   verify-security-prerequisites:
     name: Verify R2 and encryption prerequisites
-    if: github.ref == 'refs/heads/verification/phase-4c-r2-encryption'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
