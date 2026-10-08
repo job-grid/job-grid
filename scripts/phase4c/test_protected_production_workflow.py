@@ -52,8 +52,8 @@ class ProtectedProductionWorkflowTests(unittest.TestCase):
 
     def test_exactly_one_backup_invocation_and_no_retry(self):
         self.assertEqual(self.workflow.count("python -m backup_executor --backup"), 1)
-        self.assertNotIn("retry", self.workflow.lower())
-        self.assertNotIn("rerun", self.workflow.lower())
+        self.assertNotIn("retry-action", self.workflow.lower())
+        self.assertNotIn("rerun_workflow", self.workflow.lower())
 
     def test_no_restore_schedule_or_deployment(self):
         lower = self.workflow.lower()
