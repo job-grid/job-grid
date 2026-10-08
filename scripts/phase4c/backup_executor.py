@@ -29,7 +29,6 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from production_preflight import BackupPreflight, PreflightConfig, PreflightFailure
 from phase4c_tooling import (
     AES_GCM_NONCE_BYTES,
     PRODUCTION_PROJECT_REF,
@@ -656,14 +655,18 @@ class BackupExecutor:
             access_key_id=config.r2.access_key_id,
             secret_access_key=config.r2.secret_access_key,
         )
-        self._preflight = preflight or BackupPreflight(
+        if preflight is None:
+            from production_preflight import BackupPreflight
+            preflight = BackupPreflight(
             r2_client=self._r2,
-            bucket=config.r2.bucket,
-        )
+                bucket=config.r2.bucket,
+            )
+        self._preflight = preflight
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def create_backup(self) -> BackupResult:
         try:
+            from production_preflight import PreflightConfig, PreflightFailure
             self._preflight.run(
                 PreflightConfig(
                     host=self._config.source.host,
