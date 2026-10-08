@@ -119,7 +119,7 @@ PG_DUMP_FAILURE_CATEGORIES = frozenset({
     "connection",
     "tls",
     "server_query",
-    "server_error",
+    "pg_dump_error",
     "option_usage",
     "client_compatibility",
     "local_io",
@@ -132,7 +132,7 @@ def classify_pg_dump_failure(stderr: bytes | str) -> str:
 
     Precedence is deterministic: authentication, tls, connection,
     client_compatibility, option_usage, authorization, local_io, server_query,
-    server_error, unknown. The classifier never returns stderr content.
+    pg_dump_error, unknown. The classifier never returns stderr content.
     """
     if isinstance(stderr, bytes):
         message = stderr.decode("utf-8", errors="replace").lower()
@@ -199,8 +199,19 @@ def classify_pg_dump_failure(stderr: bytes | str) -> str:
         or re.search(r"(^|\\n)\\s*error:", message) is not None
         or re.search(r"(^|\\n)\\s*fatal:", message) is not None
     ):
-        return "server_error"
+        return "pg_dump_error"
     return "unknown"
+
+
+def pg_dump_failure_diagnostic(stderr: bytes | str, exit_code: int) -> str:
+    """Return only safe pg_dump failure diagnostics; never return stderr content."""
+    raw = stderr if isinstance(stderr, bytes) else stderr.encode("utf-8")
+    category = classify_pg_dump_failure(raw)
+    fingerprint = hashlib.sha256(raw).hexdigest()
+    return (
+        f"pg_dump failed: category={category} exit_code={exit_code} "
+        f"stderr_sha256={fingerprint} stderr_bytes={len(raw)}"
+    )
 
 
 class SubprocessCommandRunner:
@@ -224,8 +235,8 @@ class SubprocessCommandRunner:
             raise BackupError("pg_dump is not installed on the execution host.") from exc
         if completed.returncode != 0:
             # stderr can contain connection details; classify it locally and never forward it.
-            category = classify_pg_dump_failure(completed.stderr)
-            raise BackupError(f"pg_dump failed: {category} (exit code {completed.returncode}).")
+            diagnostic = pg_dump_failure_diagnostic(completed.stderr, completed.returncode)
+            raise BackupError(diagnostic)
 
 
 class BotoR2Client:
