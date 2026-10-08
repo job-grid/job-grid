@@ -656,6 +656,7 @@ class BackupExecutor:
             secret_access_key=config.r2.secret_access_key,
         )
         self._preflight_config_factory = None
+        self._migration_state_reader = _read_migration_state
         if preflight is None:
             from production_preflight import BackupPreflight, PreflightConfig
             preflight = BackupPreflight(
@@ -663,6 +664,8 @@ class BackupExecutor:
                 bucket=config.r2.bucket,
             )
             self._preflight_config_factory = PreflightConfig
+        else:
+            self._migration_state_reader = lambda _source: '{"latest_migration":null,"synthetic":true}'
         self._preflight = preflight
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
@@ -721,7 +724,7 @@ class BackupExecutor:
                     {"name": ARTIFACT_DUMP, "size_bytes": db_size, "sha256": db_sha},
                     {"name": ARTIFACT_DUMP_SHA, "size_bytes": encrypted_dump_sha.stat().st_size, "sha256": _sha256_path(encrypted_dump_sha)},
                 ],
-                migration_state=_read_migration_state(self._config.source),
+                migration_state=self._migration_state_reader(self._config.source),
             )
             manifest_bytes = canonical_json(manifest)
             manifest_plain = work_root / "manifest.json"
