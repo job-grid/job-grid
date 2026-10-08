@@ -322,6 +322,63 @@ def _object_exists(client: R2Client, *, bucket: str, key: str) -> bool:
         raise BackupError("Unable to verify whether the R2 destination object exists.") from exc
 
 
+def _upload_object(
+    client: R2Client,
+    *,
+    bucket: str,
+    object_key: str,
+    path: Path,
+    created_objects: list[str],
+) -> None:
+    if _object_exists(client, bucket=bucket, key=object_key):
+        raise BackupError("R2_UPLOAD_FAILED")
+    try:
+        with path.open("rb") as body:
+            client.put_object(
+                Bucket=bucket,
+                Key=object_key,
+                Body=body,
+                ContentLength=path.stat().st_size,
+            )
+    except Exception:
+        raise BackupError("R2_UPLOAD_FAILED") from None
+    created_objects.append(object_key)
+
+
+def _verify_object(
+    client: R2Client,
+    *,
+    bucket: str,
+    object_key: str,
+    path: Path,
+    expected_sha256: str,
+) -> None:
+    try:
+        head = client.head_object(Bucket=bucket, Key=object_key)
+        remote_size = int(head.get("ContentLength", -1))
+        if remote_size != path.stat().st_size:
+            raise BackupError("R2_VERIFY_FAILED")
+        response = client.get_object(Bucket=bucket, Key=object_key)
+        remote_body = response["Body"]
+        digest = hashlib.sha256()
+        try:
+            while True:
+                chunk = remote_body.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        finally:
+            close = getattr(remote_body, "close", None)
+            if close:
+                close()
+        if digest.hexdigest() != expected_sha256:
+            raise BackupError("R2_VERIFY_FAILED")
+    except BackupError:
+        raise
+    except Exception:
+        raise BackupError("R2_VERIFY_FAILED") from None
+
+
 def _upload_and_verify(
     client: R2Client,
     *,
@@ -331,38 +388,21 @@ def _upload_and_verify(
     expected_sha256: str,
     created_objects: list[str] | None = None,
 ) -> None:
-    if _object_exists(client, bucket=bucket, key=object_key):
-        raise BackupError(f"Refusing to overwrite existing backup object {object_key}.")
-    with path.open("rb") as body:
-        client.put_object(
-            Bucket=bucket,
-            Key=object_key,
-            Body=body,
-            ContentLength=path.stat().st_size,
-        )
-    if created_objects is not None:
-        created_objects.append(object_key)
-
-    head = client.head_object(Bucket=bucket, Key=object_key)
-    remote_size = int(head.get("ContentLength", -1))
-    if remote_size != path.stat().st_size:
-        raise BackupError(f"R2 object size mismatch for {object_key}.")
-
-    response = client.get_object(Bucket=bucket, Key=object_key)
-    remote_body = response["Body"]
-    digest = hashlib.sha256()
-    try:
-        while True:
-            chunk = remote_body.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            digest.update(chunk)
-    finally:
-        close = getattr(remote_body, "close", None)
-        if close:
-            close()
-    if digest.hexdigest() != expected_sha256:
-        raise BackupError(f"R2 read-back checksum mismatch for {object_key}.")
+    owned = created_objects if created_objects is not None else []
+    _upload_object(
+        client,
+        bucket=bucket,
+        object_key=object_key,
+        path=path,
+        created_objects=owned,
+    )
+    _verify_object(
+        client,
+        bucket=bucket,
+        object_key=object_key,
+        path=path,
+        expected_sha256=expected_sha256,
+    )
 
 
 def _delete_and_verify(client: R2Client, *, bucket: str, key: str) -> None:
@@ -517,18 +557,30 @@ class BackupExecutor:
                 (ARTIFACT_MANIFEST_SHA, encrypted_manifest_sha, _sha256_path(encrypted_manifest_sha)),
             ]
             try:
+                for artifact_name, path, _digest in artifacts:
+                    key = encrypted_object_key(backup_id, artifact_name)
+                    _upload_object(
+                        self._r2,
+                        bucket=self._config.r2.bucket,
+                        object_key=key,
+                        path=path,
+                        created_objects=created_objects,
+                    )
+            except Exception:
+                raise BackupError("R2_UPLOAD_FAILED") from None
+
+            try:
                 for artifact_name, path, digest in artifacts:
                     key = encrypted_object_key(backup_id, artifact_name)
-                    _upload_and_verify(
+                    _verify_object(
                         self._r2,
                         bucket=self._config.r2.bucket,
                         object_key=key,
                         path=path,
                         expected_sha256=digest,
-                        created_objects=created_objects,
                     )
             except Exception:
-                raise BackupError("R2_UPLOAD_FAILED") from None
+                raise BackupError("R2_VERIFY_FAILED") from None
 
             return BackupResult(
                 backup_id=backup_id,
