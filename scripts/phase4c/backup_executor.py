@@ -24,8 +24,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO, Mapping, Protocol
 
-import psycopg
-
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
@@ -427,6 +425,7 @@ def _new_backup_id(now: datetime | None = None) -> str:
 
 def _read_migration_state(source: SourcePostgresConfig) -> str:
     try:
+        import psycopg
         with psycopg.connect(
             host=source.host,
             port=int(source.port),
