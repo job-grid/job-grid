@@ -1,2 +1,3 @@
 boto3==1.42.20
 cryptography==50.0.0
+psycopg[binary]==3.2.3
