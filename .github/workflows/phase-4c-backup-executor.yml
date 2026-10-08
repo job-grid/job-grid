@@ -1,0 +1,54 @@
+name: Phase 4C backup executor validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-executor-tests:
+    name: Backup executor / synthetic security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned backup dependencies
+        run: python -m pip install -r scripts/phase4c/requirements-backup.txt
+
+      - name: Syntax check
+        run: python -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/backup_executor.py scripts/phase4c/test_phase4c_tooling.py scripts/phase4c/test_backup_executor.py
+
+      - name: Unit and security tests
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/phase4c python -m unittest discover -s scripts/phase4c -p 'test_*.py' -v
+
+      - name: Static production-safety gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -n --fixed-strings "pg_restore" scripts/phase4c/backup_executor.py
+          ! grep -n --fixed-strings "supabase db restore" scripts/phase4c/backup_executor.py
+          ! grep -n --fixed-strings "aws s3" scripts/phase4c/backup_executor.py
+          ! grep -n --fixed-strings "wrangler" scripts/phase4c/backup_executor.py
+          ! grep -R -n --fixed-strings "python -m backup_executor --backup" .github
+          ! grep -R -n --fixed-strings 'secrets.BACKUP_' .github
+          echo "Production database: NOT ACCESSED"
+          echo "Real backup: NOT CREATED"
+          echo "Restore: NOT RUN"
+
+      - name: Dependency audit
+        run: python -m pip check
