@@ -1,6 +1,12 @@
 name: Phase 4C permanent preflight validation
 
 on:
+  push:
+    branches:
+      - "feat/phase4c-permanent-preflight"
+    paths:
+      - "scripts/phase4c/**"
+      - ".github/workflows/phase4c-permanent-preflight-validation.yml"
   pull_request:
     branches: [main]
     paths:
