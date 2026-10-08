@@ -44,6 +44,10 @@ from phase4c_tooling import (
 
 
 BACKUP_BUCKET = "job-grid-backups"
+APPROVED_PRODUCTION_POSTGRES_HOST = "db.tnrdovdhlwitjzecduxa.supabase.co"
+APPROVED_R2_ENDPOINT_URL = "https://6952ddf46cc39605326ecf0583cde02e.r2.cloudflarestorage.com"
+PROTECTED_EXECUTION_ENVIRONMENT = "phase4c-production-approved"
+PROTECTED_AUTHORIZATION_ENV = "PHASE4C_BACKUP_AUTHORIZED"
 BACKUP_SOURCE_PREFIX = "BACKUP_SOURCE_POSTGRES_"
 R2_PREFIX = "BACKUP_R2_"
 ENCRYPTION_ENV = "BACKUP_ENCRYPTION_KEY"
@@ -131,12 +135,14 @@ class SourcePostgresConfig:
     major_version: str = "17"
 
     def validate(self) -> None:
-        if self.project_ref != PRODUCTION_PROJECT_REF:
-            raise SafetyError("Backup source must be the approved production project.")
-        if not all((self.host, self.port, self.database, self.username, self.password)):
-            raise SafetyError("All backup source PostgreSQL credentials are required.")
         if self.project_ref == RECOVERY_PROJECT_REF:
             raise SafetyError("Recovery project cannot be a backup source.")
+        if self.project_ref != PRODUCTION_PROJECT_REF:
+            raise SafetyError("Backup source must be the approved production project.")
+        if self.host != APPROVED_PRODUCTION_POSTGRES_HOST:
+            raise SafetyError("Backup source PostgreSQL host is not the approved production host.")
+        if not all((self.host, self.port, self.database, self.username, self.password)):
+            raise SafetyError("All backup source PostgreSQL credentials are required.")
 
 
 @dataclass(frozen=True)
@@ -149,6 +155,8 @@ class R2Config:
     def validate(self) -> None:
         if not all((self.endpoint_url, self.access_key_id, self.secret_access_key)):
             raise SafetyError("Dedicated backup R2 credentials and endpoint are required.")
+        if self.endpoint_url != APPROVED_R2_ENDPOINT_URL:
+            raise SafetyError("Backup R2 endpoint is not the approved private endpoint.")
         if self.bucket != BACKUP_BUCKET:
             raise SafetyError("Backup R2 bucket does not match the approved private bucket.")
         if "AWS_ACCESS_KEY_ID" in os.environ or "AWS_SECRET_ACCESS_KEY" in os.environ:
@@ -233,8 +241,8 @@ def _sha256_path(path: Path) -> str:
     return sha256_file(path)
 
 
-def _write_checksum(path: Path, digest: str) -> None:
-    path.write_text(f"{digest}  {path.stem}\n", encoding="utf-8")
+def _write_checksum(path: Path, digest: str, artifact_name: str) -> None:
+    path.write_text(f"{digest}  {artifact_name}\n", encoding="utf-8")
 
 
 def _encrypt_file(source: Path, destination: Path, key: bytes) -> None:
@@ -307,6 +315,26 @@ def _upload_and_verify(
         raise BackupError(f"R2 read-back checksum mismatch for {object_key}.")
 
 
+def _delete_and_verify(client: R2Client, *, bucket: str, key: str) -> None:
+    try:
+        client.delete_object(Bucket=bucket, Key=key)
+    except Exception as exc:
+        raise BackupError(f"Failed to reconcile R2 object {key}.") from exc
+    if _object_exists(client, bucket=bucket, key=key):
+        raise BackupError(f"R2 object {key} remains after reconciliation.")
+
+
+def _reconcile_objects(client: R2Client, *, bucket: str, keys: list[str]) -> None:
+    errors = []
+    for key in reversed(dict.fromkeys(keys)):
+        try:
+            _delete_and_verify(client, bucket=bucket, key=key)
+        except BackupError as exc:
+            errors.append(str(exc))
+    if errors:
+        raise BackupError("Backup reconciliation failed: " + "; ".join(errors))
+
+
 def _build_dump_command(source: SourcePostgresConfig, output_path: Path) -> list[str]:
     # Password is supplied only through PGPASSWORD in the child environment.
     return [
@@ -324,9 +352,21 @@ def _build_dump_command(source: SourcePostgresConfig, output_path: Path) -> list
 
 
 def _child_env(source: SourcePostgresConfig) -> dict[str, str]:
-    env = os.environ.copy()
-    env["PGPASSWORD"] = source.password
-    return env
+    return {
+        "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+        "LANG": os.environ.get("LANG", "C"),
+        "LC_ALL": os.environ.get("LC_ALL", "C"),
+        "PGPASSWORD": source.password,
+    }
+
+
+def assert_backup_authorized() -> None:
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        raise SafetyError("Real backup execution requires GitHub Actions.")
+    if os.environ.get("GITHUB_ENVIRONMENT") != PROTECTED_EXECUTION_ENVIRONMENT:
+        raise SafetyError("Real backup execution requires the protected production environment.")
+    if os.environ.get(PROTECTED_AUTHORIZATION_ENV) != "true":
+        raise SafetyError("Protected backup authorization is not present.")
 
 
 class BackupExecutor:
@@ -357,7 +397,10 @@ class BackupExecutor:
         work_root.mkdir(parents=False, exist_ok=False)
         plaintext = work_root / "database.dump"
         encrypted_dump = work_root / ARTIFACT_DUMP
+        encrypted_dump_sha = work_root / ARTIFACT_DUMP_SHA
         encrypted_manifest = work_root / ARTIFACT_MANIFEST
+        encrypted_manifest_sha = work_root / ARTIFACT_MANIFEST_SHA
+        created_objects: list[str] = []
         try:
             self._runner.run(
                 _build_dump_command(self._config.source, plaintext),
@@ -372,6 +415,7 @@ class BackupExecutor:
 
             db_sha = _sha256_path(encrypted_dump)
             db_size = encrypted_dump.stat().st_size
+            _write_checksum(encrypted_dump_sha, db_sha, ARTIFACT_DUMP)
             manifest = build_manifest(
                 backup_id=backup_id,
                 created_at=self._clock().isoformat(),
@@ -389,24 +433,24 @@ class BackupExecutor:
 
             manifest_sha = _sha256_path(encrypted_manifest)
             manifest_size = encrypted_manifest.stat().st_size
-            dump_key = encrypted_object_key(backup_id, ARTIFACT_DUMP)
-            manifest_key = encrypted_object_key(backup_id, ARTIFACT_MANIFEST)
+            _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
 
-            # Only encrypted files cross the R2 boundary.
-            _upload_and_verify(
-                self._r2,
-                bucket=self._config.r2.bucket,
-                object_key=dump_key,
-                path=encrypted_dump,
-                expected_sha256=db_sha,
-            )
-            _upload_and_verify(
-                self._r2,
-                bucket=self._config.r2.bucket,
-                object_key=manifest_key,
-                path=encrypted_manifest,
-                expected_sha256=manifest_sha,
-            )
+            artifacts = [
+                (ARTIFACT_DUMP, encrypted_dump, db_sha),
+                (ARTIFACT_DUMP_SHA, encrypted_dump_sha, _sha256_path(encrypted_dump_sha)),
+                (ARTIFACT_MANIFEST, encrypted_manifest, manifest_sha),
+                (ARTIFACT_MANIFEST_SHA, encrypted_manifest_sha, _sha256_path(encrypted_manifest_sha)),
+            ]
+            for artifact_name, path, digest in artifacts:
+                key = encrypted_object_key(backup_id, artifact_name)
+                _upload_and_verify(
+                    self._r2,
+                    bucket=self._config.r2.bucket,
+                    object_key=key,
+                    path=path,
+                    expected_sha256=digest,
+                    created_objects=created_objects,
+                )
 
             return BackupResult(
                 backup_id=backup_id,
@@ -414,9 +458,16 @@ class BackupExecutor:
                 manifest_artifact_sha256=manifest_sha,
                 database_artifact_size=db_size,
                 manifest_artifact_size=manifest_size,
-                database_object_key=dump_key,
-                manifest_object_key=manifest_key,
+                database_object_key=encrypted_object_key(backup_id, ARTIFACT_DUMP),
+                manifest_object_key=encrypted_object_key(backup_id, ARTIFACT_MANIFEST),
             )
+        except Exception as exc:
+            if created_objects:
+                try:
+                    _reconcile_objects(self._r2, bucket=self._config.r2.bucket, keys=created_objects)
+                except BackupError as cleanup_exc:
+                    raise BackupError(f"{exc}; {cleanup_exc}") from exc
+            raise
         finally:
             # Best-effort cleanup only; this is not guaranteed secure deletion.
             shutil.rmtree(work_root, ignore_errors=True)
@@ -436,6 +487,7 @@ def main() -> int:
 
     if not args.backup:
         parser.error("No action selected. Backup execution requires explicit --backup authorization.")
+    assert_backup_authorized()
     config = BackupConfig.from_environment(work_dir=Path(tempfile.gettempdir()))
     result = BackupExecutor(config).create_backup()
     print(json.dumps({
