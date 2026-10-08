@@ -305,7 +305,8 @@ class BackupExecutorTests(unittest.TestCase):
                     "local_io",
                     "unknown",
                 })
-                if stderr:\n                    self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
+                if stderr:
+                    self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
 
     def test_pg_dump_failure_classification_accepts_case_and_whitespace_variations(self):
         cases = {
