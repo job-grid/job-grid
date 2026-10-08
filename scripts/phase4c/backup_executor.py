@@ -249,6 +249,20 @@ def _encrypt_file(source: Path, destination: Path, key: bytes) -> None:
         dst.write(encryptor.tag)
 
 
+def _object_exists(client: R2Client, *, bucket: str, key: str) -> bool:
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+        return True
+    except KeyError:
+        return False
+    except ClientError as exc:
+        status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        code = exc.response.get("Error", {}).get("Code")
+        if status == 404 or code in {"404", "NoSuchKey", "NotFound"}:
+            return False
+        raise BackupError("Unable to verify whether the R2 destination object exists.") from exc
+
+
 def _upload_and_verify(
     client: R2Client,
     *,
@@ -257,7 +271,7 @@ def _upload_and_verify(
     path: Path,
     expected_sha256: str,
 ) -> None:
-    if client.head_object(Bucket=bucket, Key=object_key):
+    if _object_exists(client, bucket=bucket, key=object_key):
         raise BackupError(f"Refusing to overwrite existing backup object {object_key}.")
     with path.open("rb") as body:
         client.put_object(
