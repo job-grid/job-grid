@@ -92,19 +92,24 @@ def check_client(major: str) -> None:
 
 
 def check_dns(host: str) -> None:
+    """Resolve the pinned hostname using every address family available.
+
+    The database hostname pin is intentionally unchanged. AF_UNSPEC-style
+    resolution avoids incorrectly rejecting an IPv6-only direct endpoint
+    during a DNS-only check; actual socket reachability is tested separately.
+    """
     if host != APPROVED_HOST:
         _fail(PreflightCode.DNS_FAILED)
     try:
-        result = subprocess.run(
-            ["getent", "ahostsv4", APPROVED_HOST],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=PREFLIGHT_TIMEOUT,
+        addresses = socket.getaddrinfo(
+            host,
+            None,
+            family=socket.AF_UNSPEC,
+            type=socket.SOCK_STREAM,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, ValueError, socket.gaierror, TimeoutError):
         _fail(PreflightCode.DNS_FAILED)
-    if result.returncode != 0:
+    if not addresses:
         _fail(PreflightCode.DNS_FAILED)
 
 
