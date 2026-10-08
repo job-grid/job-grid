@@ -30,13 +30,24 @@ from backup_executor import (
     _upload_and_verify,
     assert_backup_authorized,
     assert_pg_dump_major_version,
-    classify_pg_dump_failure,
-    classify_pg_dump_failure_detail,
-    pg_dump_failure_diagnostic,
     assert_no_restore_target,
     main,
 )
 from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, SafetyError
+from backup_preflight import (
+    PreflightCode,
+    PreflightFailure,
+    PreflightRunner,
+    check_authentication,
+    check_backup_readability,
+    check_database_access,
+    check_dns,
+    check_encryption,
+    check_filesystem,
+    check_r2,
+    check_tcp,
+    check_tls,
+)
 
 
 class FakeRunner:
@@ -63,7 +74,10 @@ class FakeR2:
     def __init__(self):
         self.objects = {}
 
-    def head_bucket(self, *, Bucket):\n        return {}\n\n    def head_object(self, *, Bucket, Key):
+    def head_bucket(self, *, Bucket):
+        return {}
+
+    def head_object(self, *, Bucket, Key):
         if Key not in self.objects:
             raise KeyError(Key)
         return {"ContentLength": len(self.objects[Key])}
@@ -102,7 +116,20 @@ class FailingR2(FakeR2):
         return super().get_object(Bucket=Bucket, Key=Key)
 
 
-\n\nclass FakePreflight:\n    def __init__(self, failure=None):\n        self.failure = failure\n        self.calls = []\n\n    def run(self, config):\n        self.calls.append("PREFLIGHT")\n        if self.failure is not None:\n            raise PreflightFailure(self.failure)\n\n\nclass BackupExecutorTests(unittest.TestCase):
+
+
+class FakePreflight:
+    def __init__(self, failure=None):
+        self.failure = failure
+        self.calls = []
+
+    def run(self, config):
+        self.calls.append("PREFLIGHT")
+        if self.failure is not None:
+            raise PreflightFailure(self.failure)
+
+
+class BackupExecutorTests(unittest.TestCase):
     def make_config(
         self,
         root,
@@ -140,7 +167,82 @@ class FailingR2(FakeR2):
             ),
         ).create_backup()
 
-\n    def test_preflight_runs_before_pg_dump_and_r2_upload(self):\n        with tempfile.TemporaryDirectory() as temp:\n            preflight = FakePreflight()\n            runner = FakeRunner()\n            r2 = FakeR2()\n            BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()\n            self.assertEqual(preflight.calls, ["PREFLIGHT"])\n            self.assertEqual(len(runner.calls), 1)\n            self.assertEqual(len(r2.objects), 4)\n\n    def test_each_preflight_failure_blocks_pg_dump_and_r2(self):\n        for failure in [code.value for code in PreflightCode]:\n            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:\n                runner = FakeRunner(); r2 = FakeR2(); preflight = FakePreflight(failure)\n                with self.assertRaises(PreflightFailure) as ctx:\n                    BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()\n                self.assertEqual(str(ctx.exception), failure)\n                self.assertEqual(runner.calls, [])\n                self.assertEqual(r2.objects, {})\n\n    def test_preflight_stage_order_is_fixed(self):\n        import backup_preflight\n        calls=[]\n        functions=["check_postgres_client","check_dns","check_tcp","check_tls","check_authentication","check_database_access","check_backup_readability","check_filesystem","check_r2","check_encryption"]\n        with tempfile.TemporaryDirectory() as temp:\n            config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(temp))\n            patches=[patch.object(backup_preflight,name,side_effect=lambda *a,_n=name,**k:calls.append(_n)) for name in functions]\n            for p in patches:p.start()\n            try: PreflightRunner(r2_client=FakeR2()).run(config)\n            finally:\n                for p in reversed(patches):p.stop()\n        self.assertEqual(calls,functions)\n\n    def test_network_timeouts_have_fixed_codes(self):\n        import subprocess as subprocess_module\n        with patch("backup_preflight.subprocess.run", side_effect=subprocess_module.TimeoutExpired(["getent"],5)):\n            with self.assertRaises(PreflightFailure) as ctx: check_dns(APPROVED_PRODUCTION_POSTGRES_HOST)\n        self.assertEqual(str(ctx.exception),PreflightCode.DNS_FAILED.value)\n        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):\n            with self.assertRaises(PreflightFailure) as ctx: check_tcp(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")\n        self.assertEqual(str(ctx.exception),PreflightCode.TCP_FAILED.value)\n        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):\n            with self.assertRaises(PreflightFailure) as ctx: check_tls(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")\n        self.assertEqual(str(ctx.exception),PreflightCode.TLS_FAILED.value)\n\n    def test_database_stage_failures_are_fixed_codes(self):\n        import backup_preflight\n        config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(tempfile.gettempdir()))\n        for fn,code in ((check_authentication,PreflightCode.AUTH_FAILED),(check_database_access,PreflightCode.DATABASE_ACCESS_FAILED),(check_backup_readability,PreflightCode.READABILITY_FAILED)):\n            with self.subTest(code=code.value),patch("backup_preflight._connect_postgres",side_effect=PreflightFailure(code)):\n                with self.assertRaises(PreflightFailure) as ctx: fn(config)\n                self.assertEqual(str(ctx.exception),code.value)\n\n    def test_filesystem_insufficient_space_is_fail_closed(self):\n        with tempfile.TemporaryDirectory() as temp,patch("backup_preflight.MIN_FREE_SPACE_BYTES",10**30):\n            with self.assertRaises(PreflightFailure) as ctx: check_filesystem(Path(temp))\n        self.assertEqual(str(ctx.exception),PreflightCode.FILESYSTEM_FAILED.value)\n\n    def test_r2_preflight_failure_is_fixed_and_controlled(self):\n        class DeniedR2(FakeR2):\n            def head_bucket(self,*,Bucket): raise RuntimeError("SECRET-R2-DIAGNOSTIC")\n        with self.assertRaises(PreflightFailure) as ctx: check_r2(DeniedR2(),bucket=BACKUP_BUCKET)\n        self.assertEqual(str(ctx.exception),PreflightCode.R2_FAILED.value)\n        self.assertNotIn("SECRET-R2-DIAGNOSTIC",str(ctx.exception))\n\n    def test_encryption_invalid_key_is_fixed(self):\n        with self.assertRaises(PreflightFailure) as ctx: check_encryption(b"bad")\n        self.assertEqual(str(ctx.exception),PreflightCode.ENCRYPTION_FAILED.value)\n\n    def test_preflight_does_not_put_credentials_in_dump_argv(self):\n        config=self.make_config(Path(tempfile.gettempdir())); argv=_build_dump_command(config.source,Path("/tmp/synthetic.dump"))\n        self.assertNotIn(config.source.password,argv)\n        self.assertNotIn("postgresql://"," ".join(argv))\n\n    def test_end_to_end_has_complete_four_object_artifact_set(self):
+
+    def test_preflight_runs_before_pg_dump_and_r2_upload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            preflight = FakePreflight()
+            runner = FakeRunner()
+            r2 = FakeR2()
+            BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()
+            self.assertEqual(preflight.calls, ["PREFLIGHT"])
+            self.assertEqual(len(runner.calls), 1)
+            self.assertEqual(len(r2.objects), 4)
+
+    def test_each_preflight_failure_blocks_pg_dump_and_r2(self):
+        for failure in [code.value for code in PreflightCode]:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:
+                runner = FakeRunner(); r2 = FakeR2(); preflight = FakePreflight(failure)
+                with self.assertRaises(PreflightFailure) as ctx:
+                    BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()
+                self.assertEqual(str(ctx.exception), failure)
+                self.assertEqual(runner.calls, [])
+                self.assertEqual(r2.objects, {})
+
+    def test_preflight_stage_order_is_fixed(self):
+        import backup_preflight
+        calls=[]
+        functions=["check_postgres_client","check_dns","check_tcp","check_tls","check_authentication","check_database_access","check_backup_readability","check_filesystem","check_r2","check_encryption"]
+        with tempfile.TemporaryDirectory() as temp:
+            config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(temp))
+            patches=[patch.object(backup_preflight,name,side_effect=lambda *a,_n=name,**k:calls.append(_n)) for name in functions]
+            for p in patches:p.start()
+            try: PreflightRunner(r2_client=FakeR2()).run(config)
+            finally:
+                for p in reversed(patches):p.stop()
+        self.assertEqual(calls,functions)
+
+    def test_network_timeouts_have_fixed_codes(self):
+        import subprocess as subprocess_module
+        with patch("backup_preflight.subprocess.run", side_effect=subprocess_module.TimeoutExpired(["getent"],5)):
+            with self.assertRaises(PreflightFailure) as ctx: check_dns(APPROVED_PRODUCTION_POSTGRES_HOST)
+        self.assertEqual(str(ctx.exception),PreflightCode.DNS_FAILED.value)
+        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):
+            with self.assertRaises(PreflightFailure) as ctx: check_tcp(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")
+        self.assertEqual(str(ctx.exception),PreflightCode.TCP_FAILED.value)
+        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):
+            with self.assertRaises(PreflightFailure) as ctx: check_tls(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")
+        self.assertEqual(str(ctx.exception),PreflightCode.TLS_FAILED.value)
+
+    def test_database_stage_failures_are_fixed_codes(self):
+        import backup_preflight
+        config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(tempfile.gettempdir()))
+        for fn,code in ((check_authentication,PreflightCode.AUTH_FAILED),(check_database_access,PreflightCode.DATABASE_ACCESS_FAILED),(check_backup_readability,PreflightCode.READABILITY_FAILED)):
+            with self.subTest(code=code.value),patch("backup_preflight._connect_postgres",side_effect=PreflightFailure(code)):
+                with self.assertRaises(PreflightFailure) as ctx: fn(config)
+                self.assertEqual(str(ctx.exception),code.value)
+
+    def test_filesystem_insufficient_space_is_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temp,patch("backup_preflight.MIN_FREE_SPACE_BYTES",10**30):
+            with self.assertRaises(PreflightFailure) as ctx: check_filesystem(Path(temp))
+        self.assertEqual(str(ctx.exception),PreflightCode.FILESYSTEM_FAILED.value)
+
+    def test_r2_preflight_failure_is_fixed_and_controlled(self):
+        class DeniedR2(FakeR2):
+            def head_bucket(self,*,Bucket): raise RuntimeError("SECRET-R2-DIAGNOSTIC")
+        with self.assertRaises(PreflightFailure) as ctx: check_r2(DeniedR2(),bucket=BACKUP_BUCKET)
+        self.assertEqual(str(ctx.exception),PreflightCode.R2_FAILED.value)
+        self.assertNotIn("SECRET-R2-DIAGNOSTIC",str(ctx.exception))
+
+    def test_encryption_invalid_key_is_fixed(self):
+        with self.assertRaises(PreflightFailure) as ctx: check_encryption(b"bad")
+        self.assertEqual(str(ctx.exception),PreflightCode.ENCRYPTION_FAILED.value)
+
+    def test_preflight_does_not_put_credentials_in_dump_argv(self):
+        config=self.make_config(Path(tempfile.gettempdir())); argv=_build_dump_command(config.source,Path("/tmp/synthetic.dump"))
+        self.assertNotIn(config.source.password,argv)
+        self.assertNotIn("postgresql://"," ".join(argv))
+
+    def test_end_to_end_has_complete_four_object_artifact_set(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             r2 = FakeR2()
@@ -157,11 +259,13 @@ class FailingR2(FakeR2):
             )
             self.assertEqual(
                 r2.objects[prefix + ARTIFACT_DUMP_SHA].decode(),
-                f"{result.database_artifact_sha256}  {ARTIFACT_DUMP}\n",
+                f"{result.database_artifact_sha256}  {ARTIFACT_DUMP}
+",
             )
             self.assertEqual(
                 r2.objects[prefix + ARTIFACT_MANIFEST_SHA].decode(),
-                f"{result.manifest_artifact_sha256}  {ARTIFACT_MANIFEST}\n",
+                f"{result.manifest_artifact_sha256}  {ARTIFACT_MANIFEST}
+",
             )
             self.assertTrue(r2.objects[prefix + ARTIFACT_DUMP].startswith(b"JG4C"))
             self.assertTrue(r2.objects[prefix + ARTIFACT_MANIFEST].startswith(b"JG4C"))
