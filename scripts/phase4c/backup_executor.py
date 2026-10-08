@@ -25,12 +25,14 @@ from typing import BinaryIO, Mapping, Protocol
 
 import boto3
 from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from phase4c_tooling import (
     AES_GCM_NONCE_BYTES,
     PRODUCTION_PROJECT_REF,
     RECOVERY_PROJECT_REF,
+    RestoreTarget,
     SafetyError,
     assert_restore_target,
     build_manifest,
@@ -170,6 +172,7 @@ class BackupConfig:
             database=_required("BACKUP_SOURCE_POSTGRES_DB"),
             username=_required("BACKUP_SOURCE_POSTGRES_USER"),
             password=_required("BACKUP_SOURCE_POSTGRES_PASSWORD"),
+            major_version=os.environ.get("BACKUP_SOURCE_POSTGRES_MAJOR_VERSION", "17"),
         )
         r2 = R2Config(
             endpoint_url=_required("BACKUP_R2_ENDPOINT_URL"),
@@ -331,13 +334,13 @@ class BackupExecutor:
 
     def create_backup(self) -> BackupResult:
         backup_id = _new_backup_id(self._clock())
+        self._config.work_dir.mkdir(parents=True, exist_ok=True)
         work_root = self._config.work_dir / f"phase4c-{backup_id}"
-        work_root.mkdir(parents=True, exist_ok=False)
+        work_root.mkdir(parents=False, exist_ok=False)
         plaintext = work_root / "database.dump"
         encrypted_dump = work_root / ARTIFACT_DUMP
         encrypted_manifest = work_root / ARTIFACT_MANIFEST
         try:
-            self._config.work_dir.mkdir(parents=True, exist_ok=True)
             self._runner.run(
                 _build_dump_command(self._config.source, plaintext),
                 env=_child_env(self._config.source),
@@ -355,7 +358,7 @@ class BackupExecutor:
                 backup_id=backup_id,
                 created_at=self._clock().isoformat(),
                 source_project_ref=self._config.source.project_ref,
-                postgres_major_version="17",
+                postgres_major_version=self._config.source.major_version,
                 artifacts=[
                     {"name": ARTIFACT_DUMP, "size_bytes": db_size, "sha256": db_sha}
                 ],
@@ -404,7 +407,7 @@ class BackupExecutor:
 def assert_no_restore_target(target_project_ref: str) -> None:
     """Shared hard guard for any future restore caller."""
     assert_restore_target(
-        type("Target", (), {"project_ref": target_project_ref, "host": "validated-later"})()
+        RestoreTarget(project_ref=target_project_ref, host="validated-later")
     )
 
 
