@@ -297,10 +297,11 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(str(ctx.exception), "RECOVERY_VALIDATION_FAILED")
         self.assertNotIn("DO_NOT_LEAK", str(ctx.exception))
 
-    def test_no_production_recovery_environment_variable(self):
-        source = Path("scripts/phase4c/recovery_procedure.py").read_text(encoding="utf-8")
+    def test_recovery_workflow_has_no_production_credentials(self):
+        source = Path(".github/workflows/phase4c-isolated-recovery-test.yml").read_text(encoding="utf-8")
         self.assertNotIn("BACKUP_SOURCE_POSTGRES_PASSWORD", source)
         self.assertNotIn("PRODUCTION_POSTGRES_PASSWORD", source)
+        self.assertIn("RECOVERY_POSTGRES_PASSWORD", source)
 
 
 if __name__ == "__main__":
