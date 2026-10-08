@@ -400,6 +400,24 @@ class BackupExecutorTests(unittest.TestCase):
         self.assertNotIn("schedule.every", source.lower())
         self.assertNotIn("cron", source.lower())
 
+    def test_protected_workflow_selects_postgresql_17_deterministically(self):
+        workflow = (
+            Path(__file__).parents[2]
+            / ".github"
+            / "workflows"
+            / "phase4c-protected-production-backup.yml"
+        )
+        content = workflow.read_text(encoding="utf-8")
+        self.assertIn('sudo apt-get install --no-install-recommends -y postgresql-client-17', content)
+        self.assertIn('export PATH="/usr/lib/postgresql/17/bin:$PATH"', content)
+        self.assertIn('resolved_pg_dump="$(command -v pg_dump)"', content)
+        self.assertIn('test "$resolved_pg_dump" = "/usr/lib/postgresql/17/bin/pg_dump"', content)
+        self.assertIn('echo "pg_dump version: $(pg_dump --version)"', content)
+        self.assertIn(
+            'PYTHONPATH=scripts/phase4c python -m backup_executor --check-pg-dump-version',
+            content,
+        )
+
     def test_ci_contains_no_secret_references_or_real_backup_invocation(self):
         workflow = (
             Path(__file__).parents[2]
