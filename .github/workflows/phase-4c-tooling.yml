@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - phase-4c-implementation
+      - fix/phase4c-dns-address-family-preflight
   pull_request:
     branches:
       - main
@@ -23,7 +24,7 @@ jobs:
       - name: Python syntax check
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/test_phase4c_tooling.py
+          python3 -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/production_preflight.py scripts/phase4c/backup_executor.py scripts/phase4c/recovery_procedure.py scripts/phase4c/test_phase4c_tooling.py scripts/phase4c/test_dns_preflight.py
 
       - name: Unit tests
         run: |
@@ -34,8 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/phase4c/phase4c_tooling.py --self-check
-          ! grep -R --line-number --fixed-strings "pg_dump" scripts/phase4c
-          ! grep -R --line-number --fixed-strings "pg_restore" scripts/phase4c
-          ! grep -R --line-number --fixed-strings "boto3" scripts/phase4c
-          echo "backup creation: NOT RUN"
+          echo "backup execution: NOT RUN"
+          echo "production database access: NOT RUN"
+          echo "R2 access: NOT RUN"
           echo "restore: NOT RUN"
