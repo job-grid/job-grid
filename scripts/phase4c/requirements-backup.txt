@@ -1,0 +1,2 @@
+boto3==1.42.20
+cryptography==50.0.0
