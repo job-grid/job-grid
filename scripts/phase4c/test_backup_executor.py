@@ -284,7 +284,7 @@ class BackupExecutorTests(unittest.TestCase):
             b"pg_dump: error: query failed: ERROR: relation jobs does not exist": "server_query",
             b"pg_dump: error: server closed the connection unexpectedly": "server_error",
             b"pg_dump: error: unrecognized option '--bad'": "option_usage",
-            b"pg_dump: error: could not open output file "/tmp/dump"": "local_io",
+            b'pg_dump: error: could not open output file "/tmp/dump"': "local_io",
             b"pg_dump: error: could not write to output file: No space left on device": "local_io",
             b"": "unknown",
             b"something completely unrecognized": "unknown",
