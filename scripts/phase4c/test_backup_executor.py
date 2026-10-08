@@ -238,6 +238,7 @@ class BackupExecutorTests(unittest.TestCase):
             {
                 "GITHUB_ACTIONS": "true",
                 "GITHUB_ENVIRONMENT": PROTECTED_EXECUTION_ENVIRONMENT,
+                "GITHUB_EVENT_NAME": "workflow_dispatch",
                 PROTECTED_AUTHORIZATION_ENV: "false",
             },
             clear=True,
@@ -250,11 +251,25 @@ class BackupExecutorTests(unittest.TestCase):
             {
                 "GITHUB_ACTIONS": "true",
                 "GITHUB_ENVIRONMENT": PROTECTED_EXECUTION_ENVIRONMENT,
+                "GITHUB_EVENT_NAME": "workflow_dispatch",
                 PROTECTED_AUTHORIZATION_ENV: "true",
             },
             clear=True,
         ):
             assert_backup_authorized()
+
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_ACTIONS": "true",
+                "GITHUB_ENVIRONMENT": PROTECTED_EXECUTION_ENVIRONMENT,
+                "GITHUB_EVENT_NAME": "pull_request",
+                PROTECTED_AUTHORIZATION_ENV: "true",
+            },
+            clear=True,
+        ):
+            with self.assertRaises(SafetyError):
+                assert_backup_authorized()
 
     def test_cli_backup_requires_protected_authorization(self):
         with patch.dict(os.environ, {}, clear=True), patch.object(sys, "argv", ["backup_executor.py", "--backup"]):
