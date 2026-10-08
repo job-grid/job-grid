@@ -203,13 +203,50 @@ def classify_pg_dump_failure(stderr: bytes | str) -> str:
     return "unknown"
 
 
+def classify_pg_dump_failure_detail(stderr: bytes | str) -> str:
+    """Return a fixed diagnostic detail label; never return stderr content."""
+    if isinstance(stderr, bytes):
+        message = stderr.decode("utf-8", errors="replace").lower()
+    else:
+        message = stderr.lower()
+
+    detail_signatures = (
+        ("server_closed_connection", "server closed the connection unexpectedly"),
+        ("connection_lost", "connection to server was lost"),
+        ("connection_send_failed", "could not send data to server"),
+        ("connection_receive_failed", "could not receive data from server"),
+        ("server_version_mismatch", "server version mismatch"),
+        ("server_version_newer_than_client", "server version is newer than pg_dump"),
+        ("query_failed", "pg_dump: error: query failed:"),
+        ("output_open_failed", "could not open output file"),
+        ("output_write_failed", "could not write to output file"),
+        ("disk_full", "no space left on device"),
+        ("io_error", "input/output error"),
+        ("authentication_failed", "password authentication failed"),
+        ("no_password", "no password supplied"),
+        ("tls_certificate", "certificate verify failed"),
+        ("ssl_error", "ssl error"),
+        ("connection_refused", "connection refused"),
+        ("connection_timeout", "connection timed out"),
+        ("dns_failure", "could not translate host name"),
+        ("option_usage", "unrecognized option"),
+    )
+    for detail, signature in detail_signatures:
+        if signature in message:
+            return detail
+    if "pg_dump: error:" in message or "pg_dump: fatal:" in message:
+        return "generic_pg_dump_error"
+    return "unclassified"
+
+
 def pg_dump_failure_diagnostic(stderr: bytes | str, exit_code: int) -> str:
     """Return only safe pg_dump failure diagnostics; never return stderr content."""
     raw = stderr if isinstance(stderr, bytes) else stderr.encode("utf-8")
     category = classify_pg_dump_failure(raw)
+    detail = classify_pg_dump_failure_detail(raw)
     fingerprint = hashlib.sha256(raw).hexdigest()
     return (
-        f"pg_dump failed: category={category} exit_code={exit_code} "
+        f"pg_dump failed: category={category} detail={detail} exit_code={exit_code} "
         f"stderr_sha256={fingerprint} stderr_bytes={len(raw)}"
     )
 
