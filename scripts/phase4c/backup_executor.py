@@ -14,6 +14,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -52,6 +53,7 @@ BACKUP_SOURCE_PREFIX = "BACKUP_SOURCE_POSTGRES_"
 R2_PREFIX = "BACKUP_R2_"
 ENCRYPTION_ENV = "BACKUP_ENCRYPTION_KEY"
 PG_DUMP = "pg_dump"
+PG_DUMP_VERSION_ARGUMENT = "--version"
 CHUNK_SIZE = 1024 * 1024
 ARTIFACT_DUMP = "database.dump.enc"
 ARTIFACT_MANIFEST = "manifest.json.enc"
@@ -79,12 +81,65 @@ class R2Client(Protocol):
         ...
 
 
+def _parse_pg_dump_major(version_output: str) -> str:
+    match = re.fullmatch(r"pg_dump \(PostgreSQL (\d+)(?:\.\d+)*\)\s*", version_output.strip())
+    if not match:
+        raise BackupError("Unable to determine pg_dump client major version.")
+    return match.group(1)
+
+
+def assert_pg_dump_major_version(expected_major: str, version_output: str) -> None:
+    expected = expected_major.strip()
+    if not expected.isdigit():
+        raise SafetyError("Approved PostgreSQL major version is invalid.")
+    installed = _parse_pg_dump_major(version_output)
+    if installed != expected:
+        raise SafetyError("PostgreSQL client major version does not match the approved source major version.")
+
+
+def verify_pg_dump_major_version(expected_major: str) -> None:
+    try:
+        completed = subprocess.run(
+            [PG_DUMP, PG_DUMP_VERSION_ARGUMENT],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise BackupError("pg_dump is not installed on the execution host.") from exc
+    if completed.returncode != 0:
+        raise BackupError("Unable to determine pg_dump client version.")
+    assert_pg_dump_major_version(expected_major, completed.stdout)
+
+
+def classify_pg_dump_failure(stderr: str) -> str:
+    message = stderr.lower()
+    if "password authentication failed" in message or "authentication failed" in message:
+        return "authentication"
+    if "ssl" in message and ("error" in message or "failed" in message or "required" in message):
+        return "tls"
+    if "server version" in message and "pg_dump version" in message:
+        return "server_compatibility"
+    if "permission denied" in message or "must be owner" in message or "not authorized" in message:
+        return "authorization"
+    if "could not connect" in message or "connection refused" in message or "connection timed out" in message:
+        return "connection"
+    if "unrecognized option" in message or "invalid option" in message or "usage:" in message:
+        return "option_or_usage"
+    if "could not open" in message or "no space left on device" in message or "input/output error" in message:
+        return "local_io"
+    return "unknown"
+
+
 class SubprocessCommandRunner:
     """Runs pg_dump without placing the database password in argv."""
 
     def run(self, argv: list[str], *, env: Mapping[str, str], output_path: Path) -> None:
         if argv[0] != PG_DUMP:
             raise BackupError("Only pg_dump is permitted by the production backup runner.")
+        expected_major = os.environ.get("BACKUP_SOURCE_POSTGRES_MAJOR_VERSION", "")
+        verify_pg_dump_major_version(expected_major)
         try:
             with output_path.open("wb") as output:
                 completed = subprocess.run(
@@ -97,8 +152,9 @@ class SubprocessCommandRunner:
         except FileNotFoundError as exc:
             raise BackupError("pg_dump is not installed on the execution host.") from exc
         if completed.returncode != 0:
-            # stderr can contain connection details; never forward it.
-            raise BackupError(f"pg_dump failed with exit code {completed.returncode}.")
+            # stderr can contain connection details; classify it locally and never forward it.
+            category = classify_pg_dump_failure(completed.stderr.decode("utf-8", errors="replace"))
+            raise BackupError(f"pg_dump failed: {category} (exit code {completed.returncode}).")
 
 
 class BotoR2Client:
@@ -488,7 +544,17 @@ def assert_no_restore_target(target_project_ref: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Phase 4C production logical backup executor")
     parser.add_argument("--backup", action="store_true", help="Create one backup.")
+    parser.add_argument(
+        "--check-pg-dump-version",
+        action="store_true",
+        help="Verify the installed pg_dump major version without database access.",
+    )
     args = parser.parse_args()
+
+    if args.check_pg_dump_version:
+        verify_pg_dump_major_version(_required("BACKUP_SOURCE_POSTGRES_MAJOR_VERSION"))
+        print("pg_dump major version validated.")
+        return 0
 
     if not args.backup:
         parser.error("No action selected. Backup execution requires explicit --backup authorization.")
