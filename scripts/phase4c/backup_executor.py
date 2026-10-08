@@ -217,6 +217,20 @@ def classify_pg_dump_failure_detail(stderr: bytes | str) -> str:
         ("connection_receive_failed", "could not receive data from server"),
         ("server_version_mismatch", "server version mismatch"),
         ("server_version_newer_than_client", "server version is newer than pg_dump"),
+        ("permission_denied", "permission denied"),
+        ("database_not_found", "database does not exist"),
+        ("relation_not_found", "relation does not exist"),
+        ("role_not_found", "role does not exist"),
+        ("connection_parameter_error", "invalid connection option"),
+        ("connection_parameter_error", "invalid connection parameter"),
+        ("connection_parameter_error", "invalid connection string"),
+        ("ssl_required", "ssl connection is required"),
+        ("ssl_required", "server requires ssl"),
+        ("ssl_disabled", "ssl is not enabled"),
+        ("ssl_disabled", "ssl connection is not enabled"),
+        ("unsupported_parameter", "unrecognized configuration parameter"),
+        ("unsupported_parameter", "parameter is not supported"),
+        ("unsupported_parameter", "unsupported parameter"),
         ("query_failed", "pg_dump: error: query failed:"),
         ("output_open_failed", "could not open output file"),
         ("output_write_failed", "could not write to output file"),
@@ -234,7 +248,9 @@ def classify_pg_dump_failure_detail(stderr: bytes | str) -> str:
     for detail, signature in detail_signatures:
         if signature in message:
             return detail
-    if "pg_dump: error:" in message or "pg_dump: fatal:" in message:
+    if "pg_dump: fatal:" in message:
+        return "pg_dump_fatal"
+    if "pg_dump: error:" in message:
         return "generic_pg_dump_error"
     return "unclassified"
 
