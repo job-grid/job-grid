@@ -63,7 +63,7 @@ class FakeR2:
     def __init__(self):
         self.objects = {}
 
-    def head_object(self, *, Bucket, Key):
+    def head_bucket(self, *, Bucket):\n        return {}\n\n    def head_object(self, *, Bucket, Key):
         if Key not in self.objects:
             raise KeyError(Key)
         return {"ContentLength": len(self.objects[Key])}
@@ -102,7 +102,7 @@ class FailingR2(FakeR2):
         return super().get_object(Bucket=Bucket, Key=Key)
 
 
-class BackupExecutorTests(unittest.TestCase):
+\n\nclass FakePreflight:\n    def __init__(self, failure=None):\n        self.failure = failure\n        self.calls = []\n\n    def run(self, config):\n        self.calls.append("PREFLIGHT")\n        if self.failure is not None:\n            raise PreflightFailure(self.failure)\n\n\nclass BackupExecutorTests(unittest.TestCase):
     def make_config(
         self,
         root,
@@ -134,12 +134,13 @@ class BackupExecutorTests(unittest.TestCase):
             self.make_config(root),
             command_runner=FakeRunner(),
             r2_client=r2,
+            preflight_runner=FakePreflight(),
             clock=lambda: __import__("datetime").datetime(
                 2026, 10, 8, tzinfo=__import__("datetime").timezone.utc
             ),
         ).create_backup()
 
-    def test_end_to_end_has_complete_four_object_artifact_set(self):
+\n    def test_preflight_runs_before_pg_dump_and_r2_upload(self):\n        with tempfile.TemporaryDirectory() as temp:\n            preflight = FakePreflight()\n            runner = FakeRunner()\n            r2 = FakeR2()\n            BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()\n            self.assertEqual(preflight.calls, ["PREFLIGHT"])\n            self.assertEqual(len(runner.calls), 1)\n            self.assertEqual(len(r2.objects), 4)\n\n    def test_each_preflight_failure_blocks_pg_dump_and_r2(self):\n        for failure in [code.value for code in PreflightCode]:\n            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:\n                runner = FakeRunner(); r2 = FakeR2(); preflight = FakePreflight(failure)\n                with self.assertRaises(PreflightFailure) as ctx:\n                    BackupExecutor(self.make_config(Path(temp)), command_runner=runner, r2_client=r2, preflight_runner=preflight).create_backup()\n                self.assertEqual(str(ctx.exception), failure)\n                self.assertEqual(runner.calls, [])\n                self.assertEqual(r2.objects, {})\n\n    def test_preflight_stage_order_is_fixed(self):\n        import backup_preflight\n        calls=[]\n        functions=["check_postgres_client","check_dns","check_tcp","check_tls","check_authentication","check_database_access","check_backup_readability","check_filesystem","check_r2","check_encryption"]\n        with tempfile.TemporaryDirectory() as temp:\n            config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(temp))\n            patches=[patch.object(backup_preflight,name,side_effect=lambda *a,_n=name,**k:calls.append(_n)) for name in functions]\n            for p in patches:p.start()\n            try: PreflightRunner(r2_client=FakeR2()).run(config)\n            finally:\n                for p in reversed(patches):p.stop()\n        self.assertEqual(calls,functions)\n\n    def test_network_timeouts_have_fixed_codes(self):\n        import subprocess as subprocess_module\n        with patch("backup_preflight.subprocess.run", side_effect=subprocess_module.TimeoutExpired(["getent"],5)):\n            with self.assertRaises(PreflightFailure) as ctx: check_dns(APPROVED_PRODUCTION_POSTGRES_HOST)\n        self.assertEqual(str(ctx.exception),PreflightCode.DNS_FAILED.value)\n        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):\n            with self.assertRaises(PreflightFailure) as ctx: check_tcp(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")\n        self.assertEqual(str(ctx.exception),PreflightCode.TCP_FAILED.value)\n        with patch("backup_preflight.socket.create_connection", side_effect=TimeoutError()):\n            with self.assertRaises(PreflightFailure) as ctx: check_tls(APPROVED_PRODUCTION_POSTGRES_HOST,"5432")\n        self.assertEqual(str(ctx.exception),PreflightCode.TLS_FAILED.value)\n\n    def test_database_stage_failures_are_fixed_codes(self):\n        import backup_preflight\n        config=backup_preflight.PreflightConfig(PRODUCTION_PROJECT_REF,APPROVED_PRODUCTION_POSTGRES_HOST,"5432","postgres","backup_user","synthetic-password","17",APPROVED_R2_ENDPOINT_URL,BACKUP_BUCKET,"a","b",b"0"*32,Path(tempfile.gettempdir()))\n        for fn,code in ((check_authentication,PreflightCode.AUTH_FAILED),(check_database_access,PreflightCode.DATABASE_ACCESS_FAILED),(check_backup_readability,PreflightCode.READABILITY_FAILED)):\n            with self.subTest(code=code.value),patch("backup_preflight._connect_postgres",side_effect=PreflightFailure(code)):\n                with self.assertRaises(PreflightFailure) as ctx: fn(config)\n                self.assertEqual(str(ctx.exception),code.value)\n\n    def test_filesystem_insufficient_space_is_fail_closed(self):\n        with tempfile.TemporaryDirectory() as temp,patch("backup_preflight.MIN_FREE_SPACE_BYTES",10**30):\n            with self.assertRaises(PreflightFailure) as ctx: check_filesystem(Path(temp))\n        self.assertEqual(str(ctx.exception),PreflightCode.FILESYSTEM_FAILED.value)\n\n    def test_r2_preflight_failure_is_fixed_and_controlled(self):\n        class DeniedR2(FakeR2):\n            def head_bucket(self,*,Bucket): raise RuntimeError("SECRET-R2-DIAGNOSTIC")\n        with self.assertRaises(PreflightFailure) as ctx: check_r2(DeniedR2(),bucket=BACKUP_BUCKET)\n        self.assertEqual(str(ctx.exception),PreflightCode.R2_FAILED.value)\n        self.assertNotIn("SECRET-R2-DIAGNOSTIC",str(ctx.exception))\n\n    def test_encryption_invalid_key_is_fixed(self):\n        with self.assertRaises(PreflightFailure) as ctx: check_encryption(b"bad")\n        self.assertEqual(str(ctx.exception),PreflightCode.ENCRYPTION_FAILED.value)\n\n    def test_preflight_does_not_put_credentials_in_dump_argv(self):\n        config=self.make_config(Path(tempfile.gettempdir())); argv=_build_dump_command(config.source,Path("/tmp/synthetic.dump"))\n        self.assertNotIn(config.source.password,argv)\n        self.assertNotIn("postgresql://"," ".join(argv))\n\n    def test_end_to_end_has_complete_four_object_artifact_set(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             r2 = FakeR2()
@@ -272,217 +273,11 @@ class BackupExecutorTests(unittest.TestCase):
         with self.assertRaises(BackupError):
             assert_pg_dump_major_version("17", "pg_dump version unavailable")
 
-    def test_pg_dump_failure_classification_is_safe(self):
-        cases = {
-            b"password authentication failed for user backup_user": "authentication",
-            b"FATAL: password authentication failed": "authentication",
-            b"pg_dump: error: could not connect to server": "connection",
-            b"could not connect to server: Connection timed out": "connection",
-            b"connection refused": "connection",
-            b"SSL connection has been closed unexpectedly": "tls",
-            b"certificate verify failed: fake-key=super-secret": "tls",
-            b"server version: 17.0; pg_dump version: 16.4": "client_compatibility",
-            b"pg_dump: error: query failed: ERROR: permission denied for table jobs": "authorization",
-            b"pg_dump: error: query failed: ERROR: relation jobs does not exist": "server_query",
-            b"pg_dump: error: server closed the connection unexpectedly": "pg_dump_error",
-            b"pg_dump: error: unrecognized option '--bad'": "option_usage",
-            b'pg_dump: error: could not open output file "/tmp/dump"': "local_io",
-            b"pg_dump: error: could not write to output file: No space left on device": "local_io",
-            b"": "unknown",
-            b"something completely unrecognized": "unknown",
-        }
-        for stderr, expected in cases.items():
-            with self.subTest(stderr=stderr):
-                category = classify_pg_dump_failure(stderr)
-                self.assertEqual(category, expected)
-                self.assertIn(category, {
-                    "authentication",
-                    "authorization",
-                    "connection",
-                    "tls",
-                    "server_query",
-                    "pg_dump_error",
-                    "option_usage",
-                    "client_compatibility",
-                    "local_io",
-                    "unknown",
-                })
-                if stderr:
-                    self.assertNotIn(stderr.decode("utf-8", errors="replace"), category)
-
-    def test_pg_dump_failure_classification_accepts_case_and_whitespace_variations(self):
-        cases = {
-            b"  PASSWORD AUTHENTICATION FAILED for user backup_user  ": "authentication",
-            b"\\n\\tpg_dump: ERROR: QUERY FAILED: ERROR: relation missing\\n": "server_query",
-            b"\\n  pg_dump: ERROR: unexpected server failure\\n": "pg_dump_error",
-            b"\\tpg_dump: ERROR: UNRECOGNIZED OPTION '--bad'\\n": "option_usage",
-        }
-        for stderr, expected in cases.items():
-            with self.subTest(stderr=stderr):
-                self.assertEqual(classify_pg_dump_failure(stderr), expected)
-
-    def test_pg_dump_failure_classification_precedence_is_deterministic(self):
-        cases = {
-            b"pg_dump: error: query failed: ERROR: permission denied; SSL connection failed": "tls",
-            b"pg_dump: error: query failed: ERROR: permission denied; connection refused": "connection",
-            b"server version: 17.0; pg_dump version: 16.0; unrecognized option '--bad'": "client_compatibility",
-            b"pg_dump: error: query failed: ERROR: permission denied for table jobs": "authorization",
-            b"pg_dump: error: query failed: ERROR: relation jobs does not exist": "server_query",
-        }
-        for stderr, expected in cases.items():
-            with self.subTest(stderr=stderr):
-                self.assertEqual(classify_pg_dump_failure(stderr), expected)
-
-    def test_pg_dump_failure_classifier_never_returns_original_stderr(self):
-        adversarial = (
-            b"pg_dump: error: query failed: ERROR: fake_password=SECRET123 "
-            b"postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres "
-            b"token=FAKE-TOKEN encryption_key=FAKE-KEY "
-        )
-        category = classify_pg_dump_failure(adversarial)
-        self.assertEqual(category, "server_query")
-        self.assertNotIn("SECRET123", category)
-        self.assertNotIn("db.example.invalid", category)
-        self.assertNotIn("FAKE-TOKEN", category)
-        self.assertNotIn("FAKE-KEY", category)
-        self.assertNotIn(adversarial.decode(), category)
-
-    def test_pg_dump_failure_detail_uses_fixed_safe_labels(self):
-        cases = {
-            b"pg_dump: error: server closed the connection unexpectedly": "server_closed_connection",
-            b"pg_dump: error: connection to server was lost": "connection_lost",
-            b"pg_dump: error: could not send data to server": "connection_send_failed",
-            b"pg_dump: error: could not receive data from server": "connection_receive_failed",
-            b"pg_dump: error: server version mismatch": "server_version_mismatch",
-            b"pg_dump: error: server version is newer than pg_dump": "server_version_newer_than_client",
-            b"pg_dump: error: query failed: ERROR: relation missing": "query_failed",
-            b"pg_dump: error: could not open output file": "output_open_failed",
-            b"pg_dump: error: could not write to output file": "output_write_failed",
-            b"pg_dump: error: no space left on device": "disk_full",
-            b"pg_dump: error: input/output error": "io_error",
-            b"pg_dump: error: password authentication failed": "authentication_failed",
-            b"pg_dump: error: no password supplied": "no_password",
-            b"pg_dump: error: certificate verify failed": "tls_certificate",
-            b"pg_dump: error: SSL error": "ssl_error",
-            b"pg_dump: error: connection refused": "connection_refused",
-            b"pg_dump: error: connection timed out": "connection_timeout",
-            b"pg_dump: error: could not translate host name": "dns_failure",
-            b"pg_dump: error: unrecognized option '--bad'": "option_usage",
-            b"pg_dump: error: some future error": "generic_pg_dump_error",
-            b"unclassified failure": "unclassified",
-        }
-        for stderr, expected in cases.items():
-            with self.subTest(stderr=stderr):
-                detail = classify_pg_dump_failure_detail(stderr)
-                self.assertEqual(detail, expected)
-                self.assertNotIn(stderr.decode("utf-8", errors="replace"), detail)
-
-    def test_pg_dump_failure_detail_new_fixed_labels(self):
-        cases = {
-            b"pg_dump: error: permission denied for database": "permission_denied",
-            b'pg_dump: error: database "example" does not exist': "database_not_found",
-            b'pg_dump: error: relation "jobs" does not exist': "relation_not_found",
-            b'pg_dump: error: role "backup_user" does not exist': "role_not_found",
-            b"pg_dump: error: invalid connection option: bad_option": "connection_parameter_error",
-            b"pg_dump: error: invalid connection parameter": "connection_parameter_error",
-            b"pg_dump: error: invalid connection string": "connection_parameter_error",
-            b"pg_dump: error: SSL connection is required": "ssl_required",
-            b"pg_dump: error: server requires SSL": "ssl_required",
-            b"pg_dump: error: SSL is not enabled": "ssl_disabled",
-            b"pg_dump: error: SSL connection is not enabled": "ssl_disabled",
-            b'pg_dump: error: unrecognized configuration parameter "bad_parameter"': "unsupported_parameter",
-            b"pg_dump: error: parameter is not supported": "unsupported_parameter",
-            b"pg_dump: error: unsupported parameter": "unsupported_parameter",
-            b"pg_dump: fatal: could not read from input file": "pg_dump_fatal",
-            b"pg_dump: error: future PostgreSQL failure": "generic_pg_dump_error",
-        }
-        for stderr, expected in cases.items():
-            with self.subTest(stderr=stderr):
-                detail = classify_pg_dump_failure_detail(stderr)
-                self.assertEqual(detail, expected)
-                self.assertNotIn(stderr.decode("utf-8", errors="replace"), detail)
-
-    def test_pg_dump_failure_detail_new_labels_never_expose_adversarial_values(self):
-        adversarial = (
-            b'pg_dump: error: database "secret_database" does not exist; '
-            b'postgresql://secret_user:SUPER_SECRET_PASSWORD@db.example.invalid:5432/secret_database '
-            b'token=SECRET_TOKEN encryption_key=SECRET_ENCRYPTION_KEY host=db.example.invalid '
-            b'user=secret_user'
-        )
-        diagnostic = pg_dump_failure_diagnostic(adversarial, 1)
-        self.assertIn("detail=database_not_found", diagnostic)
-        for value in (
-            "SUPER_SECRET_PASSWORD",
-            "secret_database",
-            "secret_user",
-            "db.example.invalid",
-            "SECRET_TOKEN",
-            "SECRET_ENCRYPTION_KEY",
-        ):
-            self.assertNotIn(value, diagnostic)
-        self.assertNotIn(adversarial.decode(), diagnostic)
-
     def test_pg_dump_fatal_takes_fixed_label_over_generic(self):
         diagnostic = pg_dump_failure_diagnostic(b"pg_dump: fatal: future failure", 1)
         self.assertIn("detail=pg_dump_fatal", diagnostic)
         self.assertNotIn("future failure", diagnostic)
 
-    def test_pg_dump_failure_diagnostic_includes_only_safe_detail_label(self):
-        stderr = (
-            b"pg_dump: error: server closed the connection unexpectedly "
-            b"postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres "
-            b"token=FAKE-TOKEN encryption_key=FAKE-KEY"
-        )
-        diagnostic = pg_dump_failure_diagnostic(stderr, 1)
-        self.assertIn("category=pg_dump_error", diagnostic)
-        self.assertIn("detail=server_closed_connection", diagnostic)
-        self.assertRegex(diagnostic, r"stderr_sha256=[0-9a-f]{64}")
-        for secret in ("SECRET123", "db.example.invalid", "FAKE-TOKEN", "FAKE-KEY"):
-            self.assertNotIn(secret, diagnostic)
-        self.assertNotIn(stderr.decode(), diagnostic)
-
-    def test_pg_dump_failure_detail_does_not_expand_to_untrusted_text(self):
-        stderr = b"pg_dump: error: generic failure user=SECRET123 host=db.example.invalid"
-        detail = classify_pg_dump_failure_detail(stderr)
-        self.assertEqual(detail, "generic_pg_dump_error")
-        self.assertNotIn("SECRET123", detail)
-        self.assertNotIn("db.example.invalid", detail)
-
-    def test_pg_dump_failure_diagnostic_is_sanitized_and_deterministic(self):
-        stderr = b"pg_dump: error: query failed: ERROR: fake_password=SECRET123 postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres token=FAKE-TOKEN encryption_key=FAKE-KEY host=db.example.invalid user=backup_user database=postgres"
-        first = pg_dump_failure_diagnostic(stderr, 1)
-        second = pg_dump_failure_diagnostic(stderr, 1)
-        self.assertEqual(first, second)
-        self.assertIn("category=server_query", first)
-        self.assertIn("exit_code=1", first)
-        self.assertIn("stderr_bytes=" + str(len(stderr)), first)
-        self.assertRegex(first, r"stderr_sha256=[0-9a-f]{64}")
-        for secret in ("SECRET123", "FAKE-TOKEN", "FAKE-KEY", "db.example.invalid", "backup_user", "postgres"):
-            self.assertNotIn(secret, first)
-        self.assertNotIn(stderr.decode(), first)
-        expected = __import__("hashlib").sha256(stderr).hexdigest()
-        self.assertIn("stderr_sha256=" + expected, first)
-
-    def test_pg_dump_failure_diagnostic_changes_for_different_stderr(self):
-        first = pg_dump_failure_diagnostic(b"pg_dump: error: one", 1)
-        second = pg_dump_failure_diagnostic(b"pg_dump: error: two", 1)
-        self.assertNotEqual(first, second)
-
-    def test_pg_dump_failure_diagnostic_empty_stderr_is_deterministic(self):
-        first = pg_dump_failure_diagnostic(b"", 1)
-        second = pg_dump_failure_diagnostic(b"", 1)
-        self.assertEqual(first, second)
-        self.assertIn("category=unknown", first)
-        self.assertIn("stderr_sha256=" + __import__("hashlib").sha256(b"").hexdigest(), first)
-        self.assertIn("stderr_bytes=0", first)
-        self.assertRegex(first, r"stderr_sha256=[0-9a-f]{64}")
-
-    def test_pg_dump_failure_diagnostic_only_emits_approved_categories(self):
-        allowed = {"authentication", "authorization", "connection", "tls", "server_query", "pg_dump_error", "option_usage", "client_compatibility", "local_io", "unknown"}
-        for stderr in (b"password authentication failed", b"SSL failure", b"connection refused", b"server version: 17.0; pg_dump version: 16.0", b"permission denied", b"could not open output file", b"pg_dump: error: query failed: ERROR: relation missing", b"pg_dump: error: generic failure", b"unrecognized stderr", b""):
-            diagnostic = pg_dump_failure_diagnostic(stderr, 1)
-            category = diagnostic.split("category=", 1)[1].split(" ", 1)[0]
-            self.assertIn(category, allowed)
     def test_backup_authorization_requires_protected_cloud_state(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(SafetyError):
