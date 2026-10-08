@@ -287,3 +287,65 @@ def recovery_runbook() -> tuple[str, ...]:
         "9. Run the schema/security/migration validator.",
         "10. Record only fixed status codes and sanitized validation counts; never copy production data to logs.",
     )
+def run_recovery(backup_id: str) -> None:
+    env = os.environ
+    assert_recovery_credentials(env)
+    assert_recovery_target(env["RECOVERY_PROJECT_REF"], env["RECOVERY_POSTGRES_HOST"])
+    key = _key(env["BACKUP_ENCRYPTION_KEY"])
+    client = boto3.client(
+        "s3",
+        endpoint_url=env["BACKUP_R2_ENDPOINT_URL"],
+        aws_access_key_id=env["BACKUP_R2_ACCESS_KEY_ID"],
+        aws_secret_access_key=env["BACKUP_R2_SECRET_ACCESS_KEY"],
+        region_name="auto",
+        config=BotoConfig(signature_version="s3v4"),
+    )
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        download_backup(client, bucket=env["BACKUP_R2_BUCKET"], backup_id=backup_id, root=root)
+        verify_checksum(root / ARTIFACT_DUMP, root / ARTIFACT_DUMP_SHA, ARTIFACT_DUMP)
+        verify_checksum(root / ARTIFACT_MANIFEST, root / ARTIFACT_MANIFEST_SHA, ARTIFACT_MANIFEST)
+        manifest_plain = root / "manifest.json"
+        dump_plain = root / "database.dump"
+        decrypt_file(root / ARTIFACT_MANIFEST, manifest_plain, key)
+        decrypt_file(root / ARTIFACT_DUMP, dump_plain, key)
+        try:
+            manifest = json.loads(manifest_plain.read_text(encoding="utf-8"))
+        except Exception:
+            _fixed("RECOVERY_MANIFEST_FAILED")
+        if (
+            manifest.get("backup_id") != backup_id
+            or manifest.get("source", {}).get("supabase_project_ref") != PRODUCTION_PROJECT_REF
+            or manifest.get("source", {}).get("postgres_major_version") != "17"
+        ):
+            _fixed("RECOVERY_MANIFEST_BOUNDARY_FAILED")
+        migration_state = manifest.get("database", {}).get("migration_state", "")
+        restore_backup(
+            dump_path=dump_plain,
+            host=env["RECOVERY_POSTGRES_HOST"],
+            port=env["RECOVERY_POSTGRES_PORT"],
+            database=env["RECOVERY_POSTGRES_DB"],
+            username=env["RECOVERY_POSTGRES_USER"],
+            password=env["RECOVERY_POSTGRES_PASSWORD"],
+        )
+        result = validate_recovery(
+            host=env["RECOVERY_POSTGRES_HOST"],
+            port=env["RECOVERY_POSTGRES_PORT"],
+            database=env["RECOVERY_POSTGRES_DB"],
+            username=env["RECOVERY_POSTGRES_USER"],
+            password=env["RECOVERY_POSTGRES_PASSWORD"],
+            expected_migration_state=migration_state,
+        )
+        print(json.dumps({"status": "RECOVERY_TEST_COMPLETE", "counts": result["counts"]}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Phase 4C isolated recovery test")
+    parser.add_argument("--backup-id", required=True)
+    args = parser.parse_args()
+    try:
+        run_recovery(args.backup_id)
+    except (RecoveryFailure, SafetyError) as exc:
+        print(str(exc))
+        raise SystemExit(1)
