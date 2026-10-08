@@ -45,6 +45,7 @@ jobs:
           echo "Production database: NOT ACCESSED"
           echo "Real backup: NOT CREATED"
           echo "Restore: NOT RUN"
+          echo "R2 upload: NOT PERFORMED"
 
       - name: Dependency audit
         run: python -m pip check
