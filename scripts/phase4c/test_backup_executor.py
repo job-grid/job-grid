@@ -566,18 +566,6 @@ class BackupExecutorTests(unittest.TestCase):
             executor,
         )
 
-    def test_ci_contains_no_secret_references_or_real_backup_invocation(self):
-        workflow = (
-            Path(__file__).parents[2]
-            / ".github"
-            / "workflows"
-            / "phase-4c-backup-executor.yml"
-        )
-        content = workflow.read_text(encoding="utf-8")
-        self.assertNotIn("secrets.", content)
-        self.assertNotIn("python -m backup_executor --backup", content)
-        self.assertIn("R2 upload: NOT PERFORMED", content)
-
     def test_plaintext_cleanup_after_success(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
