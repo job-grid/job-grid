@@ -82,7 +82,7 @@ class R2Client(Protocol):
 
 
 def _parse_pg_dump_major(version_output: str) -> str:
-    match = re.match(r"^\s*pg_dump \(PostgreSQL\) (\d+)(?:\.\d+)*(?:\s+.*)?\s*$", version_output)
+    match = re.match(r"^\s*pg_dump \(PostgreSQL\) (\d+)(?:\.\d+)*(?:[-+~_][0-9A-Za-z][0-9A-Za-z.+~_-]*)?(?:\s+.*)?\s*$", version_output)
     if not match:
         raise BackupError("Unable to determine pg_dump client major version.")
     return match.group(1)
