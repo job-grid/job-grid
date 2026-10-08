@@ -128,6 +128,7 @@ class SourcePostgresConfig:
     database: str
     username: str
     password: str
+    major_version: str = "17"
 
     def validate(self) -> None:
         if self.project_ref != PRODUCTION_PROJECT_REF:
