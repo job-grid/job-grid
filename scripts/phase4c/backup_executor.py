@@ -658,7 +658,7 @@ class BackupExecutor:
         if preflight is None:
             from production_preflight import BackupPreflight
             preflight = BackupPreflight(
-            r2_client=self._r2,
+                r2_client=self._r2,
                 bucket=config.r2.bucket,
             )
         self._preflight = preflight
