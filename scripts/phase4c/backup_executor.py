@@ -240,7 +240,10 @@ class BackupConfig:
         )
         source.validate()
         r2.validate()
-        key = decode_aes_key(_required(ENCRYPTION_ENV))
+        try:
+            key = decode_aes_key(_required(ENCRYPTION_ENV))
+        except Exception:
+            raise PreflightFailure("PREFLIGHT_ENCRYPTION_FAILED") from None
         dump_jobs = _parse_jobs(os.environ.get("BACKUP_DUMP_JOBS", "1"))
         return cls(source=source, r2=r2, encryption_key=key, work_dir=work_dir, dump_jobs=dump_jobs)
 
@@ -248,7 +251,7 @@ class BackupConfig:
         self.source.validate()
         self.r2.validate()
         if len(self.encryption_key) not in (16, 24, 32):
-            raise SafetyError("Encryption key has an invalid AES length.")
+            raise PreflightFailure("PREFLIGHT_ENCRYPTION_FAILED")
         if self.dump_jobs < 1 or self.dump_jobs > 4:
             raise SafetyError("BACKUP_DUMP_JOBS must be between 1 and 4.")
         if self.source.project_ref != PRODUCTION_PROJECT_REF:
