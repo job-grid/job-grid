@@ -1,6 +1,9 @@
 name: Phase 4C backup executor validation
 
 on:
+  push:
+    branches:
+      - phase-4c-backup-executor
   pull_request:
     branches:
       - main
