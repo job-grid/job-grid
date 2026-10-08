@@ -1,0 +1,59 @@
+name: Phase 4C secret-safe username diagnostic
+
+on:
+  workflow_dispatch:
+
+# This diagnostic does not check out code, install packages, or contact services.
+permissions:
+  contents: read
+
+jobs:
+  classify-username:
+    name: Classify protected backup username without disclosure
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment:
+      name: phase4c-production-approved
+      deployment: false
+    env:
+      BACKUP_SOURCE_POSTGRES_USER: ${{ secrets.BACKUP_SOURCE_POSTGRES_USER }}
+    steps:
+      - name: Classify username in memory
+        shell: bash
+        run: |
+          set +x
+          set -euo pipefail
+
+          expected='postgres.tnrdovdhlwitjzecduxa'
+          project_suffix='.tnrdovdhlwitjzecduxa'
+
+          if [[ -z "${BACKUP_SOURCE_POSTGRES_USER:-}" ]]; then
+            result='USERNAME_SECRET_MISSING'
+          elif [[ "$BACKUP_SOURCE_POSTGRES_USER" == "$expected" ]]; then
+            result='DEFAULT_POOLER_USERNAME_MATCH'
+          elif [[ "$BACKUP_SOURCE_POSTGRES_USER" == *"$project_suffix" && "$BACKUP_SOURCE_POSTGRES_USER" != "$expected" && "${BACKUP_SOURCE_POSTGRES_USER%"$project_suffix"}" != "" ]]; then
+            result='PROJECT_QUALIFIED_NONDEFAULT_USERNAME'
+          else
+            result='USERNAME_FORMAT_UNCONFIRMED'
+          fi
+
+          # Only one fixed allow-listed classification is written to the log.
+          case "$result" in
+            DEFAULT_POOLER_USERNAME_MATCH|PROJECT_QUALIFIED_NONDEFAULT_USERNAME|USERNAME_FORMAT_UNCONFIRMED|USERNAME_SECRET_MISSING)
+              printf '%s\n' "$result"
+              ;;
+            *)
+              printf '%s\n' 'USERNAME_FORMAT_UNCONFIRMED'
+              exit 1
+              ;;
+          esac
+
+      - name: State verification limits
+        if: always()
+        shell: bash
+        run: |
+          set +x
+          printf '%s\n' 'Role existence and read privileges: NOT VERIFIED'
+          printf '%s\n' 'Database connection: NOT ATTEMPTED'
+          printf '%s\n' 'pg_dump: NOT RUN'
+          printf '%s\n' 'Cloudflare R2: NOT ACCESSED'
