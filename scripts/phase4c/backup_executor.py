@@ -117,7 +117,7 @@ def classify_pg_dump_failure(stderr: str) -> str:
     message = stderr.lower()
     if "password authentication failed" in message or "authentication failed" in message:
         return "authentication"
-    if "ssl" in message and ("error" in message or "failed" in message or "required" in message):
+    if "ssl" in message or "tls" in message:
         return "tls"
     if "server version" in message and "pg_dump version" in message:
         return "server_compatibility"
