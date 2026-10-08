@@ -287,6 +287,49 @@ def _new_backup_id(now: datetime | None = None) -> str:
     return f"{stamp}-{secrets.token_hex(8)}"
 
 
+def _read_migration_state(source: SourcePostgresConfig) -> str:
+    try:
+        with psycopg.connect(
+            host=source.host,
+            port=int(source.port),
+            dbname=source.database,
+            user=source.username,
+            password=source.password,
+            connect_timeout=5,
+            sslmode="verify-full",
+            autocommit=True,
+            options="-c statement_timeout=5000",
+        ) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT current_setting('server_version_num'), "
+                    "current_setting('server_version'), "
+                    "to_regclass('supabase_migrations.schema_migrations')"
+                )
+                server_num, server_version, migration_table = cur.fetchone()
+                latest = None
+                if migration_table is not None:
+                    cur.execute(
+                        "SELECT version, name "
+                        "FROM supabase_migrations.schema_migrations "
+                        "ORDER BY version DESC LIMIT 1"
+                    )
+                    row = cur.fetchone()
+                    latest = {"version": str(row[0]), "name": str(row[1])} if row else None
+        return json.dumps(
+            {
+                "server_version_num": str(server_num),
+                "server_version": str(server_version),
+                "migration_table_present": migration_table is not None,
+                "latest_migration": latest,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    except Exception:
+        raise BackupError("DATABASE_METADATA_FAILED") from None
+
+
 def _sha256_path(path: Path) -> str:
     return sha256_file(path)
 
