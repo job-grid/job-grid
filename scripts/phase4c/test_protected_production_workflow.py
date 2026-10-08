@@ -32,7 +32,7 @@ class ProtectedProductionWorkflowTests(unittest.TestCase):
             "BACKUP_R2_SECRET_ACCESS_KEY",
             "BACKUP_ENCRYPTION_KEY",
         }
-        self.assertEqual(set(re.findall(r"secrets\\.([A-Z0-9_]+)", self.workflow)), expected)
+        self.assertEqual(set(re.findall(r"secrets\.([A-Z0-9_]+)", self.workflow)), expected)
         self.assertNotIn("AWS_ACCESS_KEY_ID", self.workflow)
         self.assertNotIn("AWS_SECRET_ACCESS_KEY", self.workflow)
 
