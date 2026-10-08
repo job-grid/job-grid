@@ -31,13 +31,13 @@ jobs:
             result='USERNAME_SECRET_MISSING'
           elif [[ "$BACKUP_SOURCE_POSTGRES_USER" == "$expected" ]]; then
             result='DEFAULT_POOLER_USERNAME_MATCH'
-          elif [[ "$BACKUP_SOURCE_POSTGRES_USER" == *"$project_suffix" && "$BACKUP_SOURCE_POSTGRES_USER" != "$expected" && "${BACKUP_SOURCE_POSTGRES_USER%"$project_suffix"}" != "" ]]; then
+          elif [[ "$BACKUP_SOURCE_POSTGRES_USER" == *"$project_suffix" && "$BACKUP_SOURCE_POSTGRES_USER" != "$expected" && ${BACKUP_SOURCE_POSTGRES_USER%$project_suffix} != "" ]]; then
             result='PROJECT_QUALIFIED_NONDEFAULT_USERNAME'
           else
             result='USERNAME_FORMAT_UNCONFIRMED'
           fi
 
-          # Only one fixed allow-listed classification is written to the log.
+          # Emit only a fixed, allow-listed classification; never emit the input.
           case "$result" in
             DEFAULT_POOLER_USERNAME_MATCH|PROJECT_QUALIFIED_NONDEFAULT_USERNAME|USERNAME_FORMAT_UNCONFIRMED|USERNAME_SECRET_MISSING)
               printf '%s\n' "$result"
@@ -47,13 +47,3 @@ jobs:
               exit 1
               ;;
           esac
-
-      - name: State verification limits
-        if: always()
-        shell: bash
-        run: |
-          set +x
-          printf '%s\n' 'Role existence and read privileges: NOT VERIFIED'
-          printf '%s\n' 'Database connection: NOT ATTEMPTED'
-          printf '%s\n' 'pg_dump: NOT RUN'
-          printf '%s\n' 'Cloudflare R2: NOT ACCESSED'
