@@ -29,6 +29,8 @@ from backup_executor import (
     _encrypt_file,
     _upload_and_verify,
     assert_backup_authorized,
+    assert_pg_dump_major_version,
+    classify_pg_dump_failure,
     assert_no_restore_target,
     main,
 )
@@ -231,6 +233,36 @@ class BackupExecutorTests(unittest.TestCase):
             with self.assertRaises(BackupError):
                 self.run_synthetic_backup(Path(temp), r2)
             self.assertEqual(r2.objects, {})
+
+    def test_pg_dump_client_major_version_accepts_approved_major(self):
+        assert_pg_dump_major_version("17", "pg_dump (PostgreSQL) 17.6")
+
+    def test_pg_dump_client_major_version_rejects_mismatch(self):
+        with self.assertRaises(SafetyError):
+            assert_pg_dump_major_version("17", "pg_dump (PostgreSQL) 16.10")
+
+    def test_pg_dump_client_major_version_rejects_invalid_expected_major(self):
+        with self.assertRaises(SafetyError):
+            assert_pg_dump_major_version("17.x", "pg_dump (PostgreSQL) 17.6")
+
+    def test_pg_dump_client_major_version_rejects_unparseable_version(self):
+        with self.assertRaises(BackupError):
+            assert_pg_dump_major_version("17", "pg_dump version unavailable")
+
+    def test_pg_dump_failure_classification_is_safe(self):
+        cases = {
+            "password authentication failed for user backup_user": "authentication",
+            "could not connect to server: Connection timed out": "connection",
+            "server version: 17.0; pg_dump version: 16.4": "server_compatibility",
+            "permission denied for table jobs": "authorization",
+            "SSL connection has been closed unexpectedly": "tls",
+            "pg_dump: error: unrecognized option '--bad'": "option_or_usage",
+            "pg_dump: error: could not open output file": "local_io",
+            "unexpected database error": "unknown",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(stderr=stderr):
+                self.assertEqual(classify_pg_dump_failure(stderr), expected)
 
     def test_backup_authorization_requires_protected_cloud_state(self):
         with patch.dict(os.environ, {}, clear=True):
