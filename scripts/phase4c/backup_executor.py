@@ -509,6 +509,7 @@ class BackupExecutor:
         command_runner: CommandRunner | None = None,
         r2_client: R2Client | None = None,
         clock=None,
+        preflight: BackupPreflight | None = None,
     ):
         config.validate()
         self._config = config
@@ -518,7 +519,7 @@ class BackupExecutor:
             access_key_id=config.r2.access_key_id,
             secret_access_key=config.r2.secret_access_key,
         )
-        self._preflight = BackupPreflight(
+        self._preflight = preflight or BackupPreflight(
             r2_client=self._r2,
             bucket=config.r2.bucket,
         )
