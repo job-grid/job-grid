@@ -123,6 +123,9 @@ class BotoR2Client:
     def get_object(self, **kwargs):
         return self._client.get_object(**kwargs)
 
+    def delete_object(self, **kwargs):
+        return self._client.delete_object(**kwargs)
+
 
 @dataclass(frozen=True)
 class SourcePostgresConfig:
