@@ -15,7 +15,7 @@ A real backup is fail-closed behind `assert_backup_authorized()`. The executor r
 3. `GITHUB_EVENT_NAME=workflow_dispatch`
 4. `PHASE4C_BACKUP_AUTHORIZED=true`
 
-The intended eventual production workflow must reference a protected GitHub Environment named `phase4c-production-approved` with required reviewers. GitHub requires the environment's protection rules to pass before a job using that environment starts, and environment secrets are unavailable until approval. citeturn0search0turn0search3 This PR does **not** create that real backup workflow or configure the environment.
+The production execution workflow is `.github/workflows/phase4c-protected-production-backup.yml`. It is workflow_dispatch-only and references the protected GitHub Environment `phase4c-production-approved`. Environment protection must pass before that job can access its environment-scoped secrets.
 
 The explicit authorization marker is an executor-level assertion in addition to the workflow environment gate. The validation workflow does not set it and cannot invoke `--backup`.
 
@@ -94,7 +94,6 @@ Regression coverage includes:
 
 This PR does not add:
 
-- a real production backup workflow
 - restore or `pg_restore`
 - scheduling
 - production/R2 credential changes

@@ -1,0 +1,75 @@
+name: Phase 4C protected production backup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-backup:
+    name: Phase 4C / one protected production backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: phase4c-production-approved
+      deployment: false
+    env:
+      BACKUP_SOURCE_PROJECT_REF: ${{ secrets.BACKUP_SOURCE_POSTGRES_PROJECT_REF }}
+      BACKUP_SOURCE_POSTGRES_HOST: ${{ secrets.BACKUP_SOURCE_POSTGRES_HOST }}
+      BACKUP_SOURCE_POSTGRES_PORT: ${{ secrets.BACKUP_SOURCE_POSTGRES_PORT }}
+      BACKUP_SOURCE_POSTGRES_DB: ${{ secrets.BACKUP_SOURCE_POSTGRES_DB }}
+      BACKUP_SOURCE_POSTGRES_USER: ${{ secrets.BACKUP_SOURCE_POSTGRES_USER }}
+      BACKUP_SOURCE_POSTGRES_PASSWORD: ${{ secrets.BACKUP_SOURCE_POSTGRES_PASSWORD }}
+      BACKUP_SOURCE_POSTGRES_MAJOR_VERSION: ${{ secrets.BACKUP_SOURCE_POSTGRES_MAJOR_VERSION }}
+      BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+      BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+      BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      BACKUP_R2_ENDPOINT_URL: https://6952ddf46cc39605326ecf0583cde02e.r2.cloudflarestorage.com
+      BACKUP_R2_BUCKET: job-grid-backups
+      BACKUP_DUMP_JOBS: "1"
+      GITHUB_ACTIONS: "true"
+      GITHUB_ENVIRONMENT: phase4c-production-approved
+      GITHUB_EVENT_NAME: workflow_dispatch
+      PHASE4C_BACKUP_AUTHORIZED: "true"
+
+    steps:
+      - name: Checkout approved workflow revision
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned backup dependencies
+        run: python -m pip install -r scripts/phase4c/requirements-backup.txt
+
+      - name: Validate executor before production access
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/backup_executor.py
+          PYTHONPATH=scripts/phase4c python -m unittest scripts/phase4c/test_backup_executor.py -v
+
+      - name: Execute exactly one production backup
+        run: |
+          set -euo pipefail
+          # One invocation only; no automatic retry.
+          # The executor fails closed and reconciles partial R2 uploads.
+          PYTHONPATH=scripts/phase4c python -m backup_executor --backup
+
+      - name: Record successful completion
+        if: success()
+        run: |
+          set -euo pipefail
+          echo "Phase 4C production backup completed successfully."
+          echo "Only the executor encrypted four-object artifact set is retained in R2."
+
+      - name: Fail explicitly after an unsuccessful backup attempt
+        if: failure()
+        run: |
+          echo "Phase 4C production backup did not complete successfully."
+          echo "No success state is emitted and no automatic retry is performed."
+          exit 1
