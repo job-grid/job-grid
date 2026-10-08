@@ -186,6 +186,18 @@ class BackupExecutorTests(unittest.TestCase):
     def test_no_restore_method_exists(self):
         self.assertFalse(hasattr(BackupExecutor, "restore"))
 
+    def test_executor_source_has_no_restore_or_scheduler(self):
+        source = Path(__file__).with_name("backup_executor.py").read_text(encoding="utf-8")
+        self.assertNotIn("pg_restore", source)
+        self.assertNotIn("supabase db restore", source)
+        self.assertNotIn("schedule", source.lower())
+
+    def test_ci_contains_no_secret_references_or_backup_invocation(self):
+        workflow = Path(__file__).parents[2] / ".github" / "workflows" / "phase-4c-backup-executor.yml"
+        content = workflow.read_text(encoding="utf-8")
+        self.assertNotIn("secrets.", content)
+        self.assertNotIn("python -m backup_executor --backup", content)
+
     def test_plaintext_cleanup_after_success(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
