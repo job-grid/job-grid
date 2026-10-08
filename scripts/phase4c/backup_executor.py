@@ -71,6 +71,9 @@ class CommandRunner(Protocol):
 
 
 class R2Client(Protocol):
+    def head_bucket(self, *, Bucket: str) -> object:
+        ...
+
     def head_object(self, *, Bucket: str, Key: str) -> Mapping[str, object]:
         ...
 
@@ -289,6 +292,9 @@ class BotoR2Client:
             config=BotoConfig(signature_version="s3v4"),
         )
 
+    def head_bucket(self, **kwargs):
+        return self._client.head_bucket(**kwargs)
+
     def head_object(self, **kwargs):
         return self._client.head_object(**kwargs)
 
@@ -376,8 +382,8 @@ class BackupConfig:
     def validate(self) -> None:
         self.source.validate()
         self.r2.validate()
-        if len(self.encryption_key) not in (16, 24, 32):
-            raise SafetyError("Encryption key has an invalid AES length.")
+        if len(self.encryption_key) != 32:
+            raise SafetyError("Phase 4C requires a 32-byte AES-256 encryption key.")
         if self.dump_jobs < 1 or self.dump_jobs > 4:
             raise SafetyError("BACKUP_DUMP_JOBS must be between 1 and 4.")
         if self.source.project_ref != PRODUCTION_PROJECT_REF:
@@ -393,6 +399,7 @@ class BackupResult:
     manifest_artifact_size: int
     database_object_key: str
     manifest_object_key: str
+    status: str = "BACKUP_COMPLETE"
 
 
 def _required(name: str) -> str:
@@ -413,6 +420,50 @@ def _parse_jobs(value: str) -> int:
 def _new_backup_id(now: datetime | None = None) -> str:
     stamp = (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
     return f"{stamp}-{secrets.token_hex(8)}"
+
+
+def _read_migration_state(source: SourcePostgresConfig) -> str:
+    try:
+        import psycopg
+        with psycopg.connect(
+            host=source.host,
+            port=int(source.port),
+            dbname=source.database,
+            user=source.username,
+            password=source.password,
+            connect_timeout=5,
+            sslmode="verify-full",
+            autocommit=True,
+            options="-c statement_timeout=5000",
+        ) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT current_setting('server_version_num'), "
+                    "current_setting('server_version'), "
+                    "to_regclass('supabase_migrations.schema_migrations')"
+                )
+                server_num, server_version, migration_table = cur.fetchone()
+                latest = None
+                if migration_table is not None:
+                    cur.execute(
+                        "SELECT version, name "
+                        "FROM supabase_migrations.schema_migrations "
+                        "ORDER BY version DESC LIMIT 1"
+                    )
+                    row = cur.fetchone()
+                    latest = {"version": str(row[0]), "name": str(row[1])} if row else None
+        return json.dumps(
+            {
+                "server_version_num": str(server_num),
+                "server_version": str(server_version),
+                "migration_table_present": migration_table is not None,
+                "latest_migration": latest,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    except Exception:
+        raise BackupError("DATABASE_METADATA_FAILED") from None
 
 
 def _sha256_path(path: Path) -> str:
@@ -450,6 +501,62 @@ def _object_exists(client: R2Client, *, bucket: str, key: str) -> bool:
         raise BackupError("Unable to verify whether the R2 destination object exists.") from exc
 
 
+def _upload_only(
+    client: R2Client,
+    *,
+    bucket: str,
+    object_key: str,
+    path: Path,
+    created_objects: list[str],
+) -> None:
+    if _object_exists(client, bucket=bucket, key=object_key):
+        raise BackupError("R2_UPLOAD_FAILED")
+    try:
+        with path.open("rb") as body:
+            client.put_object(
+                Bucket=bucket,
+                Key=object_key,
+                Body=body,
+                ContentLength=path.stat().st_size,
+            )
+        created_objects.append(object_key)
+    except Exception:
+        raise BackupError("R2_UPLOAD_FAILED") from None
+
+
+def _read_back_verify(
+    client: R2Client,
+    *,
+    bucket: str,
+    object_key: str,
+    path: Path,
+    expected_sha256: str,
+) -> None:
+    try:
+        head = client.head_object(Bucket=bucket, Key=object_key)
+        if int(head.get("ContentLength", -1)) != path.stat().st_size:
+            raise BackupError("R2_READ_BACK_FAILED")
+        response = client.get_object(Bucket=bucket, Key=object_key)
+        body = response["Body"]
+        digest = hashlib.sha256()
+        try:
+            while True:
+                chunk = body.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        finally:
+            close = getattr(body, "close", None)
+            if close:
+                close()
+        if digest.hexdigest() != expected_sha256:
+            raise BackupError("R2_READ_BACK_FAILED")
+    except BackupError:
+        raise
+    except Exception:
+        raise BackupError("R2_READ_BACK_FAILED") from None
+
+
 def _upload_and_verify(
     client: R2Client,
     *,
@@ -459,38 +566,17 @@ def _upload_and_verify(
     expected_sha256: str,
     created_objects: list[str] | None = None,
 ) -> None:
-    if _object_exists(client, bucket=bucket, key=object_key):
-        raise BackupError(f"Refusing to overwrite existing backup object {object_key}.")
-    with path.open("rb") as body:
-        client.put_object(
-            Bucket=bucket,
-            Key=object_key,
-            Body=body,
-            ContentLength=path.stat().st_size,
-        )
-    if created_objects is not None:
-        created_objects.append(object_key)
-
-    head = client.head_object(Bucket=bucket, Key=object_key)
-    remote_size = int(head.get("ContentLength", -1))
-    if remote_size != path.stat().st_size:
-        raise BackupError(f"R2 object size mismatch for {object_key}.")
-
-    response = client.get_object(Bucket=bucket, Key=object_key)
-    remote_body = response["Body"]
-    digest = hashlib.sha256()
-    try:
-        while True:
-            chunk = remote_body.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            digest.update(chunk)
-    finally:
-        close = getattr(remote_body, "close", None)
-        if close:
-            close()
-    if digest.hexdigest() != expected_sha256:
-        raise BackupError(f"R2 read-back checksum mismatch for {object_key}.")
+    owned = created_objects if created_objects is not None else []
+    _upload_only(
+        client, bucket=bucket, object_key=object_key, path=path, created_objects=owned
+    )
+    _read_back_verify(
+        client,
+        bucket=bucket,
+        object_key=object_key,
+        path=path,
+        expected_sha256=expected_sha256,
+    )
 
 
 def _delete_and_verify(client: R2Client, *, bucket: str, key: str) -> None:
@@ -514,16 +600,16 @@ def _reconcile_objects(client: R2Client, *, bucket: str, keys: list[str]) -> Non
 
 
 def _build_dump_command(source: SourcePostgresConfig, output_path: Path) -> list[str]:
-    # Password is supplied only through PGPASSWORD in the child environment.
+    # Password is supplied only through PGPASSWORD. This command intentionally
+    # preserves ACL/grant statements for recovery; ownership remains detached.
     return [
-        PG_DUMP,
+        "/usr/lib/postgresql/17/bin/pg_dump",
         "--host", source.host,
         "--port", source.port,
         "--username", source.username,
         "--dbname", source.database,
         "--format=custom",
         "--no-owner",
-        "--no-privileges",
         "--no-subscriptions",
         "--file", str(output_path),
     ]
@@ -559,6 +645,7 @@ class BackupExecutor:
         command_runner: CommandRunner | None = None,
         r2_client: R2Client | None = None,
         clock=None,
+        preflight: BackupPreflight | None = None,
     ):
         config.validate()
         self._config = config
@@ -568,9 +655,35 @@ class BackupExecutor:
             access_key_id=config.r2.access_key_id,
             secret_access_key=config.r2.secret_access_key,
         )
+        self._preflight_config_factory = None
+        self._migration_state_reader = _read_migration_state
+        if preflight is None:
+            from production_preflight import BackupPreflight, PreflightConfig
+            preflight = BackupPreflight(
+                r2_client=self._r2,
+                bucket=config.r2.bucket,
+            )
+            self._preflight_config_factory = PreflightConfig
+        else:
+            self._migration_state_reader = lambda _source: '{"latest_migration":null,"synthetic":true}'
+        self._preflight = preflight
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def create_backup(self) -> BackupResult:
+        preflight_config = None
+        if self._preflight_config_factory is not None:
+            preflight_config = self._preflight_config_factory(
+                host=self._config.source.host,
+                port=int(self._config.source.port),
+                database=self._config.source.database,
+                username=self._config.source.username,
+                password=self._config.source.password,
+                major_version=self._config.source.major_version,
+                work_dir=self._config.work_dir,
+                encryption_key=self._config.encryption_key,
+            )
+        self._preflight.run(preflight_config)
+
         backup_id = _new_backup_id(self._clock())
         self._config.work_dir.mkdir(parents=True, exist_ok=True)
         work_root = self._config.work_dir / f"phase4c-{backup_id}"
@@ -582,15 +695,21 @@ class BackupExecutor:
         encrypted_manifest_sha = work_root / ARTIFACT_MANIFEST_SHA
         created_objects: list[str] = []
         try:
-            self._runner.run(
-                _build_dump_command(self._config.source, plaintext),
-                env=_child_env(self._config.source),
-                output_path=plaintext,
-            )
-            if not plaintext.is_file() or plaintext.stat().st_size == 0:
-                raise BackupError("pg_dump did not produce a non-empty dump.")
+            try:
+                self._runner.run(
+                    _build_dump_command(self._config.source, plaintext),
+                    env=_child_env(self._config.source),
+                    output_path=plaintext,
+                )
+                if not plaintext.is_file() or plaintext.stat().st_size == 0:
+                    raise RuntimeError
+            except Exception:
+                raise BackupError("PG_DUMP_FAILED") from None
 
-            _encrypt_file(plaintext, encrypted_dump, self._config.encryption_key)
+            try:
+                _encrypt_file(plaintext, encrypted_dump, self._config.encryption_key)
+            except Exception:
+                raise BackupError("ENCRYPTION_FAILED") from None
             plaintext.unlink(missing_ok=True)
 
             db_sha = _sha256_path(encrypted_dump)
@@ -602,18 +721,26 @@ class BackupExecutor:
                 source_project_ref=self._config.source.project_ref,
                 postgres_major_version=self._config.source.major_version,
                 artifacts=[
-                    {"name": ARTIFACT_DUMP, "size_bytes": db_size, "sha256": db_sha}
+                    {"name": ARTIFACT_DUMP, "size_bytes": db_size, "sha256": db_sha},
+                    {"name": ARTIFACT_DUMP_SHA, "size_bytes": encrypted_dump_sha.stat().st_size, "sha256": _sha256_path(encrypted_dump_sha)},
                 ],
+                migration_state=self._migration_state_reader(self._config.source),
             )
             manifest_bytes = canonical_json(manifest)
             manifest_plain = work_root / "manifest.json"
             manifest_plain.write_bytes(manifest_bytes)
-            _encrypt_file(manifest_plain, encrypted_manifest, self._config.encryption_key)
-            manifest_plain.unlink(missing_ok=True)
+            try:
+                _encrypt_file(manifest_plain, encrypted_manifest, self._config.encryption_key)
+                manifest_plain.unlink(missing_ok=True)
+            except Exception:
+                raise BackupError("ENCRYPTION_FAILED") from None
 
-            manifest_sha = _sha256_path(encrypted_manifest)
-            manifest_size = encrypted_manifest.stat().st_size
-            _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
+            try:
+                manifest_sha = _sha256_path(encrypted_manifest)
+                manifest_size = encrypted_manifest.stat().st_size
+                _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
+            except Exception:
+                raise BackupError("CHECKSUM_FAILED") from None
 
             artifacts = [
                 (ARTIFACT_DUMP, encrypted_dump, db_sha),
@@ -623,14 +750,28 @@ class BackupExecutor:
             ]
             for artifact_name, path, digest in artifacts:
                 key = encrypted_object_key(backup_id, artifact_name)
-                _upload_and_verify(
+                _upload_only(
                     self._r2,
                     bucket=self._config.r2.bucket,
                     object_key=key,
                     path=path,
-                    expected_sha256=digest,
                     created_objects=created_objects,
                 )
+            try:
+                for artifact_name, path, digest in artifacts:
+                    key = encrypted_object_key(backup_id, artifact_name)
+                    _read_back_verify(
+                        self._r2,
+                        bucket=self._config.r2.bucket,
+                        object_key=key,
+                        path=path,
+                        expected_sha256=digest,
+                    )
+            except BackupError:
+                raise
+            except Exception:
+                raise BackupError("R2_READ_BACK_FAILED") from None
+
 
             return BackupResult(
                 backup_id=backup_id,

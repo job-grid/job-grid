@@ -71,8 +71,8 @@ jobs:
       - name: Validate executor before production access
         run: |
           set -euo pipefail
-          python -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/backup_executor.py
-          PYTHONPATH=scripts/phase4c python -m unittest scripts/phase4c/test_backup_executor.py -v
+          python -m py_compile scripts/phase4c/phase4c_tooling.py scripts/phase4c/production_preflight.py scripts/phase4c/backup_executor.py scripts/phase4c/recovery_procedure.py
+          PYTHONPATH=scripts/phase4c python -m unittest scripts/phase4c/test_backup_executor.py scripts/phase4c/test_production_foundation.py -v
 
       - name: Execute exactly one production backup
         run: |
