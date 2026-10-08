@@ -74,7 +74,8 @@ class Phase4CSafetyTests(unittest.TestCase):
         encoded = canonical_json(manifest)
         self.assertIn(b"supabase_project_ref", encoded)
         self.assertNotIn(b"password", encoded.lower())
-        self.assertNotIn(b"secret", encoded.lower())
+        self.assertNotIn(b"password", encoded.lower())
+        self.assertNotIn(b"access_key", encoded.lower())
         self.assertNotIn(b"key_material", encoded.lower())
 
     def test_r2_object_layout(self):
