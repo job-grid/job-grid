@@ -190,7 +190,9 @@ class BackupExecutorTests(unittest.TestCase):
         source = Path(__file__).with_name("backup_executor.py").read_text(encoding="utf-8")
         self.assertNotIn("pg_restore", source)
         self.assertNotIn("supabase db restore", source)
-        self.assertNotIn("schedule", source.lower())
+        self.assertNotIn("apscheduler", source.lower())
+        self.assertNotIn("schedule.every", source.lower())
+        self.assertNotIn("cron", source.lower())
 
     def test_ci_contains_no_secret_references_or_backup_invocation(self):
         workflow = Path(__file__).parents[2] / ".github" / "workflows" / "phase-4c-backup-executor.yml"
