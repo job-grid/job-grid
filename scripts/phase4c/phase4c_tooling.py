@@ -77,7 +77,7 @@ def sha256_file(path: Path) -> str:
 def validate_artifact_name(name: str) -> None:
     if not name or not ARTIFACT_RE.fullmatch(name):
         raise SafetyError("Artifact name contains unsafe characters.")
-    if "/" in name or "\\ " in name:
+    if "/" in name or "\\" in name:
         raise SafetyError("Artifact name must not contain path separators.")
 
 
