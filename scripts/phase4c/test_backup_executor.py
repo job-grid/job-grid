@@ -20,6 +20,7 @@ from backup_executor import (
     PROTECTED_EXECUTION_ENVIRONMENT,
     BackupConfig,
     BackupError,
+    BotoR2Client,
     BackupExecutor,
     R2Config,
     SourcePostgresConfig,
@@ -174,6 +175,9 @@ class BackupExecutorTests(unittest.TestCase):
         )
         with self.assertRaises(SafetyError):
             recovery_with_production_host.validate()
+
+    def test_concrete_r2_client_supports_reconciliation_delete(self):
+        self.assertTrue(callable(getattr(BotoR2Client, "delete_object", None)))
 
     def test_r2_endpoint_and_bucket_are_pinned(self):
         with self.assertRaises(SafetyError):
