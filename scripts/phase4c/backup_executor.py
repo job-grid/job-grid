@@ -733,7 +733,7 @@ class BackupExecutor:
 
             try:
                 manifest_sha = _sha256_path(encrypted_manifest)
-            manifest_size = encrypted_manifest.stat().st_size
+                manifest_size = encrypted_manifest.stat().st_size
                 _write_checksum(encrypted_manifest_sha, manifest_sha, ARTIFACT_MANIFEST)
             except Exception:
                 raise BackupError("CHECKSUM_FAILED") from None
@@ -752,7 +752,8 @@ class BackupExecutor:
                     object_key=key,
                     path=path,
                     created_objects=created_objects,
-                )            try:
+                )
+            try:
                 for artifact_name, path, digest in artifacts:
                     key = encrypted_object_key(backup_id, artifact_name)
                     _read_back_verify(
