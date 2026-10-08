@@ -31,6 +31,7 @@ from backup_executor import (
     assert_backup_authorized,
     assert_pg_dump_major_version,
     classify_pg_dump_failure,
+    classify_pg_dump_failure_detail,
     pg_dump_failure_diagnostic,
     assert_no_restore_target,
     main,
@@ -345,6 +346,57 @@ class BackupExecutorTests(unittest.TestCase):
         self.assertNotIn("FAKE-TOKEN", category)
         self.assertNotIn("FAKE-KEY", category)
         self.assertNotIn(adversarial.decode(), category)
+
+    def test_pg_dump_failure_detail_uses_fixed_safe_labels(self):
+        cases = {
+            b"pg_dump: error: server closed the connection unexpectedly": "server_closed_connection",
+            b"pg_dump: error: connection to server was lost": "connection_lost",
+            b"pg_dump: error: could not send data to server": "connection_send_failed",
+            b"pg_dump: error: could not receive data from server": "connection_receive_failed",
+            b"pg_dump: error: server version mismatch": "server_version_mismatch",
+            b"pg_dump: error: server version is newer than pg_dump": "server_version_newer_than_client",
+            b"pg_dump: error: query failed: ERROR: relation missing": "query_failed",
+            b"pg_dump: error: could not open output file": "output_open_failed",
+            b"pg_dump: error: could not write to output file": "output_write_failed",
+            b"pg_dump: error: no space left on device": "disk_full",
+            b"pg_dump: error: input/output error": "io_error",
+            b"pg_dump: error: password authentication failed": "authentication_failed",
+            b"pg_dump: error: no password supplied": "no_password",
+            b"pg_dump: error: certificate verify failed": "tls_certificate",
+            b"pg_dump: error: SSL error": "ssl_error",
+            b"pg_dump: error: connection refused": "connection_refused",
+            b"pg_dump: error: connection timed out": "connection_timeout",
+            b"pg_dump: error: could not translate host name": "dns_failure",
+            b"pg_dump: error: unrecognized option '--bad'": "option_usage",
+            b"pg_dump: error: some future error": "generic_pg_dump_error",
+            b"unclassified failure": "unclassified",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(stderr=stderr):
+                detail = classify_pg_dump_failure_detail(stderr)
+                self.assertEqual(detail, expected)
+                self.assertNotIn(stderr.decode("utf-8", errors="replace"), detail)
+
+    def test_pg_dump_failure_diagnostic_includes_only_safe_detail_label(self):
+        stderr = (
+            b"pg_dump: error: server closed the connection unexpectedly "
+            b"postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres "
+            b"token=FAKE-TOKEN encryption_key=FAKE-KEY"
+        )
+        diagnostic = pg_dump_failure_diagnostic(stderr, 1)
+        self.assertIn("category=pg_dump_error", diagnostic)
+        self.assertIn("detail=server_closed_connection", diagnostic)
+        self.assertRegex(diagnostic, r"stderr_sha256=[0-9a-f]{64}")
+        for secret in ("SECRET123", "db.example.invalid", "FAKE-TOKEN", "FAKE-KEY"):
+            self.assertNotIn(secret, diagnostic)
+        self.assertNotIn(stderr.decode(), diagnostic)
+
+    def test_pg_dump_failure_detail_does_not_expand_to_untrusted_text(self):
+        stderr = b"pg_dump: error: generic failure user=SECRET123 host=db.example.invalid"
+        detail = classify_pg_dump_failure_detail(stderr)
+        self.assertEqual(detail, "generic_pg_dump_error")
+        self.assertNotIn("SECRET123", detail)
+        self.assertNotIn("db.example.invalid", detail)
 
     def test_pg_dump_failure_diagnostic_is_sanitized_and_deterministic(self):
         stderr = b"pg_dump: error: query failed: ERROR: fake_password=SECRET123 postgresql://backup_user:SECRET123@db.example.invalid:5432/postgres token=FAKE-TOKEN encryption_key=FAKE-KEY host=db.example.invalid user=backup_user database=postgres"
