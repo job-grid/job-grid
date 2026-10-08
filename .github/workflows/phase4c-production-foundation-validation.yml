@@ -45,7 +45,7 @@ jobs:
       - name: Run synthetic foundation tests
         run: |
           set -euo pipefail
-          python -m unittest             scripts/phase4c/test_backup_executor.py             scripts/phase4c/test_production_foundation.py -v
+          python -m unittest             scripts/phase4c/test_backup_executor.py             scripts/phase4c/foundation_validation.py -v
 
       - name: Verify CI has no production credentials or production execution
         run: |
