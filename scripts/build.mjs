@@ -16,6 +16,6 @@ for (const name of ["components.js", "main.js"]) {
   await cp(new URL(`../scripts/${name}`, import.meta.url), new URL(`scripts/${name}`, output));
 }
 
-// In a static build, public assets are emitted at the URL root, as with Next.js.
-await cp(new URL("../public/job-grid-logo.webp", import.meta.url), new URL("job-grid-logo.webp", output));
+// Serve the official owner-supplied PNG at the site root.
+await cp(new URL("../public/job-grid-logo.png", import.meta.url), new URL("job-grid-logo.png", output));
 console.log("Static site built in dist/. This build does not deploy or connect to any backend.");
