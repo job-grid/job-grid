@@ -8,7 +8,7 @@ const css = await readFile(new URL("../styles/global.css", import.meta.url), "ut
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
 const buildScript = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
 const mainScript = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
-const logo = await readFile(new URL("../public/job-grid-logo.webp", import.meta.url));
+const logo = await readFile(new URL("../public/job-grid-logo.png", import.meta.url));
 
 test("homepage includes semantic landmarks and descriptive metadata", () => {
   assert.match(html, /<html lang="en">/);
@@ -18,15 +18,16 @@ test("homepage includes semantic landmarks and descriptive metadata", () => {
   assert.match(html, /href="#main"/);
 });
 
-test("official supplied logo has a valid WebP signature and is used by a reusable brand component", () => {
-  assert.equal(logo.subarray(0, 4).toString("ascii"), "RIFF");
-  assert.equal(logo.subarray(8, 12).toString("ascii"), "WEBP");
+test("official supplied logo is a valid PNG and is used by the reusable brand component", () => {
+  assert.equal(logo.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
   assert.match(components, /class JobGridBrand extends HTMLElement/);
-  assert.match(components, /src="\/job-grid-logo\.webp"/);
+  assert.match(components, /src="\/job-grid-logo\.png"/);
   assert.match(components, /alt="Official Job Grid emblem"/);
   assert.match(components, /variant="footer"/);
-  assert.match(buildScript, /job-grid-logo\.webp/);
-  assert.match(buildScript, /new URL\("job-grid-logo\.webp", output\)/);
+  assert.match(buildScript, /job-grid-logo\.png/);
+  assert.match(buildScript, /new URL\("job-grid-logo\.png", output\)/);
+  assert.doesNotMatch(components, /job-grid-logo\.webp/);
+  assert.doesNotMatch(buildScript, /job-grid-logo\.webp/);
 });
 
 test("design tokens follow the logo's blue, white, and deep-navy identity", () => {
