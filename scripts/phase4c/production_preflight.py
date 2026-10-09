@@ -23,7 +23,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 PG_DUMP_PATH = "/usr/lib/postgresql/17/bin/pg_dump"
 PG_MAJOR = "17"
-APPROVED_HOST = "db.tnrdovdhlwitjzecduxa.supabase.co"
+APPROVED_HOST = "aws-0-eu-west-1.pooler.supabase.com"
+APPROVED_PORT = 5432
 PREFLIGHT_TIMEOUT = 5
 MIN_FREE_SPACE_BYTES = 2 * 1024 * 1024 * 1024
 SSL_REQUEST_CODE = 80877103
@@ -92,19 +93,21 @@ def check_client(major: str) -> None:
 
 
 def check_dns(host: str) -> None:
+    """Resolve the pinned Session pooler for IPv4, IPv6, or dual-stack within a timeout."""
     if host != APPROVED_HOST:
         _fail(PreflightCode.DNS_FAILED)
     try:
         result = subprocess.run(
-            ["getent", "ahostsv4", APPROVED_HOST],
-            stdout=subprocess.DEVNULL,
+            ["getent", "ahosts", APPROVED_HOST],
+            stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            text=True,
             check=False,
             timeout=PREFLIGHT_TIMEOUT,
         )
     except (OSError, subprocess.TimeoutExpired):
         _fail(PreflightCode.DNS_FAILED)
-    if result.returncode != 0:
+    if result.returncode != 0 or not result.stdout.strip():
         _fail(PreflightCode.DNS_FAILED)
 
 
@@ -285,6 +288,10 @@ class BackupPreflight:
         self.bucket = bucket
 
     def run(self, config: PreflightConfig) -> None:
+        if config.host != APPROVED_HOST:
+            _fail(PreflightCode.DNS_FAILED)
+        if config.port != APPROVED_PORT:
+            _fail(PreflightCode.TCP_FAILED)
         check_client(config.major_version)
         check_dns(config.host)
         check_tcp(config.host, config.port)
