@@ -69,7 +69,7 @@ p { color: var(--color-text-muted); }
 .float-card small { color: var(--color-text-muted); font-size: 0.68rem; margin-top: 0.12rem; }
 .mini-icon { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 0.75rem; font-weight: 800; }
 .mini-icon-blue { color: var(--color-primary); background: var(--color-primary-soft); }
-.mini-icon-mint { color: #087e68; background: var(--color-accent-soft); }
+.mini-icon-mint { color: var(--color-primary); background: var(--color-accent-soft); }
 .hero-star { z-index: 1; position: absolute; font-size: 1.45rem; color: var(--color-primary); }
 .star-one { top: 23%; left: 17%; }
 .star-two { right: 14%; bottom: 22%; color: var(--color-accent); }
@@ -90,8 +90,8 @@ p { color: var(--color-text-muted); }
 .role-card-top, .role-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .company-mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 0.85rem; color: var(--color-primary); font-family: Manrope, var(--font-sans); font-size: 1.1rem; font-weight: 800; }
 .mark-cobalt { background: #eaf0ff; }
-.mark-mint { color: #087e68; background: var(--color-accent-soft); }
-.mark-peach { color: #a65e2e; background: var(--color-peach-soft); }
+.mark-mint { color: var(--color-primary); background: var(--color-accent-soft); }
+.mark-peach { color: var(--color-secondary); background: var(--color-primary-soft); }
 .role-type { padding: 0.34rem 0.55rem; border: 1px solid var(--color-border); border-radius: 999px; color: #6b7690; font-size: 0.64rem; font-weight: 700; }
 .role-category { margin: 1.5rem 0 0.55rem; color: var(--color-primary); font-size: 0.67rem; font-weight: 800; letter-spacing: 0.1em; }
 .role-card h3 { margin-bottom: 0.5rem; line-height: 1.35; }
@@ -111,8 +111,8 @@ p { color: var(--color-text-muted); }
 .step-card { position: relative; padding: 1.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: white; }
 .step-number { position: absolute; top: 1.3rem; right: 1.35rem; color: #a4aec3; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
 .step-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 1rem; margin-bottom: 1.5rem; color: var(--color-primary); background: var(--color-primary-soft); font-size: 1.65rem; }
-.step-card:nth-child(2) .step-icon { color: #087e68; background: var(--color-accent-soft); }
-.step-card:nth-child(3) .step-icon { color: #a65e2e; background: var(--color-peach-soft); }
+.step-card:nth-child(2) .step-icon { color: var(--color-primary); background: var(--color-accent-soft); }
+.step-card:nth-child(3) .step-icon { color: var(--color-secondary); background: var(--color-primary-soft); }
 .step-card h3 { margin-bottom: 0.6rem; }
 .step-card p { margin-bottom: 0; font-size: 0.88rem; line-height: 1.75; }
 .closing-cta { position: relative; margin-block: 5.5rem; padding: 3.6rem 4rem; overflow: hidden; border-radius: var(--radius-xl); color: white; background: linear-gradient(115deg, #1737bb 0%, #2148df 65%, #2d5ae8 100%); }

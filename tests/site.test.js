@@ -6,6 +6,7 @@ const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
 const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
+const buildScript = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
 const mainScript = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
 const logo = await readFile(new URL("../public/job-grid-logo.webp", import.meta.url));
 
@@ -21,9 +22,11 @@ test("official supplied logo has a valid WebP signature and is used by a reusabl
   assert.equal(logo.subarray(0, 4).toString("ascii"), "RIFF");
   assert.equal(logo.subarray(8, 12).toString("ascii"), "WEBP");
   assert.match(components, /class JobGridBrand extends HTMLElement/);
-  assert.match(components, /src="\/public\/job-grid-logo\.webp"/);
+  assert.match(components, /src="\/job-grid-logo\.webp"/);
   assert.match(components, /alt="Official Job Grid emblem"/);
   assert.match(components, /variant="footer"/);
+  assert.match(buildScript, /job-grid-logo\.webp/);
+  assert.match(buildScript, /new URL\("job-grid-logo\.webp", output\)/);
 });
 
 test("design tokens follow the logo's blue, white, and deep-navy identity", () => {

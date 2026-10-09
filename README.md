@@ -4,7 +4,7 @@ A responsive public website shell and reusable brand/design foundation. This pha
 
 ## Brand system
 
-- The official logo was supplied by the owner. `public/job-grid-logo.webp` is a separate 96×96, display-optimized WebP variant derived from that source for the 48px header/footer placement. It preserves the emblem proportions; the original uploaded PNG was not overwritten or redrawn.
+- The official logo was supplied by the owner. `public/job-grid-logo.webp (served at `/job-grid-logo.webp`)` is a separate 96×96, display-optimized WebP variant derived from that source for the 48px header/footer placement. It preserves the emblem proportions; the original uploaded PNG was not overwritten or redrawn.
 - Header and footer share a reusable `job-grid-brand` web component, using the same logo asset and responsive sizing rules.
 - `styles/tokens.css` centralizes the logo-derived royal blue (#004EF5), bright blue (#1161F6), white, deep navy, typography, spacing, borders, radii, and shadows.
 - Keyboard focus, skip navigation, reduced-motion preference, and mobile navigation states are included.

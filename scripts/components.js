@@ -3,7 +3,7 @@ class JobGridBrand extends HTMLElement {
     const variant = this.getAttribute("variant") === "footer" ? "footer" : "header";
     this.innerHTML = `
       <a class="brand brand-${variant}" href="#top" aria-label="Job Grid home">
-        <img class="brand-logo" src="/public/job-grid-logo.webp" width="96" height="96" alt="Official Job Grid emblem" decoding="async" />
+        <img class="brand-logo" src="/job-grid-logo.webp" width="96" height="96" alt="Official Job Grid emblem" decoding="async" />
         <span class="brand-copy"><span class="brand-name">Job Grid</span><span class="brand-caption">Make your next move</span></span>
       </a>`;
   }
