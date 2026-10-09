@@ -1,8 +1,10 @@
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from production_preflight import APPROVED_HOST, PreflightCode, PreflightFailure, check_dns
+from production_preflight import APPROVED_HOST, BackupPreflight, PreflightCode, PreflightConfig, PreflightFailure, check_dns
 
 
 class DNSPreflightTests(unittest.TestCase):
@@ -52,6 +54,14 @@ class DNSPreflightTests(unittest.TestCase):
         self.assertEqual(str(ctx.exception), PreflightCode.DNS_FAILED.value)
         self.assertNotIn("TimeoutExpired", str(ctx.exception))
 
+
+    def test_preflight_rejects_unapproved_port_before_network_access(self):
+        config = PreflightConfig(APPROVED_HOST, 6543, "postgres", "synthetic-user", "synthetic-password", "17", Path(tempfile.gettempdir()), b"0" * 32)
+        with patch("production_preflight.check_client") as client_check:
+            with self.assertRaises(PreflightFailure) as ctx:
+                BackupPreflight(r2_client=object(), bucket="synthetic").run(config)
+        self.assertEqual(ctx.exception.code, PreflightCode.TCP_FAILED.value)
+        client_check.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()
