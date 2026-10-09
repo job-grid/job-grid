@@ -53,7 +53,7 @@ PROTECTED_AUTHORIZATION_ENV = "PHASE4C_BACKUP_AUTHORIZED"
 BACKUP_SOURCE_PREFIX = "BACKUP_SOURCE_POSTGRES_"
 R2_PREFIX = "BACKUP_R2_"
 ENCRYPTION_ENV = "BACKUP_ENCRYPTION_KEY"
-PG_DUMP = "pg_dump"
+PG_DUMP = "/usr/lib/postgresql/17/bin/pg_dump"
 PG_DUMP_VERSION_ARGUMENT = "--version"
 CHUNK_SIZE = 1024 * 1024
 ARTIFACT_DUMP = "database.dump.enc"
@@ -606,7 +606,7 @@ def _build_dump_command(source: SourcePostgresConfig, output_path: Path) -> list
     # Password is supplied only through PGPASSWORD. This command intentionally
     # preserves ACL/grant statements for recovery; ownership remains detached.
     return [
-        "/usr/lib/postgresql/17/bin/pg_dump",
+        PG_DUMP,
         "--host", source.host,
         "--port", source.port,
         "--username", source.username,

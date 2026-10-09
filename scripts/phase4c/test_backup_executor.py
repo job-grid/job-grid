@@ -18,6 +18,9 @@ from backup_executor import (
     BACKUP_BUCKET,
     PROTECTED_AUTHORIZATION_ENV,
     PROTECTED_EXECUTION_ENVIRONMENT,
+    PG_DUMP,
+    PG_DUMP_VERSION_ARGUMENT,
+    SubprocessCommandRunner,
     BackupConfig,
     BackupError,
     BotoR2Client,
@@ -30,6 +33,7 @@ from backup_executor import (
     _upload_and_verify,
     assert_backup_authorized,
     assert_pg_dump_major_version,
+    verify_pg_dump_major_version,
     classify_pg_dump_failure,
     classify_pg_dump_failure_detail,
     pg_dump_failure_diagnostic,
@@ -554,6 +558,34 @@ class BackupExecutorTests(unittest.TestCase):
                     path=path,
                     expected_sha256="0" * 64,
                 )
+
+    def test_approved_pg_dump_executable_is_used_for_version_and_dump(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "synthetic.dump"
+            version = type("Completed", (), {"returncode": 0, "stdout": "pg_dump (PostgreSQL) 17.6", "stderr": b""})()
+            dumped = type("Completed", (), {"returncode": 0, "stdout": b"", "stderr": b""})()
+            with patch.dict(os.environ, {"BACKUP_SOURCE_POSTGRES_MAJOR_VERSION": "17"}):
+                with patch("backup_executor.subprocess.run", side_effect=[version, dumped]) as run:
+                    SubprocessCommandRunner().run(
+                        [PG_DUMP, "--format=custom", "--file", str(output)],
+                        env={"PATH": "/usr/bin", "PGSSLMODE": "verify-full"},
+                        output_path=output,
+                    )
+            self.assertEqual(run.call_args_list[0].args[0], [PG_DUMP, PG_DUMP_VERSION_ARGUMENT])
+            self.assertEqual(run.call_args_list[1].args[0][0], PG_DUMP)
+            self.assertEqual(run.call_args_list[0].args[0][0], run.call_args_list[1].args[0][0])
+
+    def test_unapproved_pg_dump_executable_is_rejected_before_subprocess(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "synthetic.dump"
+            with patch("backup_executor.subprocess.run") as run:
+                with self.assertRaises(BackupError):
+                    SubprocessCommandRunner().run(
+                        ["pg_dump", "--format=custom", "--file", str(output)],
+                        env={"PATH": "/usr/bin"},
+                        output_path=output,
+                    )
+            run.assert_not_called()
 
     def test_pg_dump_password_not_in_argv(self):
         config = self.make_config(Path(tempfile.gettempdir()))
