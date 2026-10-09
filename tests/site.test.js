@@ -19,7 +19,7 @@ test("homepage includes semantic landmarks and descriptive metadata", () => {
 test("owner logo remains a replaceable placeholder rather than invented brand artwork", () => {
   assert.match(components, /brand-placeholder/);
   assert.match(components, /LOGO<br>PENDING/);
-  assert.match(html, /Brand assets pending owner approval/);
+  assert.match(components, /Brand assets pending owner approval/);
 });
 
 test("design tokens contain a consistent colour, typography, radius and spacing system", () => {
@@ -44,7 +44,7 @@ test("navigation components expose labels and accessible mobile menu state", () 
 });
 
 test("vacancy cards are clearly marked sample content and no live features are claimed", () => {
-  assert.equal((html.match(/Sample role/g) ?? []).length, 3);
+  assert.equal((html.match(/class="role-type">Sample role/g) ?? []).length, 3);
   assert.match(html, /not live vacancies/);
   assert.match(html, /Search, filters, applications, and employer accounts are not connected yet/);
   assert.doesNotMatch(html, /action="https?:\/\//);
