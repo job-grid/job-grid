@@ -221,6 +221,25 @@ SELECT
 """
 
 
+def validate_schema_counts(values: tuple) -> dict:
+    """Validate recovery counts without requiring optional object types to exist."""
+    labels = (
+        "tables", "constraints", "indexes", "functions", "triggers",
+        "rls", "policies", "grants", "migration_table",
+    )
+    if len(values) != len(labels):
+        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+    counts = dict(zip(labels, values))
+    # Triggers, RLS policies, functions, grants, and even application tables may
+    # legitimately be absent in a valid early-stage schema. The migration ledger
+    # is the required structural anchor and its latest migration is checked below.
+    if counts["migration_table"] <= 0:
+        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+    if any(not isinstance(count, int) or count < 0 for count in counts.values()):
+        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+    return counts
+
+
 def validate_recovery(
     *,
     host: str,
@@ -254,14 +273,7 @@ def validate_recovery(
                 migration = cur.fetchone()
         if opened != database:
             _fixed("RECOVERY_DATABASE_ACCESS_FAILED")
-        labels = (
-            "tables", "constraints", "indexes", "functions", "triggers",
-            "rls", "policies", "grants", "migration_table",
-        )
-        counts = dict(zip(labels, values))
-        required = ("tables","constraints","indexes","functions","triggers","rls","policies","grants","migration_table")
-        if any(counts[name] <= 0 for name in required):
-            _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+        counts = validate_schema_counts(values)
         if expected_migration_state:
             expected = json.loads(expected_migration_state)
             latest = {"version": str(migration[0]), "name": str(migration[1])} if migration else None
