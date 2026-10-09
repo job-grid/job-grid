@@ -189,6 +189,19 @@ class BackupExecutorTests(unittest.TestCase):
         with self.assertRaises(SafetyError):
             recovery_with_production_host.validate()
 
+    def test_production_source_rejects_unapproved_pooler_port(self):
+        bad_source = SourcePostgresConfig(
+            project_ref=PRODUCTION_PROJECT_REF,
+            host=APPROVED_PRODUCTION_POSTGRES_HOST,
+            port="6543",
+            database="postgres",
+            username="backup_user",
+            password="synthetic-password",
+            major_version="17",
+        )
+        with self.assertRaises(SafetyError):
+            bad_source.validate()
+
     def test_concrete_r2_client_supports_reconciliation_delete(self):
         self.assertTrue(callable(getattr(BotoR2Client, "delete_object", None)))
 
@@ -219,6 +232,7 @@ class BackupExecutorTests(unittest.TestCase):
         ):
             env = _child_env(self.make_config(Path(tempfile.gettempdir())).source)
         self.assertEqual(env["PGPASSWORD"], "synthetic-password")
+        self.assertEqual(env["PGSSLMODE"], "verify-full")
         self.assertIn("PATH", env)
         self.assertNotIn("UNRELATED_PROTECTED_SECRET", env)
         self.assertNotIn("ANOTHER_SECRET", env)
