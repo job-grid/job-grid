@@ -45,7 +45,8 @@ from phase4c_tooling import (
 
 
 BACKUP_BUCKET = "job-grid-backups"
-APPROVED_PRODUCTION_POSTGRES_HOST = "db.tnrdovdhlwitjzecduxa.supabase.co"
+APPROVED_PRODUCTION_POSTGRES_HOST = "aws-0-eu-west-1.pooler.supabase.com"
+APPROVED_PRODUCTION_POSTGRES_PORT = "5432"
 APPROVED_R2_ENDPOINT_URL = "https://6952ddf46cc39605326ecf0583cde02e.r2.cloudflarestorage.com"
 PROTECTED_EXECUTION_ENVIRONMENT = "phase4c-production-approved"
 PROTECTED_AUTHORIZATION_ENV = "PHASE4C_BACKUP_AUTHORIZED"
@@ -324,7 +325,9 @@ class SourcePostgresConfig:
         if self.project_ref != PRODUCTION_PROJECT_REF:
             raise SafetyError("Backup source must be the approved production project.")
         if self.host != APPROVED_PRODUCTION_POSTGRES_HOST:
-            raise SafetyError("Backup source PostgreSQL host is not the approved production host.")
+            raise SafetyError("Backup source PostgreSQL host is not the approved Session pooler host.")
+        if self.port != APPROVED_PRODUCTION_POSTGRES_PORT:
+            raise SafetyError("Backup source PostgreSQL port is not the approved Session pooler port.")
         if not all((self.host, self.port, self.database, self.username, self.password)):
             raise SafetyError("All backup source PostgreSQL credentials are required.")
 
@@ -621,6 +624,8 @@ def _child_env(source: SourcePostgresConfig) -> dict[str, str]:
         "LANG": os.environ.get("LANG", "C"),
         "LC_ALL": os.environ.get("LC_ALL", "C"),
         "PGPASSWORD": source.password,
+        # Set TLS verification for pg_dump itself, not only the psycopg preflight.
+        "PGSSLMODE": "verify-full",
     }
 
 
