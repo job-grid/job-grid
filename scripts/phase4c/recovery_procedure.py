@@ -259,8 +259,14 @@ def validate_recovery(
             "rls", "policies", "grants", "migration_table",
         )
         counts = dict(zip(labels, values))
-        required = ("tables","constraints","indexes","functions","triggers","rls","policies","grants","migration_table")
-        if any(counts[name] <= 0 for name in required):
+        # Object categories such as triggers, RLS policies, functions, and explicit
+        # grants may legitimately be empty in a valid database. Requiring every
+        # category to be non-zero rejects valid restores (including early-stage
+        # schemas). The migration ledger is the required structural anchor; when
+        # present, its latest migration is compared with the encrypted manifest.
+        if counts["migration_table"] <= 0:
+            _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+        if any(not isinstance(count, int) or count < 0 for count in counts.values()):
             _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
         if expected_migration_state:
             expected = json.loads(expected_migration_state)
