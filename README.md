@@ -1,24 +1,31 @@
 # Job Grid — Phase 1 website foundation
 
-A responsive, static-first public website shell and reusable brand/design foundation. This phase deliberately does not connect to Supabase, query live jobs, collect candidate information, authenticate users, deploy, or alter database schemas.
+A responsive public website shell and reusable brand/design foundation. This phase deliberately does not connect to Supabase, query live jobs, collect candidate information, authenticate users, deploy, or alter database schemas.
+
+## Brand system
+
+- The official logo was supplied by the owner. `public/job-grid-logo.webp` is a separate 96×96, display-optimized WebP variant derived from that source for the 48px header/footer placement. It preserves the emblem proportions; the original uploaded PNG was not overwritten or redrawn.
+- Header and footer share a reusable `job-grid-brand` web component, using the same logo asset and responsive sizing rules.
+- `styles/tokens.css` centralizes the logo-derived royal blue (#004EF5), bright blue (#1161F6), white, deep navy, typography, spacing, borders, radii, and shadows.
+- Keyboard focus, skip navigation, reduced-motion preference, and mobile navigation states are included.
 
 ## Technology decision
 
-The repository did not have an application/package manifest or frontend framework at the Phase 1 starting point. This initial public shell uses standards-based HTML, CSS custom properties, native Web Components, and modern JavaScript modules. That avoids introducing a large dependency tree before the first interface and deployment architecture have been reviewed.
+The repository did not have an application/package manifest or frontend framework at the Phase 1 starting point. This foundation uses semantic HTML, CSS custom properties, native Web Components, modern JavaScript modules, and Node's built-in test runner. No third-party runtime dependencies were added.
 
-**Recommended next-stage application stack:** TypeScript + React/Next.js, provided the Cloudflare deployment path is confirmed with a non-production preview first. That will suit the planned route structure, job-detail pages, protected account areas, and server-rendered SEO. The current control-plane repository does not itself establish an application deployment configuration, so Phase 1 does not add an unverified production path.
+**Recommended next-stage application stack:** TypeScript + React/Next.js, once the Cloudflare deployment path is confirmed with a non-production preview. This fits the planned job-search routes, SEO, job details, and protected account areas. The existing repository does not establish a deployed app path, so Phase 1 does not invent one.
 
 ## Development
 
 Requirements: Node.js 22+ and npm.
 
-- `npm ci` — install the locked dependency graph (no third-party runtime dependencies in this phase).
-- `npm run lint` — check HTML metadata, semantic landmarks, accessibility hooks, core tokens, mobile/reduced-motion rules, and absence of database coupling.
-- `npm run typecheck` — syntax-check the JavaScript modules. No TypeScript has been introduced in this static phase.
-- `npm test` — run built-in Node test runner checks.
-- `npm run build` — copy the public files into `dist/`; no deployment occurs.
+- `npm ci` — install the dependency-free lockfile.
+- `npm run lint` — check semantic metadata, accessibility hooks, design tokens, and source invariants.
+- `npm run typecheck` — syntax-check JavaScript modules; no TypeScript is introduced in this static-first phase.
+- `npm test` — run tests with Node's built-in test runner, including the official logo's WebP signature and reusable brand component.
+- `npm run build` — copy public files into `dist/`; no deployment occurs.
 
-Open `index.html` through a local static server to inspect the page. The homepage is responsive and uses reusable header/footer Web Components. The “LOGO PENDING” outline is temporary and should be replaced with the owner's supplied logo without changing the page layout.
+The owner-supplied image remains the source of truth. If a full-resolution or transparent export is later needed, prepare it as a separate asset; do not overwrite the owner's PNG.
 
 ## Current boundaries
 
@@ -29,9 +36,9 @@ Open `index.html` through a local static server to inspect the page. The homepag
 
 ## Next planned phases
 
-1. Add the approved logo asset, responsive logo sizing, and brand sign-off.
-2. Build job discovery, live listings/pagination, filters, and job details against a separately reviewed data contract.
+1. Review/sign off the official logo placement and palette.
+2. Build job discovery, live listings/pagination, filters, and job details against an approved data contract.
 3. Add candidate and employer authentication/registration with authorization tests.
 4. Add applications and applicant tracking.
 5. Add moderation/admin workflows and SEO route generation.
-6. Establish and test an isolated Cloudflare preview/deployment path before separately authorizing any production configuration.
+6. Establish and test an isolated Cloudflare preview/deployment path before separately authorizing production configuration.

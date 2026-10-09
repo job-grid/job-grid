@@ -7,6 +7,7 @@ const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), 
 const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
 const mainScript = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
+const logo = await readFile(new URL("../public/job-grid-logo.webp", import.meta.url));
 
 test("homepage includes semantic landmarks and descriptive metadata", () => {
   assert.match(html, /<html lang="en">/);
@@ -16,16 +17,22 @@ test("homepage includes semantic landmarks and descriptive metadata", () => {
   assert.match(html, /href="#main"/);
 });
 
-test("owner logo remains a replaceable placeholder rather than invented brand artwork", () => {
-  assert.match(components, /brand-placeholder/);
-  assert.match(components, /LOGO<br>PENDING/);
-  assert.match(components, /Brand assets pending owner approval/);
+test("official supplied logo has a valid WebP signature and is used by a reusable brand component", () => {
+  assert.equal(logo.subarray(0, 4).toString("ascii"), "RIFF");
+  assert.equal(logo.subarray(8, 12).toString("ascii"), "WEBP");
+  assert.match(components, /class JobGridBrand extends HTMLElement/);
+  assert.match(components, /src="\/public\/job-grid-logo\.webp"/);
+  assert.match(components, /alt="Official Job Grid emblem"/);
+  assert.match(components, /variant="footer"/);
 });
 
-test("design tokens contain a consistent colour, typography, radius and spacing system", () => {
-  for (const token of ["--color-primary", "--color-secondary", "--color-accent", "--color-bg", "--color-text", "--font-sans", "--radius-lg", "--space-8"]) {
+test("design tokens follow the logo's blue, white, and deep-navy identity", () => {
+  for (const token of ["--color-primary", "--color-primary-bright", "--color-secondary", "--color-navy-deep", "--color-bg", "--color-text", "--font-sans", "--radius-lg", "--space-8"]) {
     assert.ok(tokens.includes(token), `Expected token ${token}`);
   }
+  assert.match(tokens, /--color-primary: #004ef5/);
+  assert.match(tokens, /--color-primary-bright: #1161f6/);
+  assert.match(tokens, /--color-bg: #ffffff/);
 });
 
 test("responsive and accessibility states are defined", () => {
@@ -34,6 +41,7 @@ test("responsive and accessibility states are defined", () => {
   assert.match(css, /:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /\.skip-link/);
+  assert.match(css, /\.brand-logo/);
 });
 
 test("navigation components expose labels and accessible mobile menu state", () => {
