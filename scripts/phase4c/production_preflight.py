@@ -93,19 +93,21 @@ def check_client(major: str) -> None:
 
 
 def check_dns(host: str) -> None:
-    """Resolve the pinned Session pooler with IPv4, IPv6, or dual-stack DNS."""
+    """Resolve the pinned Session pooler for IPv4, IPv6, or dual-stack within a timeout."""
     if host != APPROVED_HOST:
         _fail(PreflightCode.DNS_FAILED)
     try:
-        addresses = socket.getaddrinfo(
-            host,
-            None,
-            family=socket.AF_UNSPEC,
-            type=socket.SOCK_STREAM,
+        result = subprocess.run(
+            ["getent", "ahosts", APPROVED_HOST],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+            timeout=PREFLIGHT_TIMEOUT,
         )
-    except (OSError, ValueError, socket.gaierror, TimeoutError):
+    except (OSError, subprocess.TimeoutExpired):
         _fail(PreflightCode.DNS_FAILED)
-    if not addresses:
+    if result.returncode != 0 or not result.stdout.strip():
         _fail(PreflightCode.DNS_FAILED)
 
 
