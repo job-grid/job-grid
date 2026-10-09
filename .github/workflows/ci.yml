@@ -87,7 +87,7 @@ jobs:
           if [[ -f package.json ]]; then
             echo "has_app=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_app=false" >> "$GITHUB_OUTPUT"
+            echo "has_app=false" >> "$GITHUB_OUTPUT
           fi
       - name: Setup Node
         if: steps.detect.outputs.has_app == 'true'
@@ -115,9 +115,15 @@ jobs:
           if npm run | grep -qE '^  test'; then npm test --if-present; else echo 'Tests: SKIPPED — no test script.'; fi
       - name: Production build
         if: steps.detect.outputs.has_app == 'true'
-        shell: bash
-        run: |
-          if npm run | grep -qE '^  build'; then npm run build; else echo 'Production build: SKIPPED — no build script.'; fi
+        run: npm run build
+      - name: Upload static site build artifact
+        if: steps.detect.outputs.has_app == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-grid-static-site-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
       - name: No application implementation yet
         if: steps.detect.outputs.has_app == 'false'
         run: >-
