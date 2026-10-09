@@ -87,7 +87,7 @@ jobs:
           if [[ -f package.json ]]; then
             echo "has_app=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_app=false" >> "$GITHUB_OUTPUT
+            echo "has_app=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Setup Node
         if: steps.detect.outputs.has_app == 'true'
