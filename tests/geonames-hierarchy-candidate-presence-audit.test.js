@@ -56,7 +56,7 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(report.input_integrity.sample_rows, 5);
   assert.equal(report.input_integrity.sample_unique_ids, 5);
   assert.equal(report.input_integrity.duplicate_sample_ids, 0);
-  assert.equal(report.admin1.code_references_with_exact_crosswalk_key, 1);
+  assert.equal(report.admin1.code_references_with_exact_crosswalk_key, 3);
   assert.equal(report.admin1.code_references_without_exact_key, 1);
   assert.equal(report.admin1.raw_00_placeholder_candidates, 1);
   assert.equal(report.admin1.unmatched_nonzero_code_references, 0);
@@ -66,16 +66,20 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(report.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
   assert.equal(report.admin2.total_unresolved_admin2_rows, 1);
   assert.equal(report.admin2.candidate_presence_issues, 0);
-  assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin1.AA, { ADM1: 1 });
+  assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin1.AA, { ADM1: 2 });
   assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin2.AA, { ADM2: 1 });
   assert.deepEqual(report.candidate_key_code_consistency_by_level_and_country.admin1.AA, {
-    target_admin_rows_checked: 2,
-    target_admin1_code_matches: 2
+    target_admin1_code_matches: 3,
+    target_admin1_code_mismatches: 0,
+    target_admin_rows_checked: 3
   });
   assert.deepEqual(report.candidate_key_code_consistency_by_level_and_country.admin2.AA, {
     complete_composite_key_matches: 2,
+    complete_composite_key_mismatches: 0,
     target_admin1_code_matches: 2,
+    target_admin1_code_mismatches: 0,
     target_admin2_code_matches: 2,
+    target_admin2_code_mismatches: 0,
     target_admin_rows_checked: 2
   });
   assert.equal(report.exceptions.rows, 0);
