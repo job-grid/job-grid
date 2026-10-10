@@ -4,7 +4,7 @@
 
 ## Scope
 
-A read-only audit was run using the committed, reproducible [hierarchy audit script](../../scripts/geonames-hierarchy-candidate-presence-audit.py) against the existing 25,685-row GeoNames sample and full `admin1CodesASCII.txt` and `admin2Codes.txt` crosswalk files. The first presence-only check did not exclude self-reference candidates. A stricter follow-up of the same source set explicitly compared each candidate ID with the child ID and found 7,102 self-reference cases in total. The JSON report and this section now reflect the stricter result.
+A read-only audit was run using the committed, reproducible [hierarchy audit script](../scripts/geonames-hierarchy-candidate-presence-audit.py) against the existing 25,685-row GeoNames sample and full `admin1CodesASCII.txt` and `admin2Codes.txt` crosswalk files. The first presence-only check did not exclude self-reference candidates. A stricter follow-up of the same source set explicitly compared each candidate ID with the child ID and found 7,102 self-reference cases in total. The JSON report and this section now reflect the stricter result.
 
 No source file was modified, no parent ID was written, and no database operation was performed. Aggregate evidence is in [the JSON report](geonames-hierarchy-candidate-presence-audit-2026-10-10.json).
 
