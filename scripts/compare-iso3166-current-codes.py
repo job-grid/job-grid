@@ -138,6 +138,18 @@ def main() -> int:
         if not path.is_file():
             parser.error(f"Input file not found: {path}")
 
+    repo_root = Path(__file__).resolve().parents[1]
+    restricted_paths = [("ISO source snapshot", args.iso_csv)]
+    if args.private_details_path is not None:
+        restricted_paths.append(("row-level mismatch details", args.private_details_path))
+    for label, path in restricted_paths:
+        resolved_path = path.resolve()
+        try:
+            resolved_path.relative_to(repo_root)
+        except ValueError:
+            continue
+        parser.error(f"{label} must be stored outside the repository root: {repo_root}")
+
     parsed_source_url = urlparse(args.source_url)
     if parsed_source_url.scheme != "https" or not parsed_source_url.netloc:
         parser.error("--source-url must be an HTTPS URL identifying the actual official source used.")
