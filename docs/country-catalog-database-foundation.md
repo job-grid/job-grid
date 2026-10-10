@@ -329,3 +329,46 @@ The 24 Singapore `admin1_crosswalk_not_found` exceptions remain unresolved. `SG.
 **Timestamp correction:** the supplied sample's `source_manifest.json` field `last_modified_utc` is created from Python `path.stat().st_mtime`, local filesystem modification time. It is not HTTP `Last-Modified` metadata. The corrected field name is `local_file_mtime_utc`; a separate `http_last_modified_utc` may be populated only from a captured server header and otherwise remains null. The original evidence archive was not rewritten; this semantic correction is explicitly recorded in the repository source manifest and both Stage C reports.
 
 **Disposition:** Stage A sample evidence remains READY FOR OWNER REVIEW. Stage C independent source verification is BLOCKED pending an approved transfer of the five official country ZIPs. Complete catalog acceptance remains separately BLOCKED pending source-pinned reproduction, current approved ISO comparison, policy approval and parent-hierarchy reconciliation. No migration, seed, database import, production/Cloudflare/secrets/backup/recovery change or PR merge was performed. Phase 4C remains BLOCKED.
+
+
+## Verification addendum — 2026-10-10: country archive comparison and crosswalk audit
+
+This addendum supersedes prior Stage C wording that the five country archives were unavailable. The earlier text is historical context; the current measured outcome is recorded here.
+
+### Five-country sample comparison
+
+The five owner-computer country archives passed ZIP CRC integrity checks. All 25,685 sample records were found by GeoNames ID and matched exactly across all 19 original fields. Source rows parsed: 481,942; missing sample IDs: 0; conflicting fields: 0; ambiguous ID matches: 0; duplicate IDs: 0; malformed 19-field rows: 0. This does not mean the full worldwide scan was reproduced.
+
+| Archive | Bytes | SHA-256 | Source rows | Exact sample matches |
+|---|---:|---|---:|---:|
+| `KE.zip` | 859,668 | `d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43` | 31,490 | 2,631 |
+| `GB.zip` | 3,639,180 | `eefc08df408aa4c3218151b5d9ca73768555fafac676a2ce5d612e2007c1f32a` | 109,181 | 12,096 |
+| `JP.zip` | 4,959,247 | `f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58` | 103,762 | 4,899 |
+| `BR.zip` | 7,177,385 | `4a9ddffb465ccad219127146f0678087cfece414ca0240bee53a5ea6750eebd8` | 235,530 | 5,888 |
+| `SG.zip` | 69,019 | `7e18942c0241144089da0b9bea659c96fadc201573be9d25a02442eb7b7f09d8` | 1,979 | 171 |
+
+The owner-computer full crosswalks contain 3,865 unique admin1 keys and 47,642 unique admin2 keys. Exact raw-code lookup over each sample row measured 2,333 non-empty admin1 references not found and 240 non-empty admin2 references not found:
+
+| Country | Admin1 unresolved | Admin2 unresolved |
+|---|---:|---:|
+| KE | 26 | 5 |
+| GB | 3 | 29 |
+| JP | 2,161 | 206 |
+| BR | 1 | 0 |
+| SG | 142 | 0 |
+| **Total** | **2,333** | **240** |
+
+This lookup covers records selected into the sample, including administrative features and populated places/localities. It verifies exact code-key presence, not authoritative code semantics or a complete parent-child graph. Raw `00` values remain unresolved placeholder/nonstandard-code candidates and need explicit policy. Preserve raw source codes. Do not automatically reject rows, label unmatched nonzero values as legacy without evidence, synthesize Singapore administrative records, or invent parents.
+
+The earlier 24 Singapore `admin1_crosswalk_not_found` exceptions remain open. The broader lookup identified 142 SG rows with a non-empty admin1 code missing from the full crosswalk: 118 use raw `00`, and 24 use raw `01`–`05`. Individual-ID overlap with the existing 24-row exception list has not been established. A durable row-level CSV/JSON of unmatched references is still required for review.
+
+### Current evidence and acceptance gates
+
+- **PASS:** five-country sample records exactly match owner-provided country ZIPs across all 19 original fields.
+- **PARTIAL / UNRESOLVED:** crosswalk reference counts are measured; exception classification and row-level export remain.
+- **UNVERIFIED:** the owner-reported 13,472,324-record full-worldwide scan has not been reproduced; `allCountries.zip` was not opened or parsed for this task.
+- **UNVERIFIED:** a current owner-approved ISO authority snapshot has not been compared.
+- **BLOCKED:** catalog acceptance, pending hierarchy/exception decisions and remaining reproducibility/ISO gates.
+- **BLOCKED separately:** Phase 4C recovery readiness.
+
+The files were checked read-only on the owner computer. The hashes below are locally measured; no HTTP Last-Modified header or exact remote retrieval time was captured. The duplicate `JP (1).zip` is identical to `JP.zip` by size and SHA-256. No migrations, seeds, imports, database or production changes were performed; PR #27 remains open, draft and unmerged.

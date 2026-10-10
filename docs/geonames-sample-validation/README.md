@@ -50,38 +50,28 @@ At `2026-10-10T11:21:52Z`, all nine configured official `download.geonames.org/e
 GeoNames attribution/licensing must be retained. This package makes no worldwide-completeness, production-readiness, sovereignty, or employment-eligibility claim.
 
 
-## Stage C — official five-country archive comparison: BLOCKED pending input transfer
+## Stage C — five-country sample-record comparison PASS; hierarchy review remains blocked
 
-Checked the owner's reported input folder `C:\Users\jonat\OneDrive\Desktop\JobGrid-GeoNames` on the connected Windows computer at approximately `2026-10-10T14:29Z`. The folder listing contained `allCountries.zip`, `countryInfo.txt.txt`, the admin1/admin2 crosswalks, `readme.txt`, and the sample ZIP/output folder. It did **not** contain the five requested country archives `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, or `SG.zip`. The same five archives were not present in the owner's Downloads listing. The available worldwide archive was not opened or parsed for this task, and no worldwide archive download was started.
+The five requested country ZIPs are now present in the owner's connected Windows folder. All five passed ZIP CRC integrity checks. Source rows were parsed and compared to the 25,685-row sample by GeoNames ID and all 19 source fields.
 
-The requested official source URLs are recorded below. Because the five country ZIPs were not available in the checked input folder, they have not been retrieved or examined in this stage; do not infer source-match counts from their absence.
+| Archive | Bytes | SHA-256 | Source rows | Exact sample matches | ZIP CRC |
+|---|---:|---|---:|---:|---|
+| `KE.zip` | 859,668 | `d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43` | 31,490 | 2,631 | PASS |
+| `GB.zip` | 3,639,180 | `eefc08df408aa4c3218151b5d9ca73768555fafac676a2ce5d612e2007c1f32a` | 109,181 | 12,096 | PASS |
+| `JP.zip` | 4,959,247 | `f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58` | 103,762 | 4,899 | PASS |
+| `BR.zip` | 7,177,385 | `4a9ddffb465ccad219127146f0678087cfece414ca0240bee53a5ea6750eebd8` | 235,530 | 5,888 | PASS |
+| `SG.zip` | 69,019 | `7e18942c0241144089da0b9bea659c96fadc201573be9d25a02442eb7b7f09d8` | 1,979 | 171 | PASS |
 
-| Archive | Official source URL | Retrieval date | Byte size | SHA-256 | ZIP integrity | Source records parsed | Sample match status |
-|---|---|---|---:|---|---|---:|---|
-| KE.zip | https://download.geonames.org/export/dump/KE.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
-| GB.zip | https://download.geonames.org/export/dump/GB.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
-| JP.zip | https://download.geonames.org/export/dump/JP.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
-| BR.zip | https://download.geonames.org/export/dump/BR.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
-| SG.zip | https://download.geonames.org/export/dump/SG.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+**Total:** 481,942 source rows parsed; 25,685/25,685 sample rows matched exactly. Missing IDs: 0; conflicting fields: 0; ambiguous ID matches: 0; duplicate source IDs: 0; malformed 19-field rows: 0. `JP (1).zip` is identical to `JP.zip` by size and SHA-256.
 
-**Independent source match counts:** matched = NOT MEASURED; missing from source = NOT MEASURED; conflicting original fields = NOT MEASURED; ambiguous source matches = NOT MEASURED. No selected sample row has yet been compared to the five official country ZIPs in this stage. These are null/unmeasured results, not zero.
+### Measured crosswalk lookup
 
-### Kenya candidate checks currently available
+The owner-computer full crosswalks contained 3,865 unique admin1 code keys and 47,642 unique admin2 code keys. An exact raw-code lookup over each sample row found 2,333 unmatched non-empty admin1 code references and 240 unmatched non-empty admin2 code references. By country, admin1 unmatched counts: KE 26, GB 3, JP 2,161, BR 1, SG 142; admin2 unmatched counts: KE 5, GB 29, JP 206, BR 0, SG 0.
 
-The following observations are from the previously inspected sample and included sample crosswalk only. They are **not** independent comparisons against `KE.zip`:
+These are exact-key existence counts, not final invalid-record counts. The sample includes administrative features and place/locality rows. Japan's 2,161 unresolved admin1 keys all use raw code `00`; Singapore has 142 non-empty raw admin1 codes missing from the full crosswalk (118 `00` and 24 codes `01`–`05`). The existing exceptions CSV lists 24 SG `admin1_crosswalk_not_found` rows; overlap with the broader 142-row set has not been checked by individual ID. A durable per-record exception export is still required.
 
-| Candidate | Sample GeoNames ID | Sample feature/admin code | Included sample crosswalk candidate | Current classification |
-|---|---:|---|---:|---|
-| Nairobi | 184745 | PPLC; KE admin1 `05` | Nairobi County ID 184742 | Sample-level candidate; source-archive comparison pending |
-| Kisumu | 191245 | PPLA; KE admin1 `26` | Kisumu County ID 191242 | Sample-level candidate; source-archive comparison pending |
-| Mombasa | 186301 | PPLA; KE admin1 `37` | Mombasa County ID 186298 | Sample-level candidate; source-archive comparison pending |
-| Mombasa same-name alternative | 186300 | PPL; KE admin1 `27` | Not to be collapsed by name | Keep distinct; semantic/parent review pending |
+Keep all 24 recorded Singapore exceptions unresolved. Preserve raw IDs/codes; do not classify `00` as invalid without an owner-approved rule; do not infer that unmatched nonzero codes are legacy without evidence; do not invent parent links or merge same-name entities. The row-level code lookup found no resolved admin2 key whose admin1 key was missing, but this does not prove a complete parent hierarchy.
 
-No name-only identity matching is accepted. Compare the five official archives by GeoNames ID and all 19 original fields; report the original values for any conflict. The 24 Singapore admin1 crosswalk misses remain unresolved and must not be rejected automatically.
+The owner-provided source files came from the official GeoNames URLs above, but this task did not re-fetch those URLs or capture HTTP Last-Modified headers. The hashes and ZIP checks are measured on local files. The originally reported 13,472,324-row worldwide scan was not reproduced; the full `allCountries.zip` was not opened or parsed. A current owner-approved ISO authority snapshot also remains unavailable.
 
-### Required next input
-
-Provide `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, and `SG.zip` via the approved file-transfer method into a dedicated verification input directory. Include transfer provenance if available. Once present, record the actual file byte sizes and SHA-256, ZIP CRC/integrity results, source record counts, exact-ID comparisons and field-level differences. Do not download `allCountries.zip` again, and do not claim a five-country comparison independently reproduces the worldwide scan.
-
-
-For the current five-country input-discovery result, see the [independent source-verification report](../geonames-sample-independent-source-verification-2026-10-10.md) and its [machine-readable JSON](../geonames-sample-independent-source-verification-2026-10-10.json). This Stage C report is **BLOCKED** pending the five official ZIP inputs; it does not change the separate Stage A sample-review status.
+**Current disposition:** Stage C selected-sample source comparison **PASS**; administrative hierarchy and row-level exception packaging remain incomplete; independent worldwide reproducibility and ISO comparison remain unverified; **catalog acceptance BLOCKED**. PR #27 remains open, draft and unmerged. No database, production, Cloudflare, secrets, backup or recovery changes were performed. Phase 4C remains separately BLOCKED.

@@ -28,7 +28,7 @@ test("unmeasured validation counts are null, not fabricated zeros", () => {
   assert.match(source, /Null means not measured/);
 });
 
-test("the command fails closed while ZIP parsing and ISO authority verification remain unavailable", () => {
+test("the owner-laptop five-country comparison passes while global source and ISO gates remain incomplete", () => {
   assert.match(source, /status: "BLOCKED"/);
   assert.match(source, /approved_iso_authority_verified: false/);
   assert.match(source, /process.exitCode = 2/);
@@ -61,13 +61,17 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(builderReport, /does not describe or negate the separate owner-laptop sample generation/i);
   assert.match(report, /admin1_crosswalk_not_found/);
   assert.match(report, /original-source SHA-256|original source bytes/i);
-  assert.match(stageCReport, /BLOCKED FOR INDEPENDENT SOURCE VERIFICATION/);
-  assert.match(stageCReport, /Matched sample IDs \| Missing sample IDs \| Conflicting records \| Ambiguous matches/i);
-  assert.match(stageCReport, /NOT MEASURED/);
-  assert.match(stageCReport, /SG.zip.*NOT RETRIEVED/s);
-  assert.match(stageCReport, /local_file_mtime_utc/);
-  assert.match(stageCJson, /"available_country_archives": 0/);
-  assert.match(stageCJson, /"sample_ids_matched": null/);
-  assert.match(stageCJson, /"official_ke_zip_verified": false/);
-  assert.match(stageCJson, /"official_sg_zip_checked": false/);
+  assert.match(stageCReport, /Stage C sample-record comparison: PASS/);
+  assert.match(stageCReport, /25,685/);
+  assert.match(stageCReport, /all 19 original fields/);
+  assert.match(stageCReport, /admin1CodesASCII.txt.*3,865/s);
+  assert.match(stageCReport, /admin2Codes.txt.*47,642/s);
+  assert.match(stageCReport, /24 Singapore/);
+  assert.match(stageCReport, /catalog acceptance remains .*BLOCKED/i);
+  assert.match(stageCJson, /"five_country_sample_record_comparison": "PASS"/);
+  assert.match(stageCJson, /"sample_ids_matched": 25685/);
+  assert.match(stageCJson, /"missing_sample_ids": 0/);
+  assert.match(stageCJson, /"admin1_unmatched": 2161/);
+  assert.match(stageCJson, /"official_ke_zip_verified": true/);
+  assert.match(sourceManifest, /owner_laptop_five_country_archive_comparison/);
 });

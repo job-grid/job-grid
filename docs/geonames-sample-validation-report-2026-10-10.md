@@ -130,3 +130,14 @@ Consequently the Stage C source-level match counts are **NOT MEASURED**: matched
 Per-archive URLs, missing-input status, unmeasured bytes/SHA-256, unrun ZIP checks and the Kenya sample-only candidates are documented in the [independent source-verification report](geonames-sample-independent-source-verification-2026-10-10.md) and its [machine-readable JSON](geonames-sample-independent-source-verification-2026-10-10.json). Stage A remains suitable for owner review; Stage C independent verification is blocked pending approved transfer of the five source ZIPs.
 
 The manifest correction is explicit: the owner's uploaded `source_manifest.json` field `last_modified_utc` is actually local filesystem `st_mtime`, not an HTTP header. Rename to `local_file_mtime_utc`; keep `http_last_modified_utc` null unless a real response header was captured. The original evidence ZIP remains unchanged.
+
+
+## Evidence update — Stage C five-country comparison completed (2026-10-10)
+
+This addendum supersedes the earlier Stage C paragraph stating that the five archives were absent. The owner-connected Windows computer now contains the five country ZIPs. All five passed ZIP CRC integrity tests. Exact SHA-256 hashes, byte sizes, source-row counts and match totals are recorded in `docs/geonames-sample-independent-source-verification-2026-10-10.md` and its JSON counterpart.
+
+All **25,685/25,685** selected sample records matched the appropriate country source by GeoNames ID and all 19 original fields. Missing IDs: 0; conflicting fields: 0; ambiguous matches: 0; duplicate source IDs: 0; malformed 19-field source rows: 0. This does not reproduce the owner's reported 13,472,324-row worldwide scan.
+
+The full crosswalk code lookup measured 2,333 unmatched non-empty admin1 references and 240 unmatched non-empty admin2 references in sample rows. A durable row-level exception export and owner-approved interpretation are still required. The 24 recorded Singapore exceptions remain unresolved; the broader lookup found 142 SG sample rows with non-empty admin1 codes absent from the full crosswalk. Preserve raw codes and IDs; do not invent parents.
+
+Catalog acceptance remains **BLOCKED** pending row-level exception output, owner decisions on unmatched codes and hierarchy, reproduction of the worldwide scan from pinned inputs, and a current approved ISO authority comparison. No database or production changes were performed.
