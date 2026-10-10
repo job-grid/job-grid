@@ -236,6 +236,16 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.outcome.true_self_reference_cases, 0);
   assert.equal(audit.outcome.other_candidate_presence_mismatches, 0);
   assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.status, "PASS_OBSERVED_EXPECTED_ADMIN_LEVEL_FEATURE_CODES");
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin1.distinct_same_country_admin_candidate_rows, 23195);
+  assert.deepEqual(audit.hierarchy_candidate_feature_level_profile.admin1.observed_feature_code_counts_by_country, { BR: { ADM1: 5860 }, GB: { ADM1: 12088 }, JP: { ADM1: 2689 }, KE: { ADM1: 2558 } });
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin1.unexpected_feature_code_rows_against_observed_ADM1_level, 0);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin2.distinct_same_country_admin_candidate_rows, 13468);
+  assert.deepEqual(audit.hierarchy_candidate_feature_level_profile.admin2.observed_feature_code_counts_by_country, { BR: { ADM2: 285 }, GB: { ADM2: 11819 }, JP: { ADM2: 1364 } });
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin2.unexpected_feature_code_rows_against_observed_ADM2_level, 0);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.excluded_identity_matches.admin1, 125);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.excluded_identity_matches.admin2, 6977);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.catalog_acceptance, "BLOCKED");
   assert.equal(audit.unresolved_reference_triage.admin1.unresolved_rows, 2333);
   assert.equal(audit.unresolved_reference_triage.admin1.classifications.unresolved_placeholder_raw_code_00, 2284);
   assert.equal(audit.unresolved_reference_triage.admin1.classifications.unresolved_missing_or_version_dependent_nonzero_code, 49);
