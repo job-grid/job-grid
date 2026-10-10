@@ -231,6 +231,9 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.outcome.self_reference_lookup_cases, 7102);
   assert.equal(audit.outcome.other_candidate_presence_mismatches, 0);
   assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
+  assert.match(audit.audit_script.executed_copy_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(audit.audit_script.current_repository_script_reexecuted_against_source_data_after_hardening, false);
+  assert.equal(audit.audit_script.current_repository_script_is_covered_by_synthetic_tests, true);
   assert.equal(audit.scope.parent_links_written, false);
   assert.equal(audit.admin1.candidate_self_references + audit.admin2.candidate_self_references, 7102);
   const contextCase = admin2.find(row => row.proposed_review_classification === "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
