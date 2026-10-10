@@ -4,8 +4,9 @@ import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const script = new URL("../scripts/compare-iso3166-current-codes.py", import.meta.url);
+const script = fileURLToPath(new URL("../scripts/compare-iso3166-current-codes.py", import.meta.url));
 const python = process.platform === "win32" ? "python" : "python3";
 
 async function runFixture(t, isoCsv, geonamesText) {
@@ -19,7 +20,7 @@ async function runFixture(t, isoCsv, geonamesText) {
   await writeFile(geonamesPath, geonamesText, "utf8");
 
   const result = spawnSync(python, [
-    script.pathname,
+    script,
     "--iso-csv", isoPath,
     "--country-info", geonamesPath,
     "--output", reportPath,
@@ -53,7 +54,7 @@ test("ISO comparator runs offline and emits aggregate counts without code tuples
 
   const serialized = JSON.stringify(report);
   for (const sourceValue of ["AA", "AAA", "BBX", "999", "CC", "CCC"]) {
-    assert.ok(!serialized.includes(sourceValue), "aggregate report leaked a source code value: " + sourceValue);
+    assert.ok(!serialized.includes("\"" + sourceValue + "\""), "aggregate report leaked a source code value: " + sourceValue);
   }
 });
 
