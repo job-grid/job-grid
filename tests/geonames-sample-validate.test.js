@@ -85,8 +85,14 @@ test("crosswalk exports have deterministic schemas, sorting, and measured aggreg
  const keys = ["geonames_id","name","country_code","feature_code","raw_admin1_code","raw_admin2_code","missing_reference_category","proposed_review_classification","crosswalk_lookup_key","raw_missing_code"];
  for (const rows of [a1,a2]) {
   for (const row of rows) assert.deepEqual(Object.keys(row), keys);
-  const sortKey = r => [r.country_code,r.geonames_id,r.raw_admin1_code,r.raw_admin2_code,r.feature_code,r.name].join("\\0");
-  assert.deepEqual(rows.map(sortKey), [...rows].sort((x,y)=>sortKey(x).localeCompare(sortKey(y))));
+  const compareRows = (a,b) => {
+    for (const key of ["country_code","geonames_id","raw_admin1_code","raw_admin2_code","feature_code","name"]) {
+      if (a[key] < b[key]) return -1;
+      if (a[key] > b[key]) return 1;
+    }
+    return 0;
+  };
+  assert.deepEqual(rows, [...rows].sort(compareRows));
   assert.ok(rows.every(r => !("parent_id" in r) && !("proposed_parent_id" in r)));
  }
  assert.equal(a1.length,2333); assert.equal(new Set(a1.map(r=>r.geonames_id)).size,2333);
