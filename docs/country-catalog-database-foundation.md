@@ -310,3 +310,22 @@ The builder-side retrieval failure recorded in §5A and `docs/geonames-sample-va
 6. Correct the timestamp field semantics so local file mtime is not presented as a server Last-Modified time.
 
 **Governance:** this is documentation and test-coverage work only. No database operations, migrations, seeds/imports, production, Cloudflare, secrets, backup or recovery changes were made. PR #27 remains open, draft and unmerged. Phase 4C recovery readiness remains separately **BLOCKED** pending its independently approved and verified recovery prerequisites.
+
+
+## 5D. Independent five-country archive verification — BLOCKED — 2026-10-10
+
+Stage C requires source comparison against the official `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, and `SG.zip` archives. A read-only inspection of `C:\Users\jonat\OneDrive\Desktop\JobGrid-GeoNames` and `C:\Users\jonat\Downloads` found none of those five country ZIPs. The source folder does contain the previously used worldwide `allCountries.zip`, metadata/crosswalk files and the generated sample package. The worldwide archive was not opened or parsed for Stage C, and no new worldwide download was started.
+
+The per-archive source URL, retrieval status, byte size, SHA-256, ZIP integrity result and row comparison status are recorded in:
+- [Independent five-country source verification report](geonames-sample-independent-source-verification-2026-10-10.md)
+- [Machine-readable source verification result](geonames-sample-independent-source-verification-2026-10-10.json)
+
+**Measured Stage C results:** 0 of 5 requested country archives present in the checked directory; 0 archives parsed; 0 source records compared. Archive match counts (matched, source-missing, conflicting, ambiguous) are **NOT MEASURED**, not zero. For each missing archive, retrieval date is NOT RETRIEVED, byte size and SHA-256 are NOT MEASURED, and ZIP integrity is NOT RUN. The earlier Stage A count of 25,685 sample records remains an independent check of the supplied sample package only; it is not evidence of matching against these five original official ZIPs and does not reproduce the full worldwide scan.
+
+The Nairobi (184745 / KE admin1 05), Kisumu (191245 / KE admin1 26), Mombasa candidate (186301 / KE admin1 37), and same-name Mombasa alternative (186300 / KE admin1 27) observations remain sample-level only. Their included sample crosswalk candidates are documented in the Stage C report; no claim is made that they match `KE.zip`, because it was absent.
+
+The 24 Singapore `admin1_crosswalk_not_found` exceptions remain unresolved. `SG.zip` was not available, so no further source-backed mapping was established. Do not reject the entries automatically, fabricate admin records or infer parent links.
+
+**Timestamp correction:** the supplied sample's `source_manifest.json` field `last_modified_utc` is created from Python `path.stat().st_mtime`, local filesystem modification time. It is not HTTP `Last-Modified` metadata. The corrected field name is `local_file_mtime_utc`; a separate `http_last_modified_utc` may be populated only from a captured server header and otherwise remains null. The original evidence archive was not rewritten; this semantic correction is explicitly recorded in the repository source manifest and both Stage C reports.
+
+**Disposition:** Stage A sample evidence remains READY FOR OWNER REVIEW. Stage C independent source verification is BLOCKED pending an approved transfer of the five official country ZIPs. Complete catalog acceptance remains separately BLOCKED pending source-pinned reproduction, current approved ISO comparison, policy approval and parent-hierarchy reconciliation. No migration, seed, database import, production/Cloudflare/secrets/backup/recovery change or PR merge was performed. Phase 4C remains BLOCKED.
