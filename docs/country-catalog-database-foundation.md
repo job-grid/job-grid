@@ -259,3 +259,21 @@ Tooling added to this branch:
 Important limitation: this is not the completed sample parser/reconciliation requested by the owner. It is source retrieval/checksum preflight only. The 19-field country archive parser, ZIP integrity gate, approved ISO cross-check, reviewed feature mapping, duplicate-ID reconciliation, alternate-name parsing, same-country parent validation and Kenya place ID/admin-code checks remain incomplete. The helper intentionally reports BLOCKED; its existence must not be represented as completion.
 
 Reproduction on a network-enabled isolated runner: node scripts/geonames-sample-validate.mjs --workspace /isolated/geonames-staging --download. Pin reviewed expected SHA-256 values in the workspace manifest before treating any source as verified. Do not commit source archives. No database migration, seed, import, deployment or production/recovery action was performed. Phase 4C remains BLOCKED.
+
+
+## 5B. Uploaded GeoNames sample validation — 2026-10-10 update
+
+The owner supplied `JobGrid-GeoNames-Sample-20261010-163234.zip`. This artifact was read and validated locally; it supersedes the earlier statement that no machine-generated sample output was available, but does not erase the earlier source retrieval limitation.
+
+- ZIP: 1,346,867 bytes; SHA-256 `feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf`; ZIP member integrity check passed.
+- The supplied summary reports 13,472,324 worldwide rows scanned, zero malformed 19-field rows, and 481,942 rows across the five country codes before sample selection.
+- Measured output: 25,685 selected place rows and 25,685 distinct GeoNames IDs; zero duplicate IDs and zero invalid coordinates within the selected output; 5 country metadata rows; 125 admin1 crosswalk rows; 6,977 admin2 crosswalk rows.
+- All 24 exceptions are `admin1_crosswalk_not_found`, and all are Singapore (SG). Rechecking the selected populated places against the included admin1 crosswalk reproduced the same 24 SG-only misses; no admin2 misses were found. These are unresolved source-model/crosswalk exceptions, not automatically invalid records. Preserve source IDs/codes and do not invent administrative parents.
+- Source-ID/admin1 checks: Nairobi 184745 / KE.05 → Nairobi County crosswalk ID 184742; Kisumu 191245 / KE.26 → Kisumu County crosswalk ID 191242; Mombasa candidate 186301 / KE.37 → Mombasa County crosswalk ID 186298. A same-name Mombasa record (186300 / KE.27) also exists and must remain distinct pending semantic review. The sample has 11 Brasília name matches; use ID, feature code and admin context rather than name-only matching.
+- Brazil numeric code remains text `076`; GB is used for United Kingdom; Singapore's populated-place record 1880252 has blank admin codes and must not be assigned a synthetic parent.
+
+Detailed report: [GeoNames sample validation report](geonames-sample-validation-report-2026-10-10.md) and [machine-readable JSON results](geonames-sample-validation-report-2026-10-10.json).
+
+Limitations remain material: the uploaded ZIP does not contain the original allCountries.zip, original countryInfo source, or full admin crosswalks. Thus the source hashes/byte sizes in its manifest were not independently recomputed from the original source bytes. The supplied script uses local filesystem `st_mtime` for a field named `last_modified_utc`; it should be renamed to `local_file_mtime_utc` or replaced with verified HTTP Last-Modified metadata. Crosswalk presence does not prove a parent-child relationship, and parent links were not resolved. A current approved ISO authority snapshot was not independently validated.
+
+The sample output supports owner review of these measured results, but is not a production catalog acceptance. No database operations, imports, migrations, production changes, Cloudflare changes or PR merge were performed. Phase 4C remains BLOCKED.
