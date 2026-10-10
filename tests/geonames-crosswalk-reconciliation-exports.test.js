@@ -93,7 +93,7 @@ test("crosswalk exception exports remain row-complete and CSV/JSON-equivalent", 
   assert.equal(admin2.length, summary.unmatched_admin2_unique_records);
   assert.equal(summary.admin1_crosswalk_keys, 3865);
   assert.equal(summary.admin2_crosswalk_keys, 47642);
-  assert.equal(summary.repository_exports.row_level_exports_persisted, true);
+  assert.equal(summary.owner_review.row_level_exports_persisted, true);
 });
 
 test("proposed exception classifications preserve raw codes and distinguish missing context", async () => {
