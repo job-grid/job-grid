@@ -303,6 +303,12 @@ def main() -> int:
             "raw_00_placeholder_candidates": total["admin1_raw_00_key_missing"],
             "unmatched_nonzero_code_references": total["admin1_key_missing"] - total["admin1_raw_00_key_missing"],
             "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": total["admin1_candidate_id_present_as_same_country_admin_feature"],
+            "candidate_self_references": total["admin1_candidate_self_reference"],
+            "candidate_presence_mismatches_other_than_self_reference": sum(
+                count for name, count in total.items()
+                if name.startswith("admin1_candidate_")
+                and name not in {"admin1_candidate_id_present_as_same_country_admin_feature", "admin1_candidate_self_reference"}
+            ),
             "candidate_presence_issues": sum(count for name, count in total.items() if name.startswith("admin1_candidate_") and name != "admin1_candidate_id_present_as_same_country_admin_feature"),
         },
         "admin2": {
@@ -312,6 +318,12 @@ def main() -> int:
             "references_uncheckable_due_to_blank_admin1_context": admin2_missing_context,
             "total_unresolved_admin2_rows": admin2_missing_key + admin2_missing_context,
             "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": total["admin2_candidate_id_present_as_same_country_admin_feature"],
+            "candidate_self_references": total["admin2_candidate_self_reference"],
+            "candidate_presence_mismatches_other_than_self_reference": sum(
+                count for name, count in total.items()
+                if name.startswith("admin2_candidate_")
+                and name not in {"admin2_candidate_id_present_as_same_country_admin_feature", "admin2_candidate_self_reference"}
+            ),
             "candidate_presence_issues": sum(count for name, count in total.items() if name.startswith("admin2_candidate_") and name != "admin2_candidate_id_present_as_same_country_admin_feature"),
         },
         "exceptions": {
