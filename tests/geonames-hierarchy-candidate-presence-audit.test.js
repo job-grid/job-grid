@@ -52,6 +52,7 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(result.status, 0, result.stderr);
 
   const report = JSON.parse(await readFile(join(outputDir, "hierarchy-audit-summary.json"), "utf8"));
+  assert.equal(report.status, "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED");
   assert.equal(report.input_integrity.sample_rows, 5);
   assert.equal(report.input_integrity.sample_unique_ids, 5);
   assert.equal(report.input_integrity.duplicate_sample_ids, 0);
@@ -94,3 +95,45 @@ test("hierarchy audit refuses to place generated source-data reports inside a Gi
   assert.equal(result.status, 2);
   assert.match(result.stderr, /outside the repository root/);
 });
+
+test("hierarchy audit blocks self-parent candidates and emits row-level exceptions", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-self-reference-test-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+
+  const sourceRoot = join(root, "sources");
+  const outputDir = join(root, "audit-output");
+  const sampleDir = join(sourceRoot, "sample-output-20261010-163234");
+  await mkdir(sampleDir, { recursive: true });
+
+  const sample = [
+    header,
+    row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
+    row("10", "Fixture Admin1 Self", "A", "ADM1", "AA", "01", ""),
+    row("11", "Fixture Admin2 Self", "A", "ADM2", "AA", "01", "001")
+  ].join("\n") + "\n";
+  await writeFile(join(sampleDir, "geoname_places_sample.tsv"), sample, "utf8");
+  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\tFixture Admin1\tFixture Admin1\t10\n", "utf8");
+  await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\tFixture Admin2\tFixture Admin2\t11\n", "utf8");
+
+  const result = spawnSync(python, [
+    script,
+    "--source-root", sourceRoot,
+    "--output-dir", outputDir
+  ], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 1, result.stderr);
+
+  const report = JSON.parse(await readFile(join(outputDir, "hierarchy-audit-summary.json"), "utf8"));
+  assert.equal(report.status, "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND");
+  assert.equal(report.admin1.candidate_self_references, 1);
+  assert.equal(report.admin1.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 2);
+  assert.equal(report.admin2.candidate_self_references, 1);
+  assert.equal(report.admin2.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 1);
+  assert.equal(report.exceptions.rows, 2);
+  assert.equal(report.scope.parent_links_written, false);
+
+  const exceptionCsv = await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8");
+  assert.match(exceptionCsv, /ADMIN1_CROSSWALK_CANDIDATE_SELF_REFERENCE/);
+  assert.match(exceptionCsv, /ADMIN2_CROSSWALK_CANDIDATE_SELF_REFERENCE/);
+});
+
