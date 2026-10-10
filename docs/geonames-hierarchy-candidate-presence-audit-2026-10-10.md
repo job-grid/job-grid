@@ -40,12 +40,12 @@ Singapore's 142 admin1 misses remain unresolved; the earlier 24 exceptions overl
 | Country | Sample rows | Admin1 keys found | Admin1 unresolved | Admin2 keys found | Admin2 missing-key cases | Admin2 missing-context cases |
 |---|---:|---:|---:|---:|---:|---:|
 | KE | 2,631 | 2,605 | 26 | 32 | 5 | 0 |
-| GB | 12,096 | 12,092 | 3 | 29 | 29 | 0 |
+| GB | 12,096 | 12,092 | 3 | 12,004 | 29 | 0 |
 | JP | 4,899 | 2,736 | 2,161 | 2,554 | 205 | 1 |
 | BR | 5,888 | 5,887 | 1 | 5,855 | 0 | 0 |
 | SG | 171 | 0 | 142 | 0 | 0 | 0 |
 
-The admin1 “unresolved” counts are reference-row counts; the per-country values include rows with non-empty admin1 code. Total missing key is 2,333 references.
+The admin1 “unresolved” counts are reference-row counts; the per-country values include rows with non-empty admin1 code. The admin1 total missing-key reference count is 2,333.
 
 ## Disposition
 
