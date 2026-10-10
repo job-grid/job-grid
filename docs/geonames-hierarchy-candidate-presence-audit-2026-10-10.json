@@ -1,5 +1,5 @@
 {
-  "report_version": "1.2",
+  "report_version": "1.3",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -194,24 +194,24 @@
   },
   "audit_script": {
     "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
-    "sha256": "efa73e88752ac68c69516d85975e73783386358983cbcbbb0674a05a5387d765",
-    "hash_method": "SHA-256 calculated by the audit script for the exact current repository script copied byte-for-byte to the owner-connected Windows computer",
-    "executed_copy_sha256": "efa73e88752ac68c69516d85975e73783386358983cbcbbb0674a05a5387d765",
-    "executed_copy_filename": "hierarchy_audit_identity_fix.py",
+    "sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
+    "hash_method": "SHA-256 calculated by the audit script for the exact repository script fetched and executed byte-for-byte",
+    "executed_copy_sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
+    "executed_copy_filename": "hierarchy_audit_feature_profile.py",
     "repository_branch": "docs/country-catalog-foundation",
-    "repository_commit_at_fetch": "c973a6ac1449a39d0b8e221cdeebda73a2ede73c",
-    "repository_blob_sha1": "8b89ac6f2bb1408268b4796df32abc138f7865c2",
-    "generated_summary_at_utc": "2026-10-10T22:05:47.796268+00:00",
-    "report_generation_scope": "The exact current repository script was fetched from the PR branch, copied byte-for-byte to the owner-connected Windows computer, and run against the owner-local sample and full crosswalk files.",
+    "repository_commit_at_fetch": "f07beb87e26071aa086f8ea636a1e891462ce499",
+    "repository_blob_sha1": "838c9cffd70e57d5a6b35237bf64f1cf73e08d80",
+    "generated_summary_at_utc": "2026-10-10T22:13:59.701207+00:00",
+    "report_generation_scope": "Exact current repository script fetched from PR branch, copied byte-for-byte to owner-connected Windows computer, and run against owner-local sample and full crosswalk files.",
     "current_repository_script_reexecuted_against_source_data_after_hardening": true,
     "current_repository_script_is_covered_by_synthetic_tests": true
   },
   "latest_execution": {
     "status": "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED",
-    "execution_time_utc": "2026-10-10T22:05:47.796268+00:00",
-    "execution_time_africa_nairobi": "2026-10-11T01:05:47.796268+03:00",
+    "execution_time_utc": "2026-10-10T22:13:59.701207+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:13:59.701207+03:00",
     "exit_code": 0,
-    "exit_code_meaning": "Clean candidate-presence audit. Expected ADM1/ADM2 identity matches were classified separately and no candidate-presence issues were found; unresolved code references and catalog acceptance gates remain open.",
+    "exit_code_meaning": "Candidate-presence audit passed; feature-code profile recorded for distinct same-country administrative candidate IDs; no parent links were written.",
     "input_manifest": [
       {
         "key": "sample",
@@ -253,6 +253,35 @@
       "total_identity_matches": 7102,
       "total_self_reference_candidates": 0,
       "other_candidate_presence_mismatches": 0,
+      "distinct_admin1_candidate_feature_code_rows": 23195,
+      "distinct_admin2_candidate_feature_code_rows": 13468,
+      "distinct_candidate_feature_codes_by_level_and_country": {
+        "admin1": {
+          "BR": {
+            "ADM1": 5860
+          },
+          "GB": {
+            "ADM1": 12088
+          },
+          "JP": {
+            "ADM1": 2689
+          },
+          "KE": {
+            "ADM1": 2558
+          }
+        },
+        "admin2": {
+          "BR": {
+            "ADM2": 285
+          },
+          "GB": {
+            "ADM2": 11819
+          },
+          "JP": {
+            "ADM2": 1364
+          }
+        }
+      },
       "parent_links_written": false,
       "database_operations": false,
       "source_files_modified": false
@@ -359,5 +388,81 @@
       "classification": "UNRESOLVED_REVIEW_REQUIRED",
       "reason": "Feature-code patterns help prioritize manual policy review but do not authorize changing raw administrative codes, deleting rows, or inventing parent relationships."
     }
+  },
+  "distinct_candidate_feature_codes_by_level_and_country": {
+    "admin1": {
+      "BR": {
+        "ADM1": 5860
+      },
+      "GB": {
+        "ADM1": 12088
+      },
+      "JP": {
+        "ADM1": 2689
+      },
+      "KE": {
+        "ADM1": 2558
+      }
+    },
+    "admin2": {
+      "BR": {
+        "ADM2": 285
+      },
+      "GB": {
+        "ADM2": 11819
+      },
+      "JP": {
+        "ADM2": 1364
+      }
+    }
+  },
+  "hierarchy_candidate_feature_level_profile": {
+    "status": "PASS_OBSERVED_EXPECTED_ADMIN_LEVEL_FEATURE_CODES",
+    "source": "Current repository audit script, executed locally against the exact hashed sample and crosswalk files in input_manifest",
+    "script_sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
+    "repository_script_blob_sha1": "838c9cffd70e57d5a6b35237bf64f1cf73e08d80",
+    "execution_time_utc": "2026-10-10T22:13:59.701207+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:13:59.701207+03:00",
+    "admin1": {
+      "distinct_same_country_admin_candidate_rows": 23195,
+      "observed_feature_code_counts_by_country": {
+        "BR": {
+          "ADM1": 5860
+        },
+        "GB": {
+          "ADM1": 12088
+        },
+        "JP": {
+          "ADM1": 2689
+        },
+        "KE": {
+          "ADM1": 2558
+        }
+      },
+      "unexpected_feature_code_rows_against_observed_ADM1_level": 0
+    },
+    "admin2": {
+      "distinct_same_country_admin_candidate_rows": 13468,
+      "observed_feature_code_counts_by_country": {
+        "BR": {
+          "ADM2": 285
+        },
+        "GB": {
+          "ADM2": 11819
+        },
+        "JP": {
+          "ADM2": 1364
+        }
+      },
+      "unexpected_feature_code_rows_against_observed_ADM2_level": 0
+    },
+    "excluded_identity_matches": {
+      "admin1": 125,
+      "admin2": 6977,
+      "note": "Identity matches are not parent candidates and are excluded from the distinct candidate feature-code profile."
+    },
+    "interpretation": "Every distinct same-country administrative candidate ID observed in this sample uses the expected level-specific feature code: ADM1 for admin1 crosswalk candidates and ADM2 for admin2 crosswalk candidates. This is a measured feature-level consistency result only. It does not confirm that each candidate is the semantically correct parent for each child record and does not approve any parent links.",
+    "official_feature_code_reference": "https://www.geonames.org/export/codes.html",
+    "catalog_acceptance": "BLOCKED"
   }
 }
