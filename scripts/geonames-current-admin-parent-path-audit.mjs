@@ -195,6 +195,25 @@ const OUTPUT_FIELDS = [
   "operational_parent_link_created",
 ];
 
+export function validateRemoteSourceMetadata(metadata) {
+  const sources = metadata?.remote_sources;
+  if (!Array.isArray(sources) || sources.length !== 2) return false;
+  const byCountry = new Map(sources.map((source) => [source.country_code, source]));
+  if (byCountry.size !== 2 || !byCountry.has("JP") || !byCountry.has("KE")) return false;
+
+  return ["JP", "KE"].every((countryCode) => {
+    const source = byCountry.get(countryCode);
+    const timestamp = Date.parse(source?.retrieved_at_utc ?? "");
+    return source?.archive_filename === countryCode + ".zip" &&
+      source?.source_url === "https://download.geonames.org/export/dump/" + countryCode + ".zip" &&
+      Number(source?.http_status) === 200 &&
+      Number.isFinite(timestamp) &&
+      /^[a-f0-9]{64}$/i.test(source?.archive_sha256 ?? "") &&
+      Number.isSafeInteger(source?.archive_size_bytes) &&
+      source.archive_size_bytes > 0;
+  });
+}
+
 export function renderAuditCsv(rows) {
   return [OUTPUT_FIELDS.join(","), ...rows.map((row) =>
     OUTPUT_FIELDS.map((field) => csvValue(row[field])).join(","))].join("\n") + "\n";
@@ -315,6 +334,8 @@ export function auditCurrentAdminParents(targetRows, sourceRecords) {
 }
 
 export function buildAuditSummary(rows, sourceMetadata) {
+  const remoteVerified = sourceMetadata?.remote_retrieval_metadata_verified === true;
+  const remoteSources = sourceMetadata?.remote_sources ?? [];
   const counts = (items, key) => {
     const result = {};
     for (const item of items) result[item[key]] = (result[item[key]] ?? 0) + 1;
@@ -328,8 +349,11 @@ export function buildAuditSummary(rows, sourceMetadata) {
     created_at_utc: new Date().toISOString(),
     source: {
       ...sourceMetadata,
-      remote_retrieval_metadata_verified: false,
-      snapshot_version_authority: "UNVERIFIED_LOCAL_INPUT; SHA-256 AND FILE METADATA RECORDED FOR REPRODUCIBILITY",
+      remote_retrieval_metadata_verified: remoteVerified,
+      http_last_modified_captured: remoteVerified && remoteSources.every((item) => Boolean(item.http_last_modified_utc)),
+      snapshot_version_authority: remoteVerified
+        ? "OFFICIAL_GEONAMES_JP_AND_KE_COUNTRY_ARCHIVES_RETRIEVED_AND_HASHED; NO IMMUTABLE RELEASE ID CLAIMED"
+        : "UNVERIFIED_LOCAL_INPUT; SHA-256 AND FILE METADATA RECORDED FOR REPRODUCIBILITY",
     },
     target_count: rows.length,
     candidate_paths_found_requiring_owner_approval: complete.length,
@@ -350,7 +374,8 @@ export function buildAuditSummary(rows, sourceMetadata) {
     database_or_production_changes: false,
     limitations: [
       "This report audits exact composite-code paths present in the supplied allCountries.txt only.",
-      "It does not establish that the local source file is the latest official GeoNames snapshot; remote retrieval and HTTP metadata require separate verification.",
+      "A retrieval URL, timestamp and hash pin the downloaded bytes but do not establish an immutable publisher release ID.",
+      "HTTP Last-Modified is reported as captured only when that response header was actually present.",
       "A candidate path is not owner approval and must never be imported as a parent relationship from this report alone.",
       "Raw code 00, blank codes, absent keys, duplicate keys, source identity mismatches, and source raw-code mismatches remain unresolved.",
     ],
@@ -396,13 +421,17 @@ async function main() {
   const targetPath = process.argv[3] ?? DEFAULT_TARGETS;
   const outputPrefix = process.argv[4] ??
     join(dirname(targetPath), "current-admin-parent-path-audit");
-  const [targetText, sourceStat] = await Promise.all([
+  const metadataPath = process.argv[5] ?? null;
+  const [targetText, sourceStat, metadataText] = await Promise.all([
     readFile(targetPath, "utf8"),
     stat(sourcePath),
+    metadataPath ? readFile(metadataPath, "utf8") : Promise.resolve(null),
   ]);
   const targets = buildCurrentAdminTargets(parseCsv(targetText));
   const loaded = await loadRelevantSourceRecords(sourcePath, targets);
   const rows = auditCurrentAdminParents(targets, loaded.records);
+  const remoteMetadata = metadataText ? JSON.parse(metadataText) : null;
+  const remoteVerified = validateRemoteSourceMetadata(remoteMetadata);
   const summary = buildAuditSummary(rows, {
     filename: basename(sourcePath),
     file_size_bytes: sourceStat.size,
@@ -411,6 +440,9 @@ async function main() {
     source_line_count: loaded.lineCount,
     relevant_records_loaded: loaded.records.length,
     target_export_filename: basename(targetPath),
+    source_manifest_filename: metadataPath ? basename(metadataPath) : null,
+    remote_sources: remoteMetadata?.remote_sources ?? [],
+    remote_retrieval_metadata_verified: remoteVerified,
   });
 
   await Promise.all([
@@ -424,6 +456,8 @@ async function main() {
     unresolved_or_blocked_targets: summary.unresolved_or_blocked_targets,
     statuses: summary.statuses,
     source_sha256: loaded.sha256,
+    remote_retrieval_metadata_verified: summary.source.remote_retrieval_metadata_verified,
+    http_last_modified_captured: summary.source.http_last_modified_captured,
     outputs: [`${outputPrefix}.csv`, `${outputPrefix}.json`],
     operational_parent_links_created: 0,
   }, null, 2));
