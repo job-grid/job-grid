@@ -41,6 +41,8 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   const design = await readFile(new URL("../docs/country-catalog-database-foundation.md", import.meta.url), "utf8");
   const sourceManifest = await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8");
   const builderReport = await readFile(new URL("../docs/geonames-sample-validation/results/validation-report.json", import.meta.url), "utf8");
+  const stageCReport = await readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.md", import.meta.url), "utf8");
+  const stageCJson = await readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.json", import.meta.url), "utf8");
 
   for (const document of [readme, report, sourceManifest, builderReport]) {
     assert.match(document, /13472324|13,472,324/);
@@ -59,4 +61,12 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(builderReport, /does not describe or negate the separate owner-laptop sample generation/i);
   assert.match(report, /admin1_crosswalk_not_found/);
   assert.match(report, /original-source SHA-256|original source bytes/i);
+  assert.match(stageCReport, /BLOCKED FOR INDEPENDENT SOURCE VERIFICATION/);
+  assert.match(stageCReport, /matched sample IDs.*NOT MEASURED/i);
+  assert.match(stageCReport, /SG.zip.*NOT RETRIEVED/s);
+  assert.match(stageCReport, /local_file_mtime_utc/);
+  assert.match(stageCJson, /"requested_archives_present": 0/);
+  assert.match(stageCJson, /"matched_ids": null/);
+  assert.match(stageCJson, /"official_ke_zip_verified": false/);
+  assert.match(stageCJson, /"source_sg_zip_checked": false/);
 });
