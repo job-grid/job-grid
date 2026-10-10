@@ -253,8 +253,8 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.candidate_key_code_consistency.admin2.crosswalk_key_references_with_target_rows_checked, 20445);
   assert.equal(audit.candidate_key_code_consistency.admin2.complete_composite_key_matches, 20445);
   assert.equal(audit.candidate_key_code_consistency.admin2.complete_composite_key_mismatches, 0);
-  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin1.KE, { target_admin1_code_matches: 2605, target_admin_rows_checked: 2605 });
-  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin2.KE, { complete_composite_key_matches: 32, target_admin1_code_matches: 32, target_admin2_code_matches: 32, target_admin_rows_checked: 32 });
+  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin1.KE, { target_admin1_code_matches: 2605, target_admin1_code_mismatches: 0, target_admin_rows_checked: 2605 });
+  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin2.KE, { complete_composite_key_matches: 32, complete_composite_key_mismatches: 0, target_admin1_code_matches: 32, target_admin1_code_mismatches: 0, target_admin2_code_matches: 32, target_admin2_code_mismatches: 0, target_admin_rows_checked: 32 });
   assert.equal(audit.candidate_key_code_consistency.catalog_acceptance, "BLOCKED");
   assert.equal(audit.unresolved_reference_triage.admin1.unresolved_rows, 2333);
   assert.equal(audit.unresolved_reference_triage.admin1.classifications.unresolved_placeholder_raw_code_00, 2284);
