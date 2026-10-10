@@ -240,3 +240,22 @@ Validate Nairobi County, Kisumu County, Kisumu and Mombasa by country/admin code
 - [GeoNames UK place search](https://www.geonames.org/search.html?country=GB)
 
 **Requested disposition:** owner review of schema, entity policy, source preflight, import controls and decisions. This proposal does not authorize schema creation, migrations, imports, deployment or production changes.
+
+
+## 5A. PR #27 source-pinned validation attempt — BLOCKED
+
+Attempt date: 2026-10-10 UTC. Isolated workspace: /tmp/geonames-stage. No repository raw archives, database, production or deployment target was used.
+
+Python standard-library HTTPS retrieval with a 20-second timeout failed for all nine official URLs before receiving an HTTP response. Exact error for each: URLError: [Errno -3] Temporary failure in name resolution. Sources: KE.zip, GB.zip, JP.zip, BR.zip, SG.zip, countryInfo.txt, admin1CodesASCII.txt, admin2Codes.txt and readme.txt, all under https://download.geonames.org/export/dump/.
+
+A second fetch attempt via the connected retrieval service returned target_unreachable for each of the five country ZIP archives. It did return extracted text for countryInfo.txt, both admin crosswalks and readme.txt, but those extracted page contents are not archive bytes and cannot support source ZIP byte-size/checksum or country-record counts.
+
+Therefore no archive passed ZIP integrity; no current approved ISO 3166 authority snapshot was obtained; and no place rows were parsed. SHA-256, bytes for inaccessible archives, record counts, accepted/rejected/quarantined place rows, duplicate IDs, ambiguous country mappings, parent exceptions, alternate-name coverage and per-country feature counts remain NOT MEASURED, not zero. The previous browser-only place checks are leads, not source-ID-verified reconciliation for Nairobi, Kisumu or Mombasa.
+
+Tooling added to this branch:
+- scripts/geonames-sample-validate.mjs — isolated source-manifest/checksum preflight; emits source-manifest.json, validation-summary.json, exceptions.jsonl and retrieval-errors.json. It performs no database operations, does not commit raw source files, requires explicit workspace, supports optional download, preserves numeric country code candidates as strings (including 076), and intentionally exits blocked until the source gates are satisfied.
+- tests/geonames-sample-validate.test.js — tests the required URL list, checksum gate, fail-closed behavior, string preservation of 076 and null (not fabricated zero) counts.
+
+Important limitation: this is not the completed sample parser/reconciliation requested by the owner. It is source retrieval/checksum preflight only. The 19-field country archive parser, ZIP integrity gate, approved ISO cross-check, reviewed feature mapping, duplicate-ID reconciliation, alternate-name parsing, same-country parent validation and Kenya place ID/admin-code checks remain incomplete. The helper intentionally reports BLOCKED; its existence must not be represented as completion.
+
+Reproduction on a network-enabled isolated runner: node scripts/geonames-sample-validate.mjs --workspace /isolated/geonames-staging --download. Pin reviewed expected SHA-256 values in the workspace manifest before treating any source as verified. Do not commit source archives. No database migration, seed, import, deployment or production/recovery action was performed. Phase 4C remains BLOCKED.
