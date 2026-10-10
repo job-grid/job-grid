@@ -3,7 +3,7 @@
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
-    "local_crosswalk_candidate_presence": "PASS_NO_CANDIDATE_ID_PRESENCE_MISMATCHES_FOUND",
+    "local_crosswalk_candidate_presence": "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND",
     "admin1_crosswalk_reconciliation": "PARTIAL_2333_UNRESOLVED_REFERENCES",
     "admin2_crosswalk_reconciliation": "PARTIAL_240_UNRESOLVED_CONTEXT_OR_KEY_REFERENCES",
     "approved_parent_hierarchy": "NOT_APPROVED_OR_ASSIGNED",
@@ -13,7 +13,7 @@
     "phase_4c_recovery_readiness": "BLOCKED"
   },
   "scope": {
-    "implementation": "Separately authored read-only Python audit executed on owner-connected Windows computer",
+    "implementation": "Committed reproducible read-only Python audit, executed locally on owner-connected Windows computer",
     "source_sample": "sample-output-20261010-163234/geonames_places_sample.tsv",
     "crosswalk_sources": [
       "admin1CodesASCII.txt",
@@ -42,8 +42,9 @@
     "code_references_without_exact_key": 2333,
     "raw_00_placeholder_candidates": 2284,
     "unmatched_nonzero_code_references": 49,
-    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 23320,
-    "candidate_id_presence_mismatches": 0
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 23195,
+    "candidate_self_references": 125,
+    "candidate_presence_mismatches_other_than_self_reference": 0
   },
   "admin2": {
     "nonblank_code_references": 20685,
@@ -51,8 +52,9 @@
     "references_missing_composite_crosswalk_key": 239,
     "references_uncheckable_due_to_blank_admin1_context": 1,
     "total_unresolved_admin2_rows_in_export": 240,
-    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 20445,
-    "candidate_id_presence_mismatches": 0
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 13468,
+    "candidate_self_references": 6977,
+    "candidate_presence_mismatches_other_than_self_reference": 0
   },
   "per_country": {
     "KE": {
@@ -64,7 +66,11 @@
       "admin1_unmatched_nonzero_references": 25,
       "admin2_key_found_references": 32,
       "admin2_key_missing_references": 5,
-      "admin2_blank_admin1_context": 0
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 47,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 2558,
+      "admin2_candidate_self_references": 32,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0
     },
     "GB": {
       "sample_rows": 12096,
@@ -74,7 +80,11 @@
       "admin1_raw_00_candidates": 3,
       "admin2_key_found_references": 12004,
       "admin2_key_missing_references": 29,
-      "admin2_blank_admin1_context": 0
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 4,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 12088,
+      "admin2_candidate_self_references": 185,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 11819
     },
     "JP": {
       "sample_rows": 4899,
@@ -84,7 +94,11 @@
       "admin1_raw_00_candidates": 2161,
       "admin2_key_found_references": 2554,
       "admin2_key_missing_references": 205,
-      "admin2_blank_admin1_context": 1
+      "admin2_blank_admin1_context": 1,
+      "admin1_candidate_self_references": 47,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 2689,
+      "admin2_candidate_self_references": 1190,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 1364
     },
     "BR": {
       "sample_rows": 5888,
@@ -94,7 +108,11 @@
       "admin1_raw_00_candidates": 1,
       "admin2_key_found_references": 5855,
       "admin2_key_missing_references": 0,
-      "admin2_blank_admin1_context": 0
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 27,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 5860,
+      "admin2_candidate_self_references": 5570,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 285
     },
     "SG": {
       "sample_rows": 171,
@@ -105,7 +123,11 @@
       "admin1_unmatched_nonzero_references": 24,
       "admin2_key_found_references": 0,
       "admin2_key_missing_references": 0,
-      "admin2_blank_admin1_context": 0
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0
     }
   },
   "review_case": {
@@ -116,10 +138,20 @@
     "raw_values_preserved": true
   },
   "outcome": {
-    "candidate_presence_mismatches": 0,
-    "candidate_id_checks": "The crosswalk candidate IDs referenced by resolved admin1/admin2 code rows were all present in the sample as same-country administrative features.",
-    "caveat": "This is source-candidate presence only. It is not proof that every child-to-parent relationship is semantically correct and it does not approve or create any parent links.",
+    "self_reference_lookup_cases": 7102,
+    "breakdown": {
+      "admin1_self_references": 125,
+      "admin2_self_references": 6977
+    },
+    "other_candidate_presence_mismatches": 0,
+    "distinct_candidate_ids_present_as_same_country_administrative_features": {
+      "admin1": 23195,
+      "admin2": 13468
+    },
+    "candidate_id_checks": "The stricter committed-script audit shows that some found crosswalk keys resolve to the current record's own GeoNames ID. Those are self-reference cases, not parent links. Other found keys in this sample resolve to a distinct same-country administrative feature, but candidate presence alone still does not approve semantic parentage.",
+    "caveat": "Never assign parent_id from a raw crosswalk key where the candidate ID equals the child ID. Even distinct same-country administrative candidates remain unapproved until hierarchy rules and feature policies are reviewed. No parent links were created.",
     "outstanding": [
+      "125 admin1 and 6,977 admin2 crosswalk lookups self-reference the row and must not become parent links.",
       "Interpretation of placeholder/nonstandard codes",
       "ISO snapshot acquisition and comparison under permitted terms",
       "Source-origin and remote retrieval metadata",
@@ -140,5 +172,10 @@
     "deployment": false,
     "backup_recovery_changes": false,
     "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "audit_script": {
+    "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
+    "sha256": "48ddbcf71f336992414c229dac06d7ff99f55f36de25bea6ebec458349af1277",
+    "hash_method": "Python hashlib SHA-256 from the local copy of the committed script"
   }
 }
