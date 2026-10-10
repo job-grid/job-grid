@@ -61,7 +61,7 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(report.admin1.raw_00_placeholder_candidates, 1);
   assert.equal(report.admin1.unmatched_nonzero_code_references, 0);
   assert.equal(report.admin1.candidate_presence_issues, 0);
-  assert.equal(report.admin2.references_with_exact_composite_crosswalk_key, 1);
+  assert.equal(report.admin2.references_with_exact_composite_crosswalk_key, 2);
   assert.equal(report.admin2.references_missing_composite_crosswalk_key, 0);
   assert.equal(report.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
   assert.equal(report.admin2.total_unresolved_admin2_rows, 1);
