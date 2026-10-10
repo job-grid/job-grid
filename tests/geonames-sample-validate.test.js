@@ -115,7 +115,8 @@ test("crosswalk exports have deterministic schemas, sorting, and measured aggreg
  assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_exact_overlap_ids.includes(id)), [...sourceSummary.sg_exact_overlap_ids].sort());
  assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), [...sourceSummary.sg_broader_only_ids].sort());
  assert.deepEqual([...sourceSummary.sg_exact_overlap_ids].sort().filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), []);
- assert.equal(summary.owner_review.catalog_acceptance,"BLOCKED");
+ assert.match(summary.global_gates.full_worldwide_scan_reproduction,/PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE/);
+ assert.equal(sourceSummary.owner_review.catalog_acceptance,"BLOCKED");
  assert.equal(summary.global_gates.current_owner_approved_iso_comparison,"UNVERIFIED");
 });
 
