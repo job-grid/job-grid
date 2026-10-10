@@ -119,3 +119,14 @@ No-source counts remain unavailable in the isolated builder manifest/report; the
 No database operations, migrations, seeds, imports, production/Cloudflare/secrets/backup/recovery changes, or PR merge were performed. PR #27 remains open, draft, and unmerged. Phase 4C recovery readiness remains separately **BLOCKED**.
 
 GeoNames is supplied under CC BY 4.0 and without a guarantee of accuracy, timeliness or completeness. This five-country sample establishes neither worldwide completeness nor production readiness.
+
+
+## Stage C update — five official country archives unavailable
+
+A read-only directory check of `C:\Users\jonat\OneDrive\Desktop\JobGrid-GeoNames` and `C:\Users\jonat\Downloads` found no `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, or `SG.zip`. The available local `allCountries.zip` was not opened or parsed and no worldwide archive download was started.
+
+Consequently the Stage C source-level match counts are **NOT MEASURED**: matched sample IDs, source-missing sample IDs, conflicting fields and ambiguous matches remain null/unmeasured. Zero archives were parsed and zero source records were compared because the five required files were absent; these operational counts do not mean zero matching records.
+
+Per-archive URLs, missing-input status, unmeasured bytes/SHA-256, unrun ZIP checks and the Kenya sample-only candidates are documented in the [independent source-verification report](geonames-sample-independent-source-verification-2026-10-10.md) and its [machine-readable JSON](geonames-sample-independent-source-verification-2026-10-10.json). Stage A remains suitable for owner review; Stage C independent verification is blocked pending approved transfer of the five source ZIPs.
+
+The manifest correction is explicit: the owner's uploaded `source_manifest.json` field `last_modified_utc` is actually local filesystem `st_mtime`, not an HTTP header. Rename to `local_file_mtime_utc`; keep `http_last_modified_utc` null unless a real response header was captured. The original evidence ZIP remains unchanged.
