@@ -62,7 +62,8 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(report, /admin1_crosswalk_not_found/);
   assert.match(report, /original-source SHA-256|original source bytes/i);
   assert.match(stageCReport, /BLOCKED FOR INDEPENDENT SOURCE VERIFICATION/);
-  assert.match(stageCReport, /matched sample IDs.*NOT MEASURED/i);
+  assert.match(stageCReport, /Matched sample IDs \| Missing sample IDs \| Conflicting records \| Ambiguous matches/i);
+  assert.match(stageCReport, /NOT MEASURED/);
   assert.match(stageCReport, /SG.zip.*NOT RETRIEVED/s);
   assert.match(stageCReport, /local_file_mtime_utc/);
   assert.match(stageCJson, /"requested_archives_present": 0/);
