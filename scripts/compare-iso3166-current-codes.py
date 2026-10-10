@@ -21,8 +21,10 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 ALPHA2_RE = re.compile(r"^[A-Z]{2}$")
@@ -128,6 +130,17 @@ def main() -> int:
         if not path.is_file():
             parser.error(f"Input file not found: {path}")
 
+    parsed_source_url = urlparse(args.source_url)
+    if parsed_source_url.scheme != "https" or not parsed_source_url.netloc:
+        parser.error("--source-url must be an HTTPS URL identifying the actual official source used.")
+
+    try:
+        retrieved_at = datetime.fromisoformat(args.retrieved_at_utc.replace("Z", "+00:00"))
+        if retrieved_at.tzinfo is None or retrieved_at.utcoffset() != timedelta(0):
+            raise ValueError("retrieval timestamp must include UTC timezone")
+    except (ValueError, AttributeError):
+        parser.error("--retrieved-at-utc must be an actual ISO-8601 UTC timestamp, e.g. 2026-10-10T19:00:00Z.")
+
     try:
         iso_rows, iso_invalid, iso_duplicates = read_iso_rows(
             args.iso_csv, args.alpha2_column, args.alpha3_column, args.numeric_column
@@ -193,10 +206,17 @@ def main() -> int:
 
     iso_rows_without_geonames_alpha2_match = len(iso_alpha2_set - geonames_alpha2_set)
 
-    snapshot_integrity_issues = bool(iso_invalid or any(iso_duplicates.values()))
+    snapshot_integrity_issues = bool(iso_invalid or any(iso_duplicates.values()) or not iso_rows)
+    geonames_input_quality_issues = bool(
+        geonames_malformed or geonames_empty or invalid_geonames_alpha2 or not geonames_rows
+    )
     code_conflicts = bool(alpha3_conflicts or numeric_conflicts)
     if snapshot_integrity_issues:
         comparison_status = "BLOCKED_INVALID_SNAPSHOT"
+    elif geonames_input_quality_issues:
+        comparison_status = "BLOCKED_INVALID_GEONAMES_INPUT"
+    elif alpha2_matches == 0:
+        comparison_status = "BLOCKED_NO_SHARED_ALPHA2_CODES"
     elif code_conflicts:
         comparison_status = "MISMATCHES_FOUND_REVIEW_REQUIRED"
     else:
@@ -208,7 +228,8 @@ def main() -> int:
         "status": comparison_status,
         "source_snapshot": {
             "source_url": args.source_url,
-            "scope_assertion": "ISO_3166_1_CURRENT_CODES_ONLY",
+            "scope_assertion_by_operator": "ISO_3166_1_CURRENT_CODES_ONLY",
+            "snapshot_scope_independently_verified": False,
             "retrieved_at_utc_asserted_by_operator": args.retrieved_at_utc,
             "filename": args.iso_csv.name,
             "bytes": snapshot_bytes,
@@ -274,7 +295,9 @@ def main() -> int:
         "counts": report["counts"],
         "note": "Aggregate only; no country names or code values printed.",
     }, indent=2))
-    return 0 if not (iso_invalid or any(iso_duplicates.values()) or alpha3_conflicts or numeric_conflicts) else 1
+    if snapshot_integrity_issues or geonames_input_quality_issues or alpha2_matches == 0:
+        return 2
+    return 1 if code_conflicts else 0
 
 
 if __name__ == "__main__":
