@@ -106,7 +106,7 @@ Countries connect to source identifiers, name variants and effective-dated curre
 
 ## 5. Sample-country source preflight
 
-**PRE-FLIGHT ONLY.** No source archive was downloaded into the repository, no parser was run, and no database rows were inserted. Browser-readable GeoNames countryInfo excerpts and GeoNames place/admin search pages were inspected. The available countryInfo view was cached/dated rather than a captured current snapshot. Values below are mapping candidates, not a signed-off ISO snapshot or completed import.
+**Historical pre-sample baseline — builder source retrieval only.** At the time this section was first written, no original GeoNames archive had been downloaded in the isolated builder workspace and no original-source parser was run; no database rows were inserted. Browser-readable GeoNames countryInfo excerpts and place/admin search pages were inspected. The available countryInfo view was cached/dated rather than a captured current snapshot. This paragraph's limitation refers to original source bytes in the builder workspace and is superseded for uploaded-sample inspection by §§5B–5C. Values below remain mapping candidates, not a signed-off ISO snapshot or completed import.
 
 | Country/area | GeoNames countryInfo candidate | Proposed handling / result |
 |---|---|---|
@@ -244,13 +244,13 @@ Validate Nairobi County, Kisumu County, Kisumu and Mombasa by country/admin code
 
 ## 5A. PR #27 source-pinned validation attempt — BLOCKED
 
-Attempt date: 2026-10-10 UTC. Isolated workspace: /tmp/geonames-stage. No repository raw archives, database, production or deployment target was used.
+Attempt date: 2026-10-10 UTC. Isolated workspace: /tmp/geonames-stage. This subsection records the builder's original-source retrieval attempt only; it does not describe or negate the separate owner-laptop sample-generation and uploaded-package inspection documented in §§5B–5C. No repository raw archives, database, production or deployment target was used.
 
 Python standard-library HTTPS retrieval with a 20-second timeout failed for all nine official URLs before receiving an HTTP response. Exact error for each: URLError: [Errno -3] Temporary failure in name resolution. Sources: KE.zip, GB.zip, JP.zip, BR.zip, SG.zip, countryInfo.txt, admin1CodesASCII.txt, admin2Codes.txt and readme.txt, all under https://download.geonames.org/export/dump/.
 
 A second fetch attempt via the connected retrieval service returned target_unreachable for each of the five country ZIP archives. It did return extracted text for countryInfo.txt, both admin crosswalks and readme.txt, but those extracted page contents are not archive bytes and cannot support source ZIP byte-size/checksum or country-record counts.
 
-Therefore no archive passed ZIP integrity; no current approved ISO 3166 authority snapshot was obtained; and no place rows were parsed. SHA-256, bytes for inaccessible archives, record counts, accepted/rejected/quarantined place rows, duplicate IDs, ambiguous country mappings, parent exceptions, alternate-name coverage and per-country feature counts remain NOT MEASURED, not zero. The previous browser-only place checks are leads, not source-ID-verified reconciliation for Nairobi, Kisumu or Mombasa.
+Therefore none of the original source archives attempted by the builder passed its ZIP-integrity check (the files were not retrieved); no current approved ISO 3166 authority snapshot was obtained by that builder attempt; and no original source place rows were parsed there. This does not describe the separate uploaded-sample integrity test or sample-row checks documented in §§5B–5C. SHA-256 and byte sizes for the inaccessible original archives, independent full-source record counts, accepted/rejected/quarantined original source rows, duplicate IDs across the original input, ambiguous country mappings, complete parent exceptions, alternate-name coverage and per-country original-source feature counts remain NOT MEASURED, not zero. The previous browser-only place checks are leads, not source-ID-verified reconciliation for Nairobi, Kisumu or Mombasa.
 
 Tooling added to this branch:
 - scripts/geonames-sample-validate.mjs — isolated source-manifest/checksum preflight; emits source-manifest.json, validation-summary.json, exceptions.jsonl and retrieval-errors.json. It performs no database operations, does not commit raw source files, requires explicit workspace, supports optional download, preserves numeric country code candidates as strings (including 076), and intentionally exits blocked until the source gates are satisfied.
