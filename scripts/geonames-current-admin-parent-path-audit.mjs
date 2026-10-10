@@ -462,12 +462,28 @@ export function auditCurrentAdminParents(targetRows, sourceRecords, hierarchyEdg
     row.hierarchy_path_audit_status = hierarchyStatus;
     row.hierarchy_path_blocking_reason = reason;
     if (hierarchyStatus === "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL") {
-      const path = reversePath.reverse().join(">");
+      const path = [...reversePath].reverse().join(">");
       row.hierarchy_path_candidate_geonames_ids = path;
-      if (row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL" &&
+      const pathIds = path.split(">");
+      const targetRecord = (recordsById.get(row.geonames_id) ?? [])[0];
+      const codeFields = ["admin1_code", "admin2_code", "admin3_code"];
+      let rawCodeMismatch = false;
+      for (let level = 1; level < Number(targetLevelMatch[1]); level += 1) {
+        const ancestor = (recordsById.get(pathIds[level]) ?? [])[0];
+        if (!ancestor || (targetRecord?.[codeFields[level - 1]] ?? "") !== (ancestor[codeFields[level - 1]] ?? "")) {
+          rawCodeMismatch = true;
+          break;
+        }
+      }
+      if (rawCodeMismatch) {
+        row.hierarchy_path_audit_status = "BLOCKED_HIERARCHY_RAW_CODE_DISAGREEMENT";
+        row.hierarchy_path_blocking_reason = "The explicit hierarchy path conflicts with the child record raw admin codes; keep unresolved pending source review.";
+      } else if (row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL" &&
           row.candidate_path_geonames_ids !== path) {
+        row.hierarchy_path_audit_status = "BLOCKED_CODE_HIERARCHY_PATH_DISAGREEMENT";
+        row.hierarchy_path_blocking_reason = "Exact-code and explicit type=ADM hierarchy candidate paths disagree; manual source review required.";
         row.parent_path_audit_status = "BLOCKED_CODE_HIERARCHY_PATH_DISAGREEMENT";
-        row.blocking_reason = "Exact-code and explicit type=ADM hierarchy candidate paths disagree; manual source review required.";
+        row.blocking_reason = row.hierarchy_path_blocking_reason;
       } else if (row.parent_path_audit_status !== "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL") {
         row.parent_path_audit_status = "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL";
         row.candidate_path_geonames_ids = path;
