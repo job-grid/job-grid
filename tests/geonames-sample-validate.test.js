@@ -130,7 +130,11 @@ test("unmatched codes remain unresolved and exports prohibit fabricated parent l
   assert.ok(row.missing_reference_category);
   assert.ok(row.proposed_review_classification.startsWith("UNRESOLVED_"));
   assert.ok(!("parent_id" in row) && !("proposed_parent_id" in row));
-  if (row.raw_missing_code === "00") assert.equal(row.proposed_review_classification,"UNRESOLVED_PLACEHOLDER_CODE");
+  if (!row.raw_admin1_code && row.raw_admin2_code) {
+   assert.equal(row.missing_reference_category,"ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT");
+   assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_ADMIN1_CONTEXT");
+   assert.equal(row.crosswalk_lookup_key,null);
+  } else if (row.raw_missing_code === "00") assert.equal(row.proposed_review_classification,"UNRESOLVED_PLACEHOLDER_CODE");
   else assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE");
  }
 });
@@ -147,6 +151,7 @@ test("row-level CSV files mirror the JSON counts and expected field schema", asy
   assert.equal(admin2Lines[0], expectedHeader);
   assert.equal(admin1Lines.length - 1, 2333);
   assert.equal(admin2Lines.length - 1, 240);
+  assert.ok(admin2Lines.some(line => line.startsWith("1861823,Ika-gun,JP,ADM2H,,1861823,ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT,UNRESOLVED_MISSING_ADMIN1_CONTEXT,,")));
 });
 
 
