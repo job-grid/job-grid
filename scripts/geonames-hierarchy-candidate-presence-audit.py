@@ -142,6 +142,10 @@ def main() -> int:
         "admin1": defaultdict(Counter),
         "admin2": defaultdict(Counter),
     }
+    candidate_key_code_metrics_by_level: dict[str, dict[str, Counter[str]]] = {
+        "admin1": defaultdict(Counter),
+        "admin2": defaultdict(Counter),
+    }
     issues: list[dict[str, str]] = []
     total = Counter()
 
@@ -184,6 +188,14 @@ def main() -> int:
                 metrics["admin1_key_found"] += 1
                 parent_id = candidate1["geonames_id"]
                 parent = by_id.get(parent_id)
+                if parent is not None and parent["feature_class"] == "A" and parent["country_code"].upper() == cc:
+                    key_metrics = candidate_key_code_metrics_by_level["admin1"][cc]
+                    key_metrics["target_admin_rows_checked"] += 1
+                    if parent["admin1_code"] == a1:
+                        key_metrics["target_admin1_code_matches"] += 1
+                    else:
+                        key_metrics["target_admin1_code_mismatches"] += 1
+                        record_issue(row, "ADMIN1_CROSSWALK_TARGET_ADMIN1_CODE_MISMATCH")
                 if parent_id == gid:
                     if feature_class == "A" and feature_code == "ADM1":
                         metrics["admin1_candidate_identity_match"] += 1
@@ -218,6 +230,23 @@ def main() -> int:
                     metrics["admin2_key_found"] += 1
                     parent_id = candidate2["geonames_id"]
                     parent = by_id.get(parent_id)
+                    if parent is not None and parent["feature_class"] == "A" and parent["country_code"].upper() == cc:
+                        key_metrics = candidate_key_code_metrics_by_level["admin2"][cc]
+                        key_metrics["target_admin_rows_checked"] += 1
+                        if parent["admin1_code"] == a1:
+                            key_metrics["target_admin1_code_matches"] += 1
+                        else:
+                            key_metrics["target_admin1_code_mismatches"] += 1
+                            record_issue(row, "ADMIN2_CROSSWALK_TARGET_ADMIN1_CODE_MISMATCH")
+                        if parent["admin2_code"] == a2:
+                            key_metrics["target_admin2_code_matches"] += 1
+                        else:
+                            key_metrics["target_admin2_code_mismatches"] += 1
+                            record_issue(row, "ADMIN2_CROSSWALK_TARGET_ADMIN2_CODE_MISMATCH")
+                        if parent["admin1_code"] == a1 and parent["admin2_code"] == a2:
+                            key_metrics["complete_composite_key_matches"] += 1
+                        else:
+                            key_metrics["complete_composite_key_mismatches"] += 1
                     if parent_id == gid:
                         if feature_class == "A" and feature_code == "ADM2":
                             metrics["admin2_candidate_identity_match"] += 1
@@ -320,6 +349,13 @@ def main() -> int:
             }
             for level, by_country in sorted(candidate_feature_codes_by_level.items())
         },
+        "candidate_key_code_consistency_by_level_and_country": {
+            level: {
+                cc: dict(sorted(counts.items()))
+                for cc, counts in sorted(by_country.items())
+            }
+            for level, by_country in sorted(candidate_key_code_metrics_by_level.items())
+        },
         "admin1": {
             "nonblank_code_references": total["admin1_code_present"],
             "code_references_with_exact_crosswalk_key": total["admin1_key_found"],
@@ -337,7 +373,7 @@ def main() -> int:
                     "admin1_candidate_identity_match",
                     "admin1_candidate_self_reference",
                 }
-            ),
+            ) + total["admin1_crosswalk_target_admin1_code_mismatch"],
             "candidate_presence_issues": sum(
                 count for name, count in total.items()
                 if name.startswith("admin1_candidate_")
@@ -345,7 +381,7 @@ def main() -> int:
                     "admin1_candidate_id_present_as_same_country_admin_feature",
                     "admin1_candidate_identity_match",
                 }
-            ),
+            ) + total["admin1_crosswalk_target_admin1_code_mismatch"],
         },
         "admin2": {
             "nonblank_code_references": total["admin2_code_present"],
@@ -364,7 +400,7 @@ def main() -> int:
                     "admin2_candidate_identity_match",
                     "admin2_candidate_self_reference",
                 }
-            ),
+            ) + total["admin2_crosswalk_target_admin1_code_mismatch"] + total["admin2_crosswalk_target_admin2_code_mismatch"],
             "candidate_presence_issues": sum(
                 count for name, count in total.items()
                 if name.startswith("admin2_candidate_")
@@ -372,7 +408,7 @@ def main() -> int:
                     "admin2_candidate_id_present_as_same_country_admin_feature",
                     "admin2_candidate_identity_match",
                 }
-            ),
+            ) + total["admin2_crosswalk_target_admin1_code_mismatch"] + total["admin2_crosswalk_target_admin2_code_mismatch"],
         },
         "exceptions": {
             "csv": issue_path.name,
@@ -387,6 +423,7 @@ def main() -> int:
             "administrative_feature_identity_match": "A feature_class A row with feature_code ADM1 or ADM2 whose corresponding code crosswalk resolves to its own GeoNames ID is an identity match, not a parent relationship.",
             "crosswalk_candidate_id_present": "Evidence of source candidate availability only; does not approve a parent link.",
             "distinct_candidate_feature_codes": "Aggregate feature-code counts for distinct same-country administrative candidate IDs; this profile does not prove correct administrative level or approve parentage.",
+            "candidate_key_code_consistency": "Verifies that the resolved target record's own admin code fields agree with the composite crosswalk key that located it. This is source-key consistency evidence only; it does not approve parentage.",
             "catalog_acceptance": "BLOCKED",
             "worldwide_completeness": "UNVERIFIED",
             "iso_authority_comparison": "UNVERIFIED",
@@ -414,6 +451,11 @@ def main() -> int:
         ),
         "distinct_admin2_candidate_feature_code_rows": sum(
             sum(counts.values()) for counts in candidate_feature_codes_by_level["admin2"].values()
+        ),
+        "admin1_target_admin1_code_mismatches": total["admin1_crosswalk_target_admin1_code_mismatch"],
+        "admin2_target_composite_code_mismatches": (
+            total["admin2_crosswalk_target_admin1_code_mismatch"]
+            + total["admin2_crosswalk_target_admin2_code_mismatch"]
         ),
     }, indent=2))
     fatal_input = bool(malformed_sample_rows or duplicate_sample_ids or admin1_malformed or admin2_malformed or admin1_duplicates or admin2_duplicates)
