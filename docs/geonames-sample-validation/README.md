@@ -1,6 +1,6 @@
 # GeoNames country archive sample validation
 
-**Two-stage status: READY FOR OWNER REVIEW OF SAMPLE EVIDENCE; BLOCKED FOR CATALOG ACCEPTANCE.** This README records two different validation stages. They answer different questions and must not be combined.
+**Current status: SEPARATE-IMPLEMENTATION WORLDWIDE SCAN AND SAMPLE COMPARISON PASS; CATALOG ACCEPTANCE BLOCKED.** This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification.
 
 ## Stage A — Owner-laptop sample generation and artifact inspection
 
