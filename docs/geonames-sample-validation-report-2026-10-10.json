@@ -197,13 +197,13 @@
   "acceptance_blockers": [
     "Independently verify the owner-computer source byte sizes/SHA-256 values against the pinned source snapshot; a repeat-run source manifest now records them, but independent confirmation is still absent.",
     "Independently reproduce the owner-local 13,472,324-record scan and selected sample from pinned original inputs, recording parser version and input hashes.",
-    "Obtain and record a current owner-approved ISO authority snapshot and compare candidate fields.",
+    "Obtain and record a current ISO authority snapshot under permitted terms and compare candidate fields with the local deterministic comparator.",
     "Owner approval of feature-code inclusion, selectability and exception policies.",
     "Resolve or explicitly classify hierarchy relationships from source IDs and approved geographic authorities; report unresolved links.",
     "Correct manifest timestamp semantics so local mtime is not presented as server Last-Modified metadata.",
     "Owner approval required for placeholder/nonstandard-code and parent-link policies; unresolved references remain open.",
     "Worldwide scan reproduction and current owner-approved ISO authority comparison remain unverified.",
-    "Obtain owner approval for the ISO Online Browsing Platform snapshot/version, download and hash that exact snapshot, and run the country-code comparison; do not substitute GeoNames countryInfo values for the approved ISO authority."
+    "Owner approved the ISO source choice on 2026-10-10. Obtain a current snapshot under permitted ISO terms, hash it locally, and run the deterministic comparison without exposing source rows or code tuples to AI; do not substitute GeoNames countryInfo values for ISO authority."
   ],
   "governance": {
     "database_operations": false,
@@ -644,8 +644,8 @@
     "iso_states_obp_is_up_to_date": true,
     "iso_3166_1_2020_reviewed_confirmed_2025": true,
     "snapshot_downloaded_and_hashed": false,
-    "owner_approval_received": false,
+    "owner_approval_received": true,
     "comparison_completed": false,
-    "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
+    "status": "OWNER_APPROVED_SNAPSHOT_NOT_CAPTURED_OR_COMPARED"
   }
 }
