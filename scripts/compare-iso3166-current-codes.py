@@ -69,6 +69,9 @@ def read_iso_rows(
             )
 
         for row in reader:
+            if None in row or any(row.get(column) is None for column in required):
+                invalid_rows += 1
+                continue
             alpha2 = clean(row.get(alpha2_column)).upper()
             alpha3 = clean(row.get(alpha3_column)).upper()
             numeric3 = clean(row.get(numeric_column))
