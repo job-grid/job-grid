@@ -95,16 +95,16 @@ test("empty ISO snapshots are blocked instead of reported as passing", async (t)
   assert.equal(report.counts.iso_valid_rows, 0);
 });
 
-test("malformed and truncated GeoNames rows block an otherwise matching comparison", async (t) => {
+test("malformed, truncated and overlong GeoNames rows block an otherwise matching comparison", async (t) => {
   const { result, report } = await runFixture(
     t,
     isoHeader + "\nAA,AAA,001\n",
-    geoRow("AA", "AAA", "001") + "\nMALFORMED\nAA\tAAA\t001\n"
+    geoRow("AA", "AAA", "001") + "\nMALFORMED\nAA\tAAA\t001\n" + geoRow("AA", "AAA", "001") + "\tEXTRA\n"
   );
 
   assert.equal(result.status, 2);
   assert.equal(report.status, "BLOCKED_INVALID_GEONAMES_INPUT");
-  assert.equal(report.counts.geonames_malformed_rows, 2);
+  assert.equal(report.counts.geonames_malformed_rows, 3);
 });
 
 test("invalid GeoNames alpha-2 values block acceptance", async (t) => {
