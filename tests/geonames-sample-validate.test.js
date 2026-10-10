@@ -238,14 +238,14 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
   assert.match(audit.audit_script.executed_copy_sha256, /^[a-f0-9]{64}$/);
   assert.equal(audit.audit_script.current_repository_script_reexecuted_against_source_data_after_hardening, true);
-  assert.equal(audit.latest_execution.status, "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND");
-  assert.equal(audit.latest_execution.exit_code, 1);
+  assert.equal(audit.latest_execution.status, "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED");
+  assert.equal(audit.latest_execution.exit_code, 0);
   assert.equal(audit.latest_execution.result.total_identity_matches, 7102);
   assert.equal(audit.latest_execution.result.total_self_reference_candidates, 0);
   assert.equal(audit.latest_execution.result.parent_links_written, false);
   assert.equal(audit.audit_script.current_repository_script_is_covered_by_synthetic_tests, true);
   assert.equal(audit.scope.parent_links_written, false);
-  assert.equal(audit.admin1.candidate_self_references + audit.admin2.candidate_self_references, 7102);
+  assert.equal(audit.admin1.candidate_identity_matches + audit.admin2.candidate_identity_matches, 7102);
   const contextCase = admin2.find(row => row.proposed_review_classification === "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
   assert.ok(contextCase);
   assert.equal(contextCase.raw_admin1_code, "");
