@@ -479,3 +479,17 @@ The official [GeoNames Feature Codes list](https://www.geonames.org/export/codes
 **The current administrative-selector path-review set is bounded at 128 records:** 2 `ADM3` and 126 `ADM4`, located in Japan (126) and Kenya (2). They remain excluded from current administrative selectors until the source-pinned ancestor path is verified. The historic, undifferentiated, populated-place and zone entities are preserved and treated according to the approved defaults.
 
 Still blocked: definitive individual parent links and complete country-specific paths; the current official ISO snapshot/comparison; remote source-origin/retrieval metadata; and worldwide completeness. No parent links, migrations, seeds, imports, database operations, or production/deployment changes were performed.
+
+
+## 5J. Current administrative parent-path audit tooling — 2026-10-11
+
+A read-only, repeatable parent-path audit utility is now documented in [the audit protocol](geonames-current-admin-parent-path-audit.md) and implemented in `scripts/geonames-current-admin-parent-path-audit.mjs`.
+
+- It expects an explicitly supplied `allCountries.txt` file, records local file metadata and SHA-256, verifies each target source ID/country/feature/raw admin1/admin2 fields, and looks up only exact same-country composite admin-code keys.
+- Missing, blank, raw `00`, absent, ambiguous, or source-drift keys remain blocked; it does not infer by names or proximity.
+- A candidate path is output as evidence for review only. The tool explicitly reports that zero operational parent links were created.
+- Automated unit tests include an end-to-end CLI fixture and are subject to current-head CI.
+- Four official GeoNames record pages have been spot-checked (two of Japan's 126 current ADM4 candidates, plus both Kenya ADM3 candidates). The visible hierarchy for these examples does not enumerate intermediate administrative parents. These spot checks do not close the complete 128-record review and do not authorize parent links.
+- The tool has not yet been run against a source snapshot whose original remote retrieval metadata is verified. ISO authority comparison and worldwide completeness also remain unverified.
+
+**Current result: read-only audit tooling added; parent hierarchy and catalog acceptance remain blocked.** No database schema, migrations, seeds, imports, live database, production or deployment changes were made.
