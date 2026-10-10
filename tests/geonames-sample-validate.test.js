@@ -33,3 +33,24 @@ test("the command fails closed while ZIP parsing and ISO authority verification 
   assert.match(source, /approved_iso_authority_verified: false/);
   assert.match(source, /process.exitCode = 2/);
 });
+
+
+test("documentation keeps owner-laptop sample evidence distinct from builder retrieval failures", async () => {
+  const readme = await readFile(new URL("../docs/geonames-sample-validation/README.md", import.meta.url), "utf8");
+  const report = await readFile(new URL("../docs/geonames-sample-validation-report-2026-10-10.json", import.meta.url), "utf8");
+  const design = await readFile(new URL("../docs/country-catalog-database-foundation.md", import.meta.url), "utf8");
+  const sourceManifest = await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8");
+  const builderReport = await readFile(new URL("../docs/geonames-sample-validation/results/validation-report.json", import.meta.url), "utf8");
+
+  for (const document of [readme, report, design, sourceManifest, builderReport]) {
+    assert.match(document, /13472324|13,472,324/);
+    assert.match(document, /independently reproduced|full scan.*false|not.*reproduced/i);
+    assert.match(document, /catalog acceptance.*BLOCKED|BLOCKED.*catalog acceptance/i);
+  }
+  assert.match(readme, /last_modified_utc/);
+  assert.match(readme, /Singapore/);
+  assert.match(readme, /not automatic invalid/i);
+  assert.match(builderReport, /does not describe or negate the separate owner-laptop sample generation/i);
+  assert.match(report, /admin1_crosswalk_not_found/);
+  assert.match(report, /original-source SHA-256|original source bytes/i);
+});
