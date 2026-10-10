@@ -58,6 +58,37 @@ Admin2 has **240** unresolved cases: **239** absent composite keys and **one** r
 
 The admin1 unresolved counts are reference-row counts; country totals include rows with non-empty admin1 code. The admin1 total is 2,333.
 
+## Unresolved reference triage — aggregate only
+
+The row-level unmatched-reference exports were reviewed by country, classification, and feature code. The aggregate counts below are recorded in the machine-readable report's `unresolved_reference_triage` section. The row-level files remain the source of record for individual exceptions; this report intentionally does not reproduce personal/record-level data.
+
+### Admin1: 2,333 unresolved references
+
+| Classification | Rows |
+|---|---:|
+| Raw code `00` — unresolved placeholder/nonstandard candidate | 2,284 |
+| Unmatched nonzero code — missing or version-dependent reference | 49 |
+| **Total** | **2,333** |
+
+The 49 nonzero-code cases are split between Kenya (25) and Singapore (24). Their feature-code breakdown is Kenya: 10 `ADMD`, 7 `ADM1H`, 6 `ADM2H`, 2 `ADM3`; Singapore: 22 `PPL`, 2 `PPLX`.
+
+Across all 2,333 admin1-unresolved rows, the feature-code counts are: `ADMD` 1,104; `ADM4H` 678; `ADM2H` 171; `ADM4` 126; `ADM3H` 89; `PPLX` 81; `PPL` 54; `ADMDH` 7; `ADM1H` 7; `PCLI` 5; `PPLL` 4; `ZN` 3; `ADM3` 2; and `PPLH` 2.
+
+### Admin2: 240 unresolved references/context cases
+
+| Classification | Rows |
+|---|---:|
+| Raw code `00` — unresolved placeholder/nonstandard candidate | 2 |
+| Unmatched code — missing or version-dependent reference | 237 |
+| Missing admin1 context, so no complete composite key can be formed | 1 |
+| **Total** | **240** |
+
+By feature code, the 240 cases are 220 `ADM2H`, 15 `ADM3H`, and 5 `ADMD`. By country and feature code: GB has 27 `ADM2H` and 2 `ADMD`; JP has 188 `ADM2H`, 15 `ADM3H`, and 3 `ADMD`; KE has 5 `ADM2H`.
+
+The official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html) defines `ADM1H`, `ADM2H`, `ADM3H`, and `ADM4H` as historical administrative divisions at their respective levels. It defines `ADMD` as an administrative division whose level is undifferentiated, and `ADMDH` as a historical administrative division whose level is undifferentiated. These definitions help prioritize review; **they do not prove that any specific row is invalid, current, selectable, or safe to assign a parent**.
+
+**Disposition:** keep every unresolved row, its raw code, GeoNames ID, feature code, and existing source context. Do not normalize `00`, relabel nonzero codes as legacy without evidence, reject rows automatically, or infer parent IDs. The remaining 2,333 admin1 and 240 admin2 cases stay **UNRESOLVED / REVIEW REQUIRED** pending approved inclusion, version, and country-specific hierarchy policies.
+
 ## Acceptance decision
 
 - **PASS:** Audit integrity and candidate-presence check on the hashed sample/crosswalk inputs.
