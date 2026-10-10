@@ -77,6 +77,17 @@ The first audit checked only that crosswalk candidate IDs existed as administrat
 
 These are crosswalk-key lookup results, not relationships to adopt. Do not create self-parent links. The stricter report supersedes the earlier statement that there were no candidate-presence mismatches: the earlier check found no absent/wrong-country/non-admin candidates, but missed self-reference as its own failure category. All parent relationships remain unapproved and catalog acceptance remains **BLOCKED**.
 
-## Report-generation provenance note
+## Latest repository-version rerun — 2026-10-11 (Africa/Nairobi)
 
-The aggregate numbers above were produced by the exact local script copy whose SHA-256 is recorded in the JSON report: `48ddbcf71f336992414c229dac06d7ff99f55f36de25bea6ebec458349af1277`. The repository script has since received report-status/schema hardening and synthetic regression coverage. The current repository version has **not yet been rerun against the actual local GeoNames files** after those later code-formatting changes; the figures above remain attributable to the recorded executed copy, not silently reattributed to the newest script version. Current-version synthetic tests verify that self-references produce an explicit blocking status and row-level exceptions.
+The exact script fetched from PR #27 branch commit `0cb86bb039861147e858365a9b4aee6874df1930` was copied byte-for-byte to the owner-connected Windows computer and re-run against the owner-local sample and full crosswalk files. It completed at **2026-10-10T21:53:29.446261Z (2026-10-11 00:53:29 EAT)**.
+
+- Script path: `scripts/geonames-hierarchy-candidate-presence-audit.py`
+- Executed copy SHA-256: `6912908743ee71dfb29e067ca363f59ecc2601a9f9970c89a765c3fbf7a54800`
+- Git blob SHA-1: `3950cb6e6a9ca2398f5bd93907f1c95425648a9d`
+- Sample TSV SHA-256: `1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad`
+- Admin1 crosswalk SHA-256: `1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a`
+- Admin2 crosswalk SHA-256: `e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3`
+
+The current repository script reproduced the results: **25,685** sample rows and unique IDs; **3,865** admin1 keys; **47,642** admin2 keys; zero malformed sample rows, duplicate IDs, malformed crosswalk rows or duplicate keys; **2,333** unmatched admin1 references; **240** unresolved admin2 key/context cases; and **7,102** self-reference candidates (125 admin1, 6,977 admin2). Exit code 1 is the intended fail-closed status because self-reference blockers were found; the report was written successfully.
+
+This rerun closes the earlier provenance gap. It does not resolve the hierarchy: self-referencing links must not be created, and distinct candidate IDs are not yet approved parentage. Catalog acceptance remains **BLOCKED**. No parent links, source-file changes, database operations, migrations, seeds, production changes or deployments occurred.
