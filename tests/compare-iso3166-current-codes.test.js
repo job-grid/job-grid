@@ -271,3 +271,14 @@ test("URL credentials cannot be embedded in ISO source metadata", async (t) => {
   assert.match(result.stderr, /must use an official ISO-controlled hostname under iso\.org and must not embed credentials/);
 });
 
+test("duplicate GeoNames alpha-2 rows block a clean-looking comparison", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n" + geoRow("AA", "AAA", "001") + "\n"
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report.status, "BLOCKED_INVALID_GEONAMES_INPUT");
+  assert.equal(report.counts.geonames_duplicate_alpha2_groups, 1);
+});
+
