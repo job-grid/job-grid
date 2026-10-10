@@ -33,7 +33,7 @@ async function runFixture(t, isoCsv, geonamesText, extraArgs = []) {
     "--iso-csv", isoPath,
     "--country-info", geonamesPath,
     "--output", reportPath,
-    "--source-url", "https://example.invalid/synthetic-fixture-only",
+    "--source-url", "https://committee.iso.org/iso-3166-country-codes.html",
     "--retrieved-at-utc", "2026-10-10T00:00:00Z",
     "--alpha2-column", "Alpha-2 code",
     "--alpha3-column", "Alpha-3 code",
@@ -245,5 +245,29 @@ test("ISO snapshot and GeoNames input cannot be the same file", async (t) => {
   assert.equal(result.status, 2);
   assert.equal(report, null);
   assert.match(result.stderr, /ISO snapshot and GeoNames countryInfo input must be different files/);
+});
+
+test("unofficial HTTPS hostnames cannot be presented as an ISO authority", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--source-url", "https://iso.org.attacker.example/country-codes.csv"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /must use an official ISO-controlled hostname under iso\.org/);
+});
+
+test("URL credentials cannot be embedded in ISO source metadata", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--source-url", "https://user:secret@committee.iso.org/iso-3166-country-codes.html"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /must use an official ISO-controlled hostname under iso\.org and must not embed credentials/);
 });
 
