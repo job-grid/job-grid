@@ -1,5 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   auditCurrentAdminParents,
   buildCurrentAdminTargets,
@@ -165,4 +170,53 @@ test("selects only approved current ADM1-ADM4 hierarchy blockers and deduplicate
 test("parses quoted CSV values with commas and doubled quotes", () => {
   const rows = parseCsv('id,name\n1,"Tokyo, ""Japan"""\n');
   assert.deepEqual(rows, [{ id: "1", name: 'Tokyo, "Japan"' }]);
+});
+
+
+test("CLI reads a pinned source fixture, writes auditable artifacts, and records zero operational links", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "geonames-parent-audit-"));
+  try {
+    const sourcePath = join(temp, "allCountries.txt");
+    const targetPath = join(temp, "targets.csv");
+    const outputPrefix = join(temp, "audit-output");
+    const scriptPath = fileURLToPath(new URL("../scripts/geonames-current-admin-parent-path-audit.mjs", import.meta.url));
+    const sourceRows = [
+      geoRow({ id: "1", name: "Country XX", feature: "PCLI", country: "XX" }),
+      geoRow({ id: "10", name: "Level One", feature: "ADM1", country: "XX", admin1: "01" }),
+      geoRow({ id: "20", name: "Target ADM2", feature: "ADM2", country: "XX", admin1: "01", admin2: "02" }),
+    ];
+    const targetCsv = [
+      "geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code,owner_approved_disposition",
+      "20,Target ADM2,XX,ADM2,01,02,PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED",
+      "",
+    ].join("\\n");
+    await writeFile(sourcePath, sourceRows.map((row) => [
+      row.geonames_id, row.name, row.ascii_name, "", "1", "2", row.feature_class, row.feature_code,
+      row.country_code, "", row.admin1_code, row.admin2_code, row.admin3_code, row.admin4_code,
+      "0", "", "", "UTC", row.modification_date,
+    ].join("\\t")).join("\\n") + "\\n", "utf8");
+    await writeFile(targetPath, targetCsv, "utf8");
+
+    const processResult = spawnSync(process.execPath, [scriptPath, sourcePath, targetPath, outputPrefix], {
+      encoding: "utf8",
+    });
+    assert.equal(processResult.status, 0, processResult.stderr || processResult.stdout);
+    assert.match(processResult.stdout, /READ_ONLY_AUDIT_COMPLETE_NO_PARENT_LINKS_CREATED/);
+
+    const [csv, summaryText] = await Promise.all([
+      readFile(outputPrefix + ".csv", "utf8"),
+      readFile(outputPrefix + ".json", "utf8"),
+    ]);
+    const summary = JSON.parse(summaryText);
+    assert.equal(summary.target_count, 1);
+    assert.equal(summary.candidate_paths_found_requiring_owner_approval, 1);
+    assert.equal(summary.operational_parent_links_created, 0);
+    assert.equal(summary.source.sha256.length, 64);
+    assert.equal(summary.source.source_line_count, 3);
+    assert.equal(summary.source.remote_retrieval_metadata_verified, false);
+    assert.match(csv, /1>10>20/);
+    assert.match(csv, /false$/m);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
 });
