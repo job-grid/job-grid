@@ -151,10 +151,9 @@ test("row-level CSV files mirror the JSON counts and expected field schema", asy
 
 test("GeoNames validator unpacks all 19 source fields, including cc2 at column 10", async () => {
   const validator = await readFile(new URL("../scripts/geonames-sample-validator.py", import.meta.url), "utf8");
-  const unpackLine = validator.split("\\n").find(line => /gid,nm,ascii_name,alt,lat,lon,fc,ft,country,cc2,a1,a2,a3,a4,pop,elev,dem,tz,mod=f/.test(line));
-  assert.ok(unpackLine, "the 19-field unpack must include the cc2 column");
-  const tuple = unpackLine.trim().split("=f")[0];
-  const fields = tuple.split(",").map(field => field.trim());
+  const match = validator.match(/^\\s*(gid(?:,\\w+){18})=f$/m);
+  assert.ok(match, "the source row must unpack exactly 19 fields");
+  const fields = match[1].split(",");
   assert.equal(fields.length, 19);
   assert.equal(fields[8], "country");
   assert.equal(fields[9], "cc2");
