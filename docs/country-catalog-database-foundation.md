@@ -277,3 +277,36 @@ Detailed report: [GeoNames sample validation report](geonames-sample-validation-
 Limitations remain material: the uploaded ZIP does not contain the original allCountries.zip, original countryInfo source, or full admin crosswalks. Thus the source hashes/byte sizes in its manifest were not independently recomputed from the original source bytes. The supplied script uses local filesystem `st_mtime` for a field named `last_modified_utc`; it should be renamed to `local_file_mtime_utc` or replaced with verified HTTP Last-Modified metadata. Crosswalk presence does not prove a parent-child relationship, and parent links were not resolved. A current approved ISO authority snapshot was not independently validated.
 
 The sample output supports owner review of these measured results, but is not a production catalog acceptance. No database operations, imports, migrations, production changes, Cloudflare changes or PR merge were performed. Phase 4C remains BLOCKED.
+
+
+## 5C. Reconciled evidence status — 2026-10-10
+
+**Stage A — Owner-laptop sample generation and artifact inspection: READY FOR OWNER REVIEW OF SAMPLE EVIDENCE.**  
+**Stage B — Independent source-pinned reproducibility: INCOMPLETE.**  
+**Catalog acceptance: BLOCKED.**
+
+These are separate validation stages. The owner reports that a local script ran against original `allCountries.zip`, scanned **13,472,324** worldwide records, reported zero malformed 19-field rows, and generated a package with **25,685** selected geographic records. The 13,472,324 count and malformed-row count are attributed to the owner's local script and accompanying summary; the isolated builder did not independently reproduce the full scan.
+
+The owner-supplied `JobGrid-GeoNames-Sample-20261010-163234.zip` was separately inspected by the builder: 1,346,867 bytes; SHA-256 `feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf`; ZIP member integrity check passed. Independent checks of the extracted package measured 25,685 selected records, 25,685 distinct GeoNames IDs, no duplicate IDs in the sample, and no invalid/unparsable/out-of-range sample coordinates. The package contains five country metadata rows, 125 admin1 crosswalk rows, and 6,977 admin2 crosswalk rows. The accompanying summary's 481,942 selected-country source rows and per-country source totals remain reported by the owner-local run, not an independent second scan.
+
+All 24 included `admin1_crosswalk_not_found` exceptions concern Singapore (SG), and independent rechecking against the **included sample crosswalk only** reproduced the 24 misses. They are unresolved source-model/crosswalk exceptions, **not automatic invalid-record rejections**. Preserve source GeoNames IDs and original administrative codes. Do not invent administrative records or parent links. Keep uncertain relationships flagged for review until an appropriate authority or approved mapping rule resolves them.
+
+The isolated builder's separate attempt to retrieve nine official GeoNames files failed with DNS resolution errors for all nine URLs. The original `allCountries.zip`, original `countryInfo`, and original full admin crosswalks are not included in the uploaded sample package. Therefore:
+- Original-source byte sizes and SHA-256 values have not been independently verified against original source bytes.
+- The full 13,472,324-record scan, its malformed-row count, and sample selection have not been independently reproduced from source-pinned inputs.
+- A current, owner-approved ISO authority snapshot has not been independently obtained and compared.
+- Complete parent hierarchy and source relationship reconciliation remain incomplete.
+
+The builder-side retrieval failure recorded in §5A and `docs/geonames-sample-validation/source-manifest.json` remains true for the builder environment. It describes that environment's retrieval attempt only; it does not negate the separately inspected owner-supplied sample. The sample ZIP checksum identifies the uploaded package, not the original GeoNames sources.
+
+**Manifest caveats:** the sample generator's `last_modified_utc` field is populated from local filesystem `st_mtime`, not an HTTP `Last-Modified` response. Rename it to `local_file_mtime_utc` or capture and store server-provided HTTP metadata separately. Crosswalk presence or code match does not prove the complete parent-child hierarchy. The sample selection is biased by feature inclusion, population ranking/reservoir sampling and priority-name matches, so it does not establish worldwide completeness. Keep same-name records distinct using source IDs and feature/admin context; do not match by name alone.
+
+**Exact catalog-acceptance gates:**
+1. Supply the original source bytes or independently trustworthy, source-pinned snapshots; verify byte sizes and SHA-256 values.
+2. Independently reproduce the owner-local scan and selected sample from pinned inputs, recording parser/script version and input hashes.
+3. Obtain and record a current, owner-approved ISO authority snapshot and compare candidate country codes.
+4. Obtain owner approval for feature-code inclusion, selectability and exception-handling policies.
+5. Reconcile parent relationships using source IDs and approved geographic evidence; report unresolved relationships explicitly and never fabricate a parent to force a match.
+6. Correct the timestamp field semantics so local file mtime is not presented as a server Last-Modified time.
+
+**Governance:** this is documentation and test-coverage work only. No database operations, migrations, seeds/imports, production, Cloudflare, secrets, backup or recovery changes were made. PR #27 remains open, draft and unmerged. Phase 4C recovery readiness remains separately **BLOCKED** pending its independently approved and verified recovery prerequisites.
