@@ -266,6 +266,24 @@ def main() -> int:
                         metrics["admin2_candidate_id_present_as_same_country_admin_feature"] += 1
                         candidate_feature_codes_by_level["admin2"][cc][parent["feature_code"]] += 1
 
+    for level, by_country in candidate_key_code_metrics_by_level.items():
+        required_metrics = (
+            ("target_admin_rows_checked", "target_admin1_code_matches", "target_admin1_code_mismatches")
+            if level == "admin1"
+            else (
+                "target_admin_rows_checked",
+                "target_admin1_code_matches",
+                "target_admin1_code_mismatches",
+                "target_admin2_code_matches",
+                "target_admin2_code_mismatches",
+                "complete_composite_key_matches",
+                "complete_composite_key_mismatches",
+            )
+        )
+        for code_metrics in by_country.values():
+            for metric_name in required_metrics:
+                code_metrics.setdefault(metric_name, 0)
+
     for metrics in per_country.values():
         total.update(metrics)
 
