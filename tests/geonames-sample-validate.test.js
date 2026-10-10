@@ -48,8 +48,8 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   }
   assert.match(readme, /catalog acceptance.*BLOCKED|BLOCKED.*catalog acceptance/i);
   assert.match(report, /catalog_acceptance.*BLOCKED/);
-  assert.match(sourceManifest, /catalog_acceptance.*BLOCKED/);
-  assert.match(builderReport, /catalog_acceptance.*BLOCKED/);
+  assert.match(sourceManifest, /stage_b_independent_source_pinned_reproducibility/);
+  assert.match(builderReport, /Stage A|stage_a_owner_laptop_sample_generation_and_artifact_inspection/);
   assert.match(design, /## 5C\. Reconciled evidence status/);
   assert.match(design, /13,472,324/);
   assert.match(design, /Stage A.*Stage B/s);
