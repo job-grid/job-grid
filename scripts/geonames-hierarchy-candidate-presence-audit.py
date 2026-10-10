@@ -80,11 +80,14 @@ def main() -> int:
     args = parser.parse_args()
 
     source_root = args.source_root.resolve()
-    repo_root = Path(__file__).resolve().parents[1]
+    script_path = Path(__file__).resolve()
+    repo_root = next((parent for parent in script_path.parents if (parent / ".git").exists()), None)
     output_dir = args.output_dir.resolve()
     if not source_root.is_dir():
         parser.error(f"Source root is not a directory: {source_root}")
-    if is_within(output_dir, repo_root):
+    if is_within(output_dir, source_root):
+        parser.error(f"Output directory must be outside the source root: {source_root}")
+    if repo_root is not None and is_within(output_dir, repo_root):
         parser.error(f"Output directory must be outside the repository root: {repo_root}")
     if output_dir.exists():
         parser.error(f"Output directory already exists; refusing to overwrite: {output_dir}")
@@ -166,6 +169,8 @@ def main() -> int:
             candidate1 = admin1.get(key1)
             if candidate1 is None:
                 metrics["admin1_key_missing"] += 1
+                if a1 == "00":
+                    metrics["admin1_raw_00_key_missing"] += 1
             else:
                 metrics["admin1_key_found"] += 1
                 parent_id = candidate1["geonames_id"]
@@ -255,6 +260,11 @@ def main() -> int:
             "database_operations": False,
             "source_data_transmitted": False,
         },
+        "script": {
+            "filename": script_path.name,
+            "sha256": sha256_file(script_path)[1],
+            "hash_method": "Python hashlib SHA-256, calculated by this script"
+        },
         "input_manifest": source_manifest,
         "input_integrity": {
             "sample_rows": len(rows),
@@ -282,10 +292,8 @@ def main() -> int:
             "nonblank_code_references": total["admin1_code_present"],
             "code_references_with_exact_crosswalk_key": total["admin1_key_found"],
             "code_references_without_exact_key": total["admin1_key_missing"],
-            "raw_00_placeholder_candidates": total["admin1_raw_00_references"] - sum(
-                metrics["admin1_key_found"] for metrics in per_country.values()
-                if False
-            ),
+            "raw_00_placeholder_candidates": total["admin1_raw_00_key_missing"],
+            "unmatched_nonzero_code_references": total["admin1_key_missing"] - total["admin1_raw_00_key_missing"],
             "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": total["admin1_candidate_id_present_as_same_country_admin_feature"],
             "candidate_presence_issues": sum(count for name, count in total.items() if name.startswith("admin1_candidate_") and name != "admin1_candidate_id_present_as_same_country_admin_feature"),
         },
@@ -315,16 +323,6 @@ def main() -> int:
         },
     }
 
-    # The raw admin1 '00' count here is a count of references for which the exact key was missing.
-    report["admin1"]["raw_00_placeholder_candidates"] = sum(
-        metrics["admin1_raw_00_references"] - sum(
-            1 for row in rows
-            if row["country_code"].upper() == cc
-            and row["admin1_code"] == "00"
-            and f"{cc}.{row['admin1_code']}" in admin1
-        )
-        for cc, metrics in per_country.items()
-    )
     report_path = output_dir / "hierarchy-audit-summary.json"
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
