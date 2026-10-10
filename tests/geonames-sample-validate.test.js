@@ -72,6 +72,6 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(stageCJson, /"sample_ids_matched": 25685/);
   assert.match(stageCJson, /"missing_sample_ids": 0/);
   assert.match(stageCJson, /"admin1_unmatched": 2161/);
-  assert.match(stageCJson, /"official_ke_zip_verified": true/);
+  assert.match(stageCJson, /"source_record_exact_match_to_KE_zip": true/);
   assert.match(sourceManifest, /owner_laptop_five_country_archive_comparison/);
 });
