@@ -34,8 +34,8 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   const sample = [
     header,
     row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
-    row("10", "Fixture Admin1", "A", "ADM1", "AA"),
-    row("11", "Fixture Admin2", "A", "ADM2", "AA"),
+    row("10", "Fixture Admin1", "A", "ADM1", "AA", "01", ""),
+    row("11", "Fixture Admin2", "A", "ADM2", "AA", "01", "001"),
     row("12", "Historical Admin2 Without Admin1", "A", "ADM2H", "AA", "", "012"),
     row("13", "Unresolved Placeholder Child", "P", "PPL", "AA", "00", "")
   ].join("\n") + "\n";
@@ -233,10 +233,10 @@ test("crosswalk target code fields must match the lookup key", async (t) => {
     row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
     row("10", "Wrong Admin1 Code", "A", "ADM1", "AA", "02", ""),
     row("11", "Wrong Admin2 Codes", "A", "ADM2", "AA", "02", "999")
-  ].join("\\n") + "\\n";
+  ].join("\n") + "\n";
   await writeFile(join(sampleDir, "geonames_places_sample.tsv"), sample, "utf8");
-  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\\tFixture Admin1\\tFixture Admin1\\t10\\n", "utf8");
-  await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\\tFixture Admin2\\tFixture Admin2\\t11\\n", "utf8");
+  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\tFixture Admin1\tFixture Admin1\t10\n", "utf8");
+  await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\tFixture Admin2\tFixture Admin2\t11\n", "utf8");
 
   const result = spawnSync(python, [
     script,
