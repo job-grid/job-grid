@@ -176,8 +176,8 @@ async function main() {
     const duplicates = [];
     for (const [index, line] of rows.entries()) {
       const f = line.split("\t");
-      if (f.length < 17) {
-        manifest.exceptions.push({ file: "countryInfo.txt", line: index + 1, reason_code: "INVALID_COLUMN_COUNT", count: f.length });
+      if (f.length !== 19) {
+        manifest.exceptions.push({ file: "countryInfo.txt", line: index + 1, reason_code: "INVALID_COLUMN_COUNT_EXPECTED_19", count: f.length });
         continue;
       }
       if (byCode.has(f[0])) duplicates.push(f[0]);
