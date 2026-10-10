@@ -9,7 +9,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const BASE = "https://download.geonames.org/export/dump/";
 const LICENSE = "GeoNames CC BY 4.0; data is supplied as-is without warranty.";
 const SOURCES = [
@@ -42,15 +42,46 @@ async function hashFile(file) {
 }
 
 async function fetchToFile(source, target) {
-  const retrievedAt = new Date().toISOString();
+  const retrievalStartedAt = new Date().toISOString();
+  let responseMetadata = {
+    http_status: null,
+    http_last_modified_header: null,
+    http_date_header: null,
+    final_response_url: null,
+  };
   try {
     const response = await fetch(source.url, { redirect: "follow", signal: AbortSignal.timeout(90000) });
+    responseMetadata = {
+      http_status: response.status,
+      http_last_modified_header: response.headers.get("last-modified"),
+      http_date_header: response.headers.get("date"),
+      final_response_url: response.url || null,
+    };
     if (!response.ok) throw new Error("HTTP " + response.status);
     if (!response.body) throw new Error("Response body missing");
     await pipeline(response.body, createWriteStream(target));
-    return { retrieved_at: retrievedAt, http_status: response.status, retrieval_error: null };
+    const completedAt = new Date().toISOString();
+    return {
+      retrieval_started_at_utc: retrievalStartedAt,
+      retrieval_attempt_completed_at_utc: completedAt,
+      retrieved_at_utc: completedAt,
+      ...responseMetadata,
+      retrieval_error: null,
+      retrieval_metadata_retained_from_previous_manifest: false,
+      legacy_retrieved_at_unverified: null,
+      legacy_last_modified_utc_unverified: null,
+    };
   } catch (error) {
-    return { retrieved_at: retrievedAt, http_status: null, retrieval_error: String(error?.message ?? error) };
+    return {
+      retrieval_started_at_utc: retrievalStartedAt,
+      retrieval_attempt_completed_at_utc: new Date().toISOString(),
+      retrieved_at_utc: null,
+      ...responseMetadata,
+      retrieval_error: String(error?.message ?? error),
+      retrieval_metadata_retained_from_previous_manifest: false,
+      legacy_retrieved_at_unverified: null,
+      legacy_last_modified_utc_unverified: null,
+    };
   }
 }
 
@@ -63,7 +94,7 @@ async function main() {
   try { previous = JSON.parse(await readFile(manifestPath, "utf8")); } catch { /* no prior manifest */ }
 
   const manifest = {
-    schema_version: 1,
+    schema_version: 2,
     generated_at: new Date().toISOString(),
     parser: { name: "Job Grid GeoNames sample preflight", version: VERSION },
     license: LICENSE,
@@ -92,7 +123,22 @@ async function main() {
   for (const source of SOURCES) {
     const target = path.join(root, source.file);
     const prev = previous.sources?.[source.file] ?? {};
-    let retrieval = { retrieved_at: prev.retrieved_at ?? null, http_status: null, retrieval_error: null };
+    let retrieval = {
+      retrieval_started_at_utc: prev.retrieval_started_at_utc ?? null,
+      retrieval_attempt_completed_at_utc: prev.retrieval_attempt_completed_at_utc ?? null,
+      retrieved_at_utc: prev.retrieved_at_utc ?? null,
+      http_status: prev.http_status ?? null,
+      http_last_modified_header: prev.http_last_modified_header ?? null,
+      http_date_header: prev.http_date_header ?? null,
+      final_response_url: prev.final_response_url ?? null,
+      retrieval_error: null,
+      retrieval_metadata_retained_from_previous_manifest: true,
+      // Older manifests used retrieved_at for the time before fetch() began
+      // and sometimes mislabeled filesystem mtime as last_modified_utc.
+      // Preserve such fields only as explicitly unverified legacy evidence.
+      legacy_retrieved_at_unverified: prev.retrieved_at ?? prev.legacy_retrieved_at_unverified ?? null,
+      legacy_last_modified_utc_unverified: prev.last_modified_utc ?? prev.legacy_last_modified_utc_unverified ?? null,
+    };
     if (download) retrieval = await fetchToFile(source, target);
     const entry = {
       ...source, ...retrieval, bytes: null, sha256: null,
