@@ -117,3 +117,12 @@ The row-level CSV and JSON files are now present under `docs/geonames-sample-val
 The previous 24 Singapore exception IDs have an exact **24/24 ID overlap** with the broader set of 142 Singapore admin1 misses; zero prior IDs are missing from the broader set, and 118 IDs are additional. The 142 records include 118 raw `00` values and 24 nonzero-code rows with raw values `01`–`05`. These remain unresolved pending owner-approved interpretation. Preserve original codes, do not automatically reject the rows, and do not fabricate administrative entities or parent links.
 
 The exports close the row-level packaging gate only. Owner review, crosswalk policy decisions, source-pinned reproduction of the worldwide scan, current approved ISO comparison, global hierarchy decisions, and catalog acceptance remain outstanding. Phase 4C remains separately BLOCKED.
+
+
+## Owner-computer scan repeat run — 2026-10-10
+
+A second run of the original local `prepare_sample.py` finished in a separate output directory and reported 13,472,324 worldwide rows scanned, zero malformed rows and 25,685 selected rows. The input manifest records `allCountries.zip` at 422,010,093 bytes, SHA-256 `3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15`, plus hashes for the country metadata, full crosswalks and readme. Detailed values appear in `docs/geonames-worldwide-scan-reproduction-2026-10-10.md/json`.
+
+This is a repeated execution of the same implementation on the same computer, not an independent reproduction. Byte-for-byte comparison of the selected sample output files is NOT MEASURED. Full independent reproduction and worldwide completeness remain UNVERIFIED.
+
+The source manifest’s `last_modified_utc` was populated from local filesystem `st_mtime`; it is not a captured HTTP header. Use the meaning `local_file_mtime_utc` and leave `http_last_modified_utc` null absent an actual response header. The original sample package was not altered.

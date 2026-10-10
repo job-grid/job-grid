@@ -160,3 +160,18 @@ test("GeoNames validator unpacks all 19 source fields, including cc2 at column 1
   assert.equal(fields[10], "a1");
   assert.equal(fields[18], "mod");
 });
+
+
+test("worldwide scan repeat report distinguishes same-machine repeatability from independent reproduction", async () => {
+  const scan = JSON.parse(await readFile(new URL("../docs/geonames-worldwide-scan-reproduction-2026-10-10.json", import.meta.url), "utf8"));
+  assert.equal(scan.results.worldwide_records_scanned, 13472324);
+  assert.equal(scan.results.malformed_worldwide_rows, 0);
+  assert.equal(scan.results.selected_place_rows, 25685);
+  assert.equal(scan.comparison_with_prior_owner_run.worldwide_records_scanned_both_runs, 13472324);
+  assert.equal(scan.comparison_with_prior_owner_run.sample_payload_byte_for_byte_comparison, "NOT_MEASURED");
+  assert.equal(scan.limitations.full_worldwide_scan_independently_reproduced, false);
+  assert.equal(scan.limitations.current_approved_iso_authority_comparison, "UNVERIFIED");
+  assert.equal(scan.iso_authority_candidate.owner_approval_received, false);
+  assert.equal(scan.iso_authority_candidate.snapshot_downloaded_and_hashed, false);
+  assert.equal(scan.input_sources.find(source => source.key === "allCountries").sha256, "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15");
+});

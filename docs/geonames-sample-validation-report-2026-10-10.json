@@ -66,6 +66,23 @@
         "populated_places": 387,
         "selected_records": 171
       }
+    },
+    "owner_computer_repeat_run": {
+      "status": "COMPLETED_SAME_MACHINE_SAME_SCRIPT",
+      "completed_at_utc": "2026-10-10T18:23:24.870125Z",
+      "output_directory_label": "reproduction-run-20261010-1807",
+      "worldwide_records_scanned": 13472324,
+      "malformed_worldwide_rows": 0,
+      "selected_place_rows": 25685,
+      "five_country_source_rows": 481942,
+      "selected_country_duplicate_ids": 0,
+      "selected_country_invalid_coordinates": 0,
+      "unmatched_admin1_references_in_sample": 24,
+      "unmatched_admin2_references_in_sample": 0,
+      "same_counters_as_previous_owner_run": true,
+      "source_payload_byte_for_byte_comparison_to_previous_run": "NOT_MEASURED",
+      "independent_implementation_reproduction": false,
+      "interpretation": "Repeatability evidence only; not an independent scan reproduction."
     }
   },
   "stage_b": {
@@ -77,7 +94,30 @@
     "independent_reproduction_of_full_scan": false,
     "sample_selection_reproduced_from_pinned_original_inputs": false,
     "current_approved_iso_authority_snapshot_compared": false,
-    "complete_parent_hierarchy_resolved": false
+    "complete_parent_hierarchy_resolved": false,
+    "same_owner_computer_repeat_run_completed": true,
+    "repeat_run_source_inputs": {
+      "allCountries_zip": {
+        "bytes": 422010093,
+        "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15"
+      },
+      "countryInfo": {
+        "bytes": 31680,
+        "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974"
+      },
+      "admin1": {
+        "bytes": 151583,
+        "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a"
+      },
+      "admin2": {
+        "bytes": 2366368,
+        "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3"
+      },
+      "readme": {
+        "bytes": 8843,
+        "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5"
+      }
+    }
   },
   "singapore_exception_treatment": {
     "classification": "UNRESOLVED_SOURCE_MODEL_OR_CROSSWALK_EXCEPTION",
@@ -150,17 +190,19 @@
     "Crosswalk presence/code match is not proof of complete parent-child hierarchy; parent links remain unresolved.",
     "Current approved ISO authority snapshot was not independently obtained or compared.",
     "The sample is biased by feature inclusion, population/rservoir selection and priority-name matching; it does not establish worldwide completeness.",
-    "Updated Stage C evidence: owner-computer KE.zip, GB.zip, JP.zip, BR.zip and SG.zip passed ZIP CRC checks; all 25,685 sample rows matched their country archive by ID and all 19 fields. This does not reproduce the worldwide scan or resolve all hierarchy references."
+    "Updated Stage C evidence: owner-computer KE.zip, GB.zip, JP.zip, BR.zip and SG.zip passed ZIP CRC checks; all 25,685 sample rows matched their country archive by ID and all 19 fields. This does not reproduce the worldwide scan or resolve all hierarchy references.",
+    "A second owner-computer run of the same sample-preparation script completed with 13,472,324 worldwide rows, zero malformed rows and 25,685 selected rows. This is a repeatability check, not independent-source reproduction; byte-for-byte sample-output comparison was not measured."
   ],
   "acceptance_blockers": [
-    "Obtain original source bytes or independently trustworthy source-pinned snapshots and verify byte sizes/SHA-256.",
+    "Independently verify the owner-computer source byte sizes/SHA-256 values against the pinned source snapshot; a repeat-run source manifest now records them, but independent confirmation is still absent.",
     "Independently reproduce the owner-local 13,472,324-record scan and selected sample from pinned original inputs, recording parser version and input hashes.",
     "Obtain and record a current owner-approved ISO authority snapshot and compare candidate fields.",
     "Owner approval of feature-code inclusion, selectability and exception policies.",
     "Resolve or explicitly classify hierarchy relationships from source IDs and approved geographic authorities; report unresolved links.",
     "Correct manifest timestamp semantics so local mtime is not presented as server Last-Modified metadata.",
     "Owner approval required for placeholder/nonstandard-code and parent-link policies; unresolved references remain open.",
-    "Worldwide scan reproduction and current owner-approved ISO authority comparison remain unverified."
+    "Worldwide scan reproduction and current owner-approved ISO authority comparison remain unverified.",
+    "Obtain owner approval for the ISO Online Browsing Platform snapshot/version, download and hash that exact snapshot, and run the country-code comparison; do not substitute GeoNames countryInfo values for the approved ISO authority."
   ],
   "governance": {
     "database_operations": false,
@@ -593,5 +635,16 @@
     "singapore_broader_only_ids": 118,
     "exports_directory": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/",
     "catalog_acceptance": "BLOCKED"
+  },
+  "iso_authority_candidate": {
+    "proposed_source": "ISO 3166 Maintenance Agency / Online Browsing Platform",
+    "official_current_list_information_url": "https://committee.iso.org/iso-3166-country-codes.html",
+    "standard_url": "https://www.iso.org/standard/72482.html",
+    "iso_states_obp_is_up_to_date": true,
+    "iso_3166_1_2020_reviewed_confirmed_2025": true,
+    "snapshot_downloaded_and_hashed": false,
+    "owner_approval_received": false,
+    "comparison_completed": false,
+    "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
   }
 }

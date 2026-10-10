@@ -90,3 +90,14 @@ The current row-level comparison shows 157 GeoNames IDs occur in both exception 
 For Singapore, the existing 24 exception IDs have **24/24 exact ID overlap** with the broader set of 142 admin1 misses. There are 118 additional IDs in the wider set and no prior-only IDs. The 142 misses comprise 118 raw `00` values and 24 raw values in `01`–`05`. All remain unresolved pending owner-approved representation/policy; there are no synthetic parent links.
 
 These exports are row-level evidence, not a final classification of record validity or hierarchy correctness. Preserve raw codes and GeoNames IDs. The independent worldwide scan, current approved ISO comparison, worldwide completeness, and catalog acceptance remain UNVERIFIED/BLOCKED as previously stated. Phase 4C remains separately BLOCKED.
+
+
+## Stage A repeat scan — same owner computer — 2026-10-10
+
+A second run of the existing owner-computer `prepare_sample.py` completed in a separate output directory. It again reported 13,472,324 worldwide rows, zero malformed rows, and a 25,685-record selected sample; the five-country source row total remains 481,942. The source inputs and their owner-computer SHA-256 values are recorded in `docs/geonames-worldwide-scan-reproduction-2026-10-10.json`.
+
+This is a repeat run of the same implementation on the same computer, not independent cross-platform reproduction. Byte-for-byte output comparison with the earlier sample has not been measured. Consequently, Stage B independent-source reproducibility remains incomplete.
+
+The repeat run's manifest still used the key `last_modified_utc` for local filesystem `st_mtime`. This is not HTTP Last-Modified evidence. Interpret it as local filesystem metadata only; `http_last_modified_utc` remains null unless a real response header is captured. The original sample package was not altered.
+
+For the ISO gate, the proposed authoritative source is the [ISO 3166 Maintenance Agency's Online Browsing Platform information](https://committee.iso.org/iso-3166-country-codes.html). ISO says the OBP is kept up to date. The [ISO 3166-1:2020 standard page](https://www.iso.org/standard/72482.html) says this edition was reviewed and confirmed in 2025 and remains current. This is only a candidate source: the specific snapshot still needs owner approval, retrieval, hashing and comparison.

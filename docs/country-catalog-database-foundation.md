@@ -391,3 +391,16 @@ The owner's row-level reconciliation reports 2,333 unmatched admin1 references a
 For Singapore, the 24 prior exception IDs overlap exactly with 24 of the broader 142 unmatched admin1 references. There are no prior-only IDs; 118 wider-set IDs are additional. The broader set includes 118 raw `00` values and 24 nonzero-code values in `01`–`05`.
 
 Owner decisions are still required. Preserve all raw codes and source IDs. Treat raw `00` as an unresolved placeholder/nonstandard-code candidate; do not label nonzero unmatched values legacy without evidence; do not create synthetic administrative records or invent parent relationships; and do not merge same-name records. The export solves the row-level packaging gap only. Source-pinned reproduction of the full worldwide scan, current owner-approved ISO comparison, feature inclusion/selectability decisions and complete hierarchy reconciliation remain unverified or unresolved. Catalog acceptance remains BLOCKED, PR #27 must remain open and unmerged, and Phase 4C recovery readiness remains separately BLOCKED.
+
+
+## 5G. Worldwide scan repeat run and ISO source gate — 2026-10-10
+
+A second run of the owner-computer `prepare_sample.py` completed against the same local source inputs but wrote to a separate output directory. It again reported 13,472,324 worldwide rows scanned, zero malformed rows, and 25,685 selected rows. The run manifest records `allCountries.zip` as 422,010,093 bytes with SHA-256 `3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15`, and records hashes for countryInfo, both full crosswalks and readme. See `docs/geonames-worldwide-scan-reproduction-2026-10-10.md/json`.
+
+**Evidence limit:** this is repeatability of the same implementation on the same owner computer, not independent cross-platform reproduction. The selected output payloads were not compared byte-for-byte with the prior output. Independent implementation/runtime reproduction and independent verification of the source hashes remain UNVERIFIED.
+
+**Timestamp semantics:** the reproduced manifest still keys local filesystem `st_mtime` as `last_modified_utc`. This is not proof of server HTTP `Last-Modified`; record it as `local_file_mtime_utc` and leave `http_last_modified_utc` null unless a real response header is captured. The original archive/sample remains unchanged.
+
+**ISO source proposal:** ISO's [3166 Maintenance Agency page](https://committee.iso.org/iso-3166-country-codes.html) says the Online Browsing Platform (OBP) is always up to date. ISO's [ISO 3166-1:2020 page](https://www.iso.org/standard/72482.html) states that this edition was reviewed and confirmed in 2025 and remains current. This is the proposed authoritative source for owner approval, not an already-approved comparison. The exact snapshot has not been downloaded, hashed or compared.
+
+The main counts are reproduced on the owner computer; independent full-scan reproduction, current owner-approved ISO comparison, byte-level sample-output comparison, full hierarchy decisions and catalog acceptance remain outstanding. Phase 4C remains separately BLOCKED.

@@ -1,0 +1,147 @@
+{
+  "report_version": "1.0",
+  "run_id": "owner-computer-repeat-run-2026-10-10",
+  "output_directory_label": "reproduction-run-20261010-1807",
+  "completed_at_utc": "2026-10-10T18:23:24.870125Z",
+  "status": "REPEAT_RUN_COUNTERS_MATCHED",
+  "evidence_classification": "Repeated owner-computer run using the same prepare_sample.py implementation and same local source inputs; this is not an independent cross-platform reproduction.",
+  "script": {
+    "filename": "prepare_sample.py",
+    "path_on_owner_computer": "sample-output-20261010-163234/prepare_sample.py",
+    "implementation_reused": true,
+    "separate_output_directory": true,
+    "original_sample_output_modified": false
+  },
+  "input_sources": [
+    {
+      "key": "allCountries",
+      "filename": "allCountries.zip",
+      "url": "https://download.geonames.org/export/dump/allCountries.zip",
+      "bytes": 422010093,
+      "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+      "timestamp_semantics": "The generated source manifest field last_modified_utc came from local filesystem st_mtime; it is local file metadata, not an HTTP Last-Modified header."
+    },
+    {
+      "key": "countryInfo",
+      "filename": "countryInfo.txt.txt",
+      "url": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "bytes": 31680,
+      "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+      "timestamp_semantics": "Local filesystem mtime only; no HTTP Last-Modified header was captured."
+    },
+    {
+      "key": "admin1",
+      "filename": "admin1CodesASCII.txt",
+      "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "bytes": 151583,
+      "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "timestamp_semantics": "Local filesystem mtime only; no HTTP Last-Modified header was captured."
+    },
+    {
+      "key": "admin2",
+      "filename": "admin2Codes.txt",
+      "url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "bytes": 2366368,
+      "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3",
+      "timestamp_semantics": "Local filesystem mtime only; no HTTP Last-Modified header was captured."
+    },
+    {
+      "key": "readme",
+      "filename": "readme.txt",
+      "url": "https://download.geonames.org/export/dump/readme.txt",
+      "bytes": 8843,
+      "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "timestamp_semantics": "Local filesystem mtime only; no HTTP Last-Modified header was captured."
+    }
+  ],
+  "results": {
+    "worldwide_records_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "selected_place_rows": 25685,
+    "selected_country_duplicate_ids": 0,
+    "selected_country_invalid_coordinates": 0,
+    "countryInfo_rows_selected": 5,
+    "countryInfo_malformed_selected_rows": 0,
+    "admin1_crosswalk_rows": 125,
+    "admin2_crosswalk_rows": 6977,
+    "unmatched_admin1_references_in_sample": 24,
+    "unmatched_admin2_references_in_sample": 0,
+    "exception_counts": {
+      "admin1_crosswalk_not_found": 24
+    },
+    "source_records_across_five_country_archives": 481942,
+    "sample_records_matching_five_country_archives_by_id_and_all_19_fields": 25685
+  },
+  "per_country": {
+    "KE": {
+      "source_records": 31490,
+      "admin_features": 2424,
+      "populated_places": 6957,
+      "other_features": 22109,
+      "priority_name_matches": 14,
+      "selected_records": 2631
+    },
+    "GB": {
+      "source_records": 109181,
+      "admin_features": 11895,
+      "populated_places": 43712,
+      "other_features": 53574,
+      "priority_name_matches": 2,
+      "selected_records": 12096
+    },
+    "JP": {
+      "source_records": 103762,
+      "admin_features": 4697,
+      "populated_places": 50801,
+      "other_features": 48264,
+      "priority_name_matches": 3,
+      "selected_records": 4899
+    },
+    "BR": {
+      "source_records": 235530,
+      "admin_features": 5676,
+      "populated_places": 72392,
+      "other_features": 157462,
+      "priority_name_matches": 14,
+      "selected_records": 5888
+    },
+    "SG": {
+      "source_records": 1979,
+      "admin_features": 1,
+      "populated_places": 387,
+      "other_features": 1591,
+      "priority_name_matches": 1,
+      "selected_records": 171
+    }
+  },
+  "comparison_with_prior_owner_run": {
+    "worldwide_records_scanned_both_runs": 13472324,
+    "malformed_rows_both_runs": 0,
+    "selected_rows_both_runs": 25685,
+    "five_country_source_rows_both_runs": 481942,
+    "selected_country_duplicate_ids_both_runs": 0,
+    "selected_country_invalid_coordinates_both_runs": 0,
+    "sample_payload_byte_for_byte_comparison": "NOT_MEASURED",
+    "independent_implementation_reproduction": "UNVERIFIED"
+  },
+  "limitations": {
+    "this_repeat_run_proves": "The same owner-computer script and locally present input files can complete a second run with the same main counts.",
+    "this_repeat_run_does_not_prove": "Independent reproduction using a separate implementation/runtime, byte-for-byte identical selected sample, current ISO authority match, worldwide geographic completeness, or correct complete parent hierarchy.",
+    "world_scan_is_not_catalog_acceptance": true,
+    "full_worldwide_scan_independently_reproduced": false,
+    "current_approved_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED",
+    "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "iso_authority_candidate": {
+    "proposed_source": "ISO Online Browsing Platform (OBP) / ISO 3166 Maintenance Agency",
+    "official_current_list_page": "https://committee.iso.org/iso-3166-country-codes.html",
+    "standard_page": "https://www.iso.org/standard/72482.html",
+    "source_note": "ISO states the OBP is always up to date. ISO's ISO 3166-1:2020 page says it was reviewed and confirmed in 2025 and remains current.",
+    "snapshot_downloaded_and_hashed": false,
+    "owner_approval_received": false,
+    "comparison_completed": false,
+    "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
+  }
+}

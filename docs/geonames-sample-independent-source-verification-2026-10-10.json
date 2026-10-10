@@ -401,5 +401,48 @@
   "gaps_to_close": [
     "Owner approval of placeholder/nonstandard-code handling and unresolved parent-link policy.",
     "Independent worldwide scan reproduction and current owner-approved ISO authority comparison remain outstanding."
-  ]
+  ],
+  "owner_computer_worldwide_scan_repeat_run": {
+    "status": "COMPLETED_SAME_MACHINE_SAME_SCRIPT",
+    "completed_at_utc": "2026-10-10T18:23:24.870125Z",
+    "worldwide_records_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "selected_place_rows": 25685,
+    "same_counters_as_previous_owner_run": true,
+    "sample_payload_byte_for_byte_comparison": "NOT_MEASURED",
+    "independent_implementation_reproduction": "UNVERIFIED",
+    "allCountries_zip": {
+      "bytes": 422010093,
+      "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15"
+    },
+    "other_source_sha256s": {
+      "countryInfo": {
+        "bytes": 31680,
+        "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974"
+      },
+      "admin1": {
+        "bytes": 151583,
+        "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a"
+      },
+      "admin2": {
+        "bytes": 2366368,
+        "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3"
+      },
+      "readme": {
+        "bytes": 8843,
+        "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5"
+      }
+    },
+    "timestamp_semantics": "Source manifest last_modified_utc is local filesystem st_mtime, not HTTP Last-Modified. Interpret as local_file_mtime_utc; http_last_modified_utc is null absent a real response header."
+  },
+  "iso_authority_candidate": {
+    "proposed_source": "ISO Online Browsing Platform (OBP) / ISO 3166 Maintenance Agency",
+    "official_current_list_page": "https://committee.iso.org/iso-3166-country-codes.html",
+    "standard_page": "https://www.iso.org/standard/72482.html",
+    "source_note": "ISO states the OBP is always up to date. ISO's ISO 3166-1:2020 page says it was reviewed and confirmed in 2025 and remains current.",
+    "snapshot_downloaded_and_hashed": false,
+    "owner_approval_received": false,
+    "comparison_completed": false,
+    "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
+  }
 }
