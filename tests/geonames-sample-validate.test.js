@@ -130,8 +130,10 @@ test("row-level CSV files mirror the JSON counts and expected field schema", asy
   const admin1Csv = await readFile(new URL("unmatched_admin1_references.csv", dir), "utf8");
   const admin2Csv = await readFile(new URL("unmatched_admin2_references.csv", dir), "utf8");
   const expectedHeader = "geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code,missing_reference_category,proposed_review_classification,crosswalk_lookup_key,raw_missing_code";
-  assert.equal(admin1Csv.split(/\r?\n/)[0], expectedHeader);
-  assert.equal(admin2Csv.split(/\r?\n/)[0], expectedHeader);
-  assert.equal(admin1Csv.split(/\r?\n/).filter(Boolean).length - 1, 2333);
-  assert.equal(admin2Csv.split(/\r?\n/).filter(Boolean).length - 1, 240);
+  const admin1Lines = admin1Csv.split("\n").map(line => line.replace(/\r$/, "")).filter(Boolean);
+  const admin2Lines = admin2Csv.split("\n").map(line => line.replace(/\r$/, "")).filter(Boolean);
+  assert.equal(admin1Lines[0], expectedHeader);
+  assert.equal(admin2Lines[0], expectedHeader);
+  assert.equal(admin1Lines.length - 1, 2333);
+  assert.equal(admin2Lines.length - 1, 240);
 });
