@@ -122,17 +122,20 @@
       "full_scan_independently_reproduced_by_builder": false
     },
     "stage_b_independent_source_pinned_reproducibility": {
-      "status": "INCOMPLETE",
+      "status": "PARTIAL_PASS_LOCAL_SEPARATE_IMPLEMENTATION; SOURCE_ORIGIN_ISO_AND_HIERARCHY_REMAIN",
       "original_source_archives_in_uploaded_sample": false,
       "builder_original_source_retrievals": 0,
-      "original_source_sha256_verified": false,
-      "owner_full_scan_reproduced": false,
+      "original_source_sha256_verified": true,
+      "owner_full_scan_reproduced": true,
       "current_approved_iso_authority_compared": false,
-      "complete_parent_hierarchy_reconciled": false
+      "complete_parent_hierarchy_reconciled": false,
+      "local_source_sha256_recalculated_separately": true,
+      "official_source_origin_verified": false,
+      "sample_selection_algorithm_independently_reimplemented": false
     }
   },
   "note": "The FAILED_DNS statuses and sources[] entries below describe only the isolated builder's attempted retrieval and remain historically accurate for that environment. Separately, the owner's connected Windows computer contained the five country ZIPs; measured sizes, hashes, ZIP CRC, source counts, record comparisons and crosswalk counts are in owner_laptop_five_country_archive_comparison. Five-country sample comparison passed; hierarchy exceptions, row-level exception export, worldwide source pinning, current ISO comparison and catalog acceptance remain blocked. allCountries.zip was not parsed for this task. Owner sample manifest last_modified_utc is local filesystem mtime, not HTTP metadata. Current addendum: row-level exception exports are now persisted; exact Singapore ID overlap is 24/24 with 118 additional IDs, and the admin1/admin2 exception union contains 2,416 unique GeoNames IDs. Previous statements about unpersisted exports or unmeasured overlap are historical and superseded by this measured reconciliation.",
-  "current_stage_status": "PASS_FIVE_COUNTRY_SAMPLE_COMPARISON_CATALOG_ACCEPTANCE_BLOCKED",
+  "current_stage_status": "PASS_SEPARATE_IMPLEMENTATION_FULL_LOCAL_SCAN_AND_SAMPLE_RECONCILIATION_CATALOG_ACCEPTANCE_BLOCKED",
   "last_checked_owner_input_directory": {
     "path": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
     "checked_on_utc_date": "2026-10-10",
@@ -1070,5 +1073,31 @@
     "owner_approval_received": true,
     "comparison_completed": false,
     "status": "OWNER_APPROVED_SNAPSHOT_NOT_CAPTURED_OR_COMPARED"
+  },
+  "latest_independent_worldwide_verification": {
+    "status": "PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE; SOURCE_ORIGIN_AND_SAMPLE_SELECTION_ALGORITHM_REMAIN_UNVERIFIED",
+    "implementation": "Separately authored PowerShell/.NET streaming verifier",
+    "report_json": "docs/geonames-worldwide-independent-verification-2026-10-10.json",
+    "report_markdown": "docs/geonames-worldwide-independent-verification-2026-10-10.md",
+    "worldwide_rows_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "selected_country_source_records": 481942,
+    "sample_rows_reconciled": 25685,
+    "exact_matches_all_19_fields": 25685,
+    "missing_sample_ids": 0,
+    "field_conflicts": 0,
+    "source_duplicate_hits": 0,
+    "local_source_hashes_recalculated_separately": true,
+    "local_source_hashes_match_prior_manifest": true,
+    "official_urls_refetched": false,
+    "official_source_origin_verified": false,
+    "remote_http_last_modified_captured": false,
+    "sample_output_files_compared": 7,
+    "sample_output_files_byte_identical": 7,
+    "sample_selection_algorithm_reimplemented_independently": false,
+    "current_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED",
+    "phase_4c_recovery_readiness": "BLOCKED"
   }
 }
