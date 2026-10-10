@@ -15,19 +15,19 @@ The current [ISO Open Data catalogue](https://committee.iso.org/open-data.html) 
 Therefore, for this validation:
 - Do not paste, upload, or commit the ISO source snapshot, source rows, country names, or individual code tuples into an AI tool.
 - Obtain/use the source under the access and usage terms shown by ISO. Do not purchase a paid collection unless the owner separately authorizes the cost.
-- Run the comparison as deterministic local code. The comparator added in \`scripts/compare-iso3166-current-codes.py\` does not download or transmit the source and defaults to an aggregate-only JSON report. Its optional row-level details can contain specific code values and must remain local/private.
+- Run the comparison as deterministic local code. The comparator added in `scripts/compare-iso3166-current-codes.py` does not download or transmit the source and defaults to an aggregate-only JSON report. Its optional row-level details can contain specific code values and must remain local/private.
 - Only the aggregate report (counts, comparison status, source filename/size/hash and verified retrieval metadata, without names or code tuples) may be considered for repository documentation. The raw snapshot and detailed mismatch file must stay outside Git.
 - If the official source cannot be obtained in a machine-readable format without additional permission/payment, stop at that blocker rather than scraping, bypassing access controls, or substituting an unofficial mirror for ISO authority.
 
 ## Local comparison procedure
 
 1. Obtain the current **ISO 3166-1 country-code list only** through the official ISO source. Do not mix in ISO 3166-2 subdivision codes or ISO 3166-3 formerly used codes. Preserve the original downloaded file locally and keep it outside the repository.
-2. Record the true source URL and actual retrieval timestamp. Record an HTTP \`Last-Modified\` value only if a server response header was really captured; never substitute local filesystem modification time.
-3. On a trusted local machine, run the comparator against the source CSV and the already downloaded GeoNames \`countryInfo.txt\` file. Adjust the three column-header flags to match the exact headers in the local ISO CSV:
+2. Record the true source URL and actual retrieval timestamp. Record an HTTP `Last-Modified` value only if a server response header was really captured; never substitute local filesystem modification time.
+3. On a trusted local machine, run the comparator against the source CSV and the already downloaded GeoNames `countryInfo.txt` file. Adjust the three column-header flags to match the exact headers in the local ISO CSV:
 
-   \`python scripts/compare-iso3166-current-codes.py --iso-csv "C:\\path\\outside-repo\\iso3166-1-current.csv" --country-info "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames\\countryInfo.txt.txt" --output "C:\\path\\outside-repo\\iso-comparison-summary.json" --source-url "OFFICIAL_ISO_SOURCE_URL" --retrieved-at-utc "ACTUAL_UTC_TIMESTAMP" --alpha2-column "Alpha-2 code" --alpha3-column "Alpha-3 code" --numeric-column "Numeric code" --private-details-path "C:\\path\\outside-repo\\iso-comparison-details-private.csv"\`
+   `python scripts/compare-iso3166-current-codes.py --iso-csv "C:\path\outside-repo\iso3166-1-current.csv" --country-info "C:\Users\jonat\OneDrive\Desktop\JobGrid-GeoNames\countryInfo.txt.txt" --output "C:\path\outside-repo\iso-comparison-summary.json" --source-url "OFFICIAL_ISO_SOURCE_URL" --retrieved-at-utc "ACTUAL_UTC_TIMESTAMP" --alpha2-column "Alpha-2 code" --alpha3-column "Alpha-3 code" --numeric-column "Numeric code" --private-details-path "C:\path\outside-repo\iso-comparison-details-private.csv"`
 
-   The text in uppercase is a placeholder, not a real URL or timestamp. Replace it with captured evidence. Do not run against an HTML page renamed \`.csv\`.
+   The text in uppercase is a placeholder, not a real URL or timestamp. Replace it with captured evidence. Do not run against an HTML page renamed `.csv`.
 4. Review the aggregate JSON locally. Any nonzero code-conflict counts, invalid snapshot rows, or duplicate ISO identifiers block a clean result. GeoNames-only codes remain review candidates; they are not automatically invalid. A clean comparison of shared fields is not itself approval to change catalog values or hierarchy.
 5. Keep the source file and optional detail CSV outside Git. Never send the source rows or detail file to an AI assistant. After owner review, a privacy-safe aggregate report may be documented in PR #27 with the original snapshot hash and truthful provenance.
 
