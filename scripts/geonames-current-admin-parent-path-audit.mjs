@@ -190,6 +190,12 @@ const OUTPUT_FIELDS = [
   "candidate_adm2_geonames_id",
   "candidate_adm3_geonames_id",
   "candidate_path_geonames_ids",
+  "candidate_path_source",
+  "hierarchy_direct_edge_count",
+  "hierarchy_direct_edges",
+  "hierarchy_path_candidate_geonames_ids",
+  "hierarchy_path_audit_status",
+  "hierarchy_path_blocking_reason",
   "parent_path_audit_status",
   "blocking_reason",
   "operational_parent_link_created",
@@ -219,7 +225,7 @@ export function renderAuditCsv(rows) {
     OUTPUT_FIELDS.map((field) => csvValue(row[field])).join(","))].join("\n") + "\n";
 }
 
-export function auditCurrentAdminParents(targetRows, sourceRecords) {
+function auditCurrentAdminParentsByCodes(targetRows, sourceRecords) {
   const targetIds = new Set(targetRows.map((row) => String(row.geonames_id)));
   const { targetsById, countryByCode, adminByLevelAndKey } =
     collectIndexes(sourceRecords, targetIds);
@@ -246,6 +252,12 @@ export function auditCurrentAdminParents(targetRows, sourceRecords) {
       candidate_adm2_geonames_id: "",
       candidate_adm3_geonames_id: "",
       candidate_path_geonames_ids: "",
+      candidate_path_source: "",
+      hierarchy_direct_edge_count: 0,
+      hierarchy_direct_edges: "[]",
+      hierarchy_path_candidate_geonames_ids: "",
+      hierarchy_path_audit_status: "HIERARCHY_SOURCE_NOT_SUPPLIED",
+      hierarchy_path_blocking_reason: "No hierarchy.txt source was supplied to this code-key audit.",
       parent_path_audit_status: "",
       blocking_reason: "",
       operational_parent_link_created: false,
@@ -327,11 +339,141 @@ export function auditCurrentAdminParents(targetRows, sourceRecords) {
 
     candidatePath.push(targetId);
     row.candidate_path_geonames_ids = candidatePath.join(">");
+    row.candidate_path_source = "COUNTRY_ADMIN_CODES";
     row.parent_path_audit_status = "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL";
     row.blocking_reason = "Exact country/admin-code candidate path found in the supplied snapshot; this is audit evidence only, not approval to write parent links.";
     return row;
   });
 }
+
+export function parseHierarchyLine(line) {
+  if (!line.trim()) return null;
+  const fields = line.split("\\t");
+  if (fields.length !== 3 || fields.some((field) => field.length === 0)) {
+    throw new Error("Invalid GeoNames hierarchy row: expected parentId, childId, type.");
+  }
+  return { parent_id: fields[0], child_id: fields[1], relation_type: fields[2] };
+}
+
+export async function loadHierarchyEdges(hierarchyPath, relevantChildIds) {
+  const stream = createReadStream(hierarchyPath);
+  const hash = createHash("sha256");
+  stream.on("data", (chunk) => hash.update(chunk));
+  const input = createInterface({ input: stream, crlfDelay: Infinity });
+  const edges = [];
+  let lineCount = 0;
+  for await (const line of input) {
+    if (!line) continue;
+    lineCount += 1;
+    const edge = parseHierarchyLine(line);
+    if (edge && relevantChildIds.has(edge.child_id)) edges.push(edge);
+  }
+  return { edges, lineCount, sha256: hash.digest("hex") };
+}
+
+export function auditCurrentAdminParents(targetRows, sourceRecords, hierarchyEdges = null) {
+  const rows = auditCurrentAdminParentsByCodes(targetRows, sourceRecords);
+  if (!Array.isArray(hierarchyEdges)) return rows;
+
+  const byChildId = new Map();
+  for (const edge of hierarchyEdges) {
+    const edges = byChildId.get(edge.child_id) ?? [];
+    edges.push(edge);
+    byChildId.set(edge.child_id, edges);
+  }
+  const recordsById = new Map();
+  for (const record of sourceRecords) {
+    const matches = recordsById.get(record.geonames_id) ?? [];
+    matches.push(record);
+    recordsById.set(record.geonames_id, matches);
+  }
+
+  for (const row of rows) {
+    const direct = byChildId.get(row.geonames_id) ?? [];
+    row.hierarchy_direct_edge_count = direct.length;
+    row.hierarchy_direct_edges = JSON.stringify(direct.map((edge) => {
+      const parents = recordsById.get(edge.parent_id) ?? [];
+      const parent = parents.length === 1 ? parents[0] : null;
+      return {
+        parent_geonames_id: edge.parent_id,
+        relationship_type: edge.relation_type,
+        parent_record_found: parents.length === 1,
+        parent_name: parent?.name ?? null,
+        parent_country_code: parent?.country_code ?? null,
+        parent_feature_code: parent?.feature_code ?? null,
+      };
+    }));
+
+    const targetLevelMatch = /^ADM([1-4])$/.exec(row.feature_code);
+    if (!targetLevelMatch || !row.source_identity_match) {
+      row.hierarchy_path_audit_status = "BLOCKED_TARGET_NOT_SOURCE_VERIFIED";
+      row.hierarchy_path_blocking_reason = "Hierarchy paths are evaluated only for source-verified current ADM1-ADM4 target records.";
+      continue;
+    }
+    let cursorId = row.geonames_id;
+    const reversePath = [cursorId];
+    const seen = new Set(reversePath);
+    let hierarchyStatus = "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL";
+    let reason = "A unique same-country ADM hierarchy edge was found at every expected parent level; candidate only, not approved for operational use.";
+
+    for (let parentLevel = Number(targetLevelMatch[1]) - 1; parentLevel >= 0; parentLevel -= 1) {
+      const edges = (byChildId.get(cursorId) ?? []).filter((edge) => edge.relation_type === "ADM");
+      if (edges.length === 0) {
+        hierarchyStatus = "BLOCKED_NO_DIRECT_ADM_HIERARCHY_EDGE";
+        reason = "No direct type=ADM parent edge exists for the current child in the supplied hierarchy snapshot.";
+        break;
+      }
+      if (edges.length > 1) {
+        hierarchyStatus = "BLOCKED_AMBIGUOUS_ADM_HIERARCHY_PARENT";
+        reason = "Multiple type=ADM parent edges exist for the same child; no parent was selected.";
+        break;
+      }
+      const parentId = edges[0].parent_id;
+      if (seen.has(parentId)) {
+        hierarchyStatus = "BLOCKED_ADM_HIERARCHY_CYCLE";
+        reason = "An ADM parent edge repeats an ID already in the candidate path.";
+        break;
+      }
+      const parents = recordsById.get(parentId) ?? [];
+      if (parents.length !== 1) {
+        hierarchyStatus = parents.length === 0 ? "BLOCKED_ADM_PARENT_RECORD_NOT_IN_SOURCE" : "BLOCKED_AMBIGUOUS_ADM_PARENT_SOURCE_RECORD";
+        reason = parents.length === 0
+          ? "A hierarchy parent ID could not be resolved to an exact record in the fetched JP/KE country archives."
+          : "A hierarchy parent ID matched multiple source records.";
+        break;
+      }
+      const parent = parents[0];
+      const expectedFeatureCode = parentLevel === 0 ? "PCLI" : "ADM" + parentLevel;
+      if (parent.country_code !== row.country_code || parent.feature_code !== expectedFeatureCode) {
+        hierarchyStatus = "BLOCKED_ADM_PARENT_COUNTRY_OR_LEVEL_MISMATCH";
+        reason = "The hierarchy parent does not match the expected same-country feature level (" + expectedFeatureCode + ").";
+        break;
+      }
+      reversePath.push(parentId);
+      seen.add(parentId);
+      cursorId = parentId;
+    }
+
+    row.hierarchy_path_audit_status = hierarchyStatus;
+    row.hierarchy_path_blocking_reason = reason;
+    if (hierarchyStatus === "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL") {
+      const path = reversePath.reverse().join(">");
+      row.hierarchy_path_candidate_geonames_ids = path;
+      if (row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL" &&
+          row.candidate_path_geonames_ids !== path) {
+        row.parent_path_audit_status = "BLOCKED_CODE_HIERARCHY_PATH_DISAGREEMENT";
+        row.blocking_reason = "Exact-code and explicit type=ADM hierarchy candidate paths disagree; manual source review required.";
+      } else if (row.parent_path_audit_status !== "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL") {
+        row.parent_path_audit_status = "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL";
+        row.candidate_path_geonames_ids = path;
+        row.candidate_path_source = "GEONAMES_HIERARCHY_ZIP_TYPE_ADM";
+        row.blocking_reason = reason;
+      }
+    }
+  }
+  return rows;
+}
+
 
 export function buildAuditSummary(rows, sourceMetadata) {
   const remoteVerified = sourceMetadata?.remote_retrieval_metadata_verified === true;
@@ -342,7 +484,14 @@ export function buildAuditSummary(rows, sourceMetadata) {
     return Object.fromEntries(Object.entries(result).sort(([a], [b]) => a.localeCompare(b)));
   };
   const complete = rows.filter((row) =>
-    row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL");
+    row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL" ||
+    row.parent_path_audit_status === "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL");
+  const hierarchyPathsFound = rows.filter((row) =>
+    row.hierarchy_path_audit_status === "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL").length;
+  const directAdmEdgesForTargets = rows.filter((row) => {
+    try { return JSON.parse(row.hierarchy_direct_edges).some((edge) => edge.relationship_type === "ADM"); }
+    catch { return false; }
+  }).length;
   return {
     report_version: "1.0",
     audit_type: "READ_ONLY_EXACT_COMPOSITE_CODE_PARENT_PATH_CANDIDATES",
@@ -357,6 +506,9 @@ export function buildAuditSummary(rows, sourceMetadata) {
     },
     target_count: rows.length,
     candidate_paths_found_requiring_owner_approval: complete.length,
+    explicit_hierarchy_paths_found_requiring_owner_approval: hierarchyPathsFound,
+    targets_with_direct_adm_hierarchy_edges: directAdmEdgesForTargets,
+    targets_with_any_direct_hierarchy_edges: rows.filter((row) => row.hierarchy_direct_edge_count > 0).length,
     unresolved_or_blocked_targets: rows.length - complete.length,
     statuses: counts(rows, "parent_path_audit_status"),
     by_country: Object.fromEntries([...new Set(rows.map((row) => row.country_code))].sort().map((country) => [
@@ -373,7 +525,7 @@ export function buildAuditSummary(rows, sourceMetadata) {
     operational_parent_links_created: 0,
     database_or_production_changes: false,
     limitations: [
-      "This report audits exact composite-code paths present in the supplied allCountries.txt only.",
+      "This report audits exact composite-code and supplied hierarchy edges present in the provided JP/KE source subset only; it does not establish worldwide completeness.",
       "A retrieval URL, timestamp and hash pin the downloaded bytes but do not establish an immutable publisher release ID.",
       "HTTP Last-Modified is reported as captured only when that response header was actually present.",
       "A candidate path is not owner approval and must never be imported as a parent relationship from this report alone.",
@@ -413,7 +565,7 @@ async function loadRelevantSourceRecords(sourcePath, targetRows) {
 async function main() {
   const sourcePath = process.argv[2];
   if (!sourcePath) {
-    console.error("Usage: node scripts/geonames-current-admin-parent-path-audit.mjs <allCountries.txt> [dispositions.csv] [output-prefix]");
+    console.error("Usage: node scripts/geonames-current-admin-parent-path-audit.mjs <source-subset.txt> [dispositions.csv] [output-prefix] [remote-source-manifest.json] [hierarchy.txt]");
     process.exitCode = 2;
     return;
   }
@@ -422,6 +574,7 @@ async function main() {
   const outputPrefix = process.argv[4] ??
     join(dirname(targetPath), "current-admin-parent-path-audit");
   const metadataPath = process.argv[5] ?? null;
+  const hierarchyPath = process.argv[6] ?? null;
   const [targetText, sourceStat, metadataText] = await Promise.all([
     readFile(targetPath, "utf8"),
     stat(sourcePath),
@@ -429,7 +582,10 @@ async function main() {
   ]);
   const targets = buildCurrentAdminTargets(parseCsv(targetText));
   const loaded = await loadRelevantSourceRecords(sourcePath, targets);
-  const rows = auditCurrentAdminParents(targets, loaded.records);
+  const hierarchyLoaded = hierarchyPath
+    ? await loadHierarchyEdges(hierarchyPath, new Set(loaded.records.map((record) => record.geonames_id)))
+    : null;
+  const rows = auditCurrentAdminParents(targets, loaded.records, hierarchyLoaded?.edges ?? null);
   const remoteMetadata = metadataText ? JSON.parse(metadataText) : null;
   const remoteVerified = validateRemoteSourceMetadata(remoteMetadata);
   const summary = buildAuditSummary(rows, {
@@ -441,6 +597,10 @@ async function main() {
     relevant_records_loaded: loaded.records.length,
     target_export_filename: basename(targetPath),
     source_manifest_filename: metadataPath ? basename(metadataPath) : null,
+    hierarchy_text_filename: hierarchyPath ? basename(hierarchyPath) : null,
+    hierarchy_text_line_count: hierarchyLoaded?.lineCount ?? null,
+    hierarchy_text_sha256: hierarchyLoaded?.sha256 ?? null,
+    hierarchy_edges_loaded_for_relevant_children: hierarchyLoaded?.edges.length ?? null,
     remote_sources: remoteMetadata?.remote_sources ?? [],
     remote_retrieval_metadata_verified: remoteVerified,
   });
