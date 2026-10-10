@@ -97,3 +97,10 @@ test("successful mocked retrieval captures the literal server Last-Modified head
   assert.equal("last_modified_utc" in ke, false);
   assert.equal("retrieved_at" in ke, false);
 });
+
+test("GeoNames countryInfo preflight rejects incomplete and overlong records", async () => {
+  const validator = await readFile(new URL("../scripts/geonames-sample-validate.mjs", import.meta.url), "utf8");
+  assert.match(validator, /if \(f\.length !== 19\)/);
+  assert.match(validator, /INVALID_COLUMN_COUNT_EXPECTED_19/);
+});
+
