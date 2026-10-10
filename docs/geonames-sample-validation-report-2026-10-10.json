@@ -12,7 +12,8 @@
   "disposition": {
     "stage_a_owner_laptop_sample_generation_and_artifact_inspection": "READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
     "stage_b_independent_source_pinned_reproducibility": "INCOMPLETE",
-    "catalog_acceptance": "BLOCKED"
+    "catalog_acceptance": "BLOCKED",
+    "stage_c_five_country_archive_verification": "BLOCKED_OFFICIAL_ARCHIVES_NOT_PRESENT"
   },
   "stage_a": {
     "worldwide_records_scanned_reported_by_owner_local_script": 13472324,
@@ -148,7 +149,8 @@
     "Manifest last_modified_utc is populated from local file st_mtime, not an HTTP Last-Modified header; rename to local_file_mtime_utc or preserve verified HTTP metadata separately.",
     "Crosswalk presence/code match is not proof of complete parent-child hierarchy; parent links remain unresolved.",
     "Current approved ISO authority snapshot was not independently obtained or compared.",
-    "The sample is biased by feature inclusion, population/rservoir selection and priority-name matching; it does not establish worldwide completeness."
+    "The sample is biased by feature inclusion, population/rservoir selection and priority-name matching; it does not establish worldwide completeness.",
+    "Stage C: the five official country ZIPs were not in either checked input directory. No source-level match counts are available. See docs/geonames-sample-independent-source-verification-2026-10-10.json."
   ],
   "acceptance_blockers": [
     "Obtain original source bytes or independently trustworthy source-pinned snapshots and verify byte sizes/SHA-256.",
@@ -156,7 +158,8 @@
     "Obtain and record a current owner-approved ISO authority snapshot and compare candidate fields.",
     "Owner approval of feature-code inclusion, selectability and exception policies.",
     "Resolve or explicitly classify hierarchy relationships from source IDs and approved geographic authorities; report unresolved links.",
-    "Correct manifest timestamp semantics so local mtime is not presented as server Last-Modified metadata."
+    "Correct manifest timestamp semantics so local mtime is not presented as server Last-Modified metadata.",
+    "Stage C independent five-country archive comparison is blocked until KE.zip, GB.zip, JP.zip, BR.zip, and SG.zip are supplied through an approved transfer."
   ],
   "governance": {
     "database_operations": false,
@@ -168,5 +171,137 @@
     "backup_recovery_changes": false,
     "pr_merged": false,
     "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "stage_c": {
+    "checked_at_utc": "2026-10-10T14:29:13Z",
+    "owner_source_directory": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
+    "downloads_directory_also_checked": "C:\\Users\\jonat\\Downloads",
+    "requested_archives_present": 0,
+    "requested_archives": [
+      {
+        "file": "KE.zip",
+        "url": "https://download.geonames.org/export/dump/KE.zip",
+        "status": "NOT_PRESENT",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_ids": null,
+        "source_missing_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "GB.zip",
+        "url": "https://download.geonames.org/export/dump/GB.zip",
+        "status": "NOT_PRESENT",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_ids": null,
+        "source_missing_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "JP.zip",
+        "url": "https://download.geonames.org/export/dump/JP.zip",
+        "status": "NOT_PRESENT",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_ids": null,
+        "source_missing_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "BR.zip",
+        "url": "https://download.geonames.org/export/dump/BR.zip",
+        "status": "NOT_PRESENT",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_ids": null,
+        "source_missing_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "SG.zip",
+        "url": "https://download.geonames.org/export/dump/SG.zip",
+        "status": "NOT_PRESENT",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_ids": null,
+        "source_missing_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      }
+    ],
+    "actual_operations": {
+      "archives_parsed": 0,
+      "source_records_compared": 0,
+      "matched_records": null,
+      "missing_from_source_records": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null,
+      "null_counts_mean": "NOT MEASURED, not zero; requested archives absent."
+    },
+    "kenya_candidates": {
+      "Nairobi": {
+        "geoname_id": "184745",
+        "feature_code": "PPLC",
+        "admin1_code": "05",
+        "sample_crosswalk_candidate": "Nairobi County ID 184742",
+        "official_ke_zip_verified": false
+      },
+      "Kisumu": {
+        "geoname_id": "191245",
+        "feature_code": "PPLA",
+        "admin1_code": "26",
+        "sample_crosswalk_candidate": "Kisumu County ID 191242",
+        "official_ke_zip_verified": false
+      },
+      "Mombasa": {
+        "geoname_id": "186301",
+        "feature_code": "PPLA",
+        "admin1_code": "37",
+        "sample_crosswalk_candidate": "Mombasa County ID 186298",
+        "official_ke_zip_verified": false
+      },
+      "Mombasa_same_name_alternative": {
+        "geoname_id": "186300",
+        "feature_code": "PPL",
+        "admin1_code": "27",
+        "official_ke_zip_verified": false,
+        "handling": "KEEP_DISTINCT_NO_NAME_ONLY_MATCH"
+      }
+    },
+    "singapore_exception_status": {
+      "count": 24,
+      "reason": "admin1_crosswalk_not_found",
+      "country": "SG",
+      "classification": "UNRESOLVED_NOT_AUTOMATIC_INVALID_RECORD",
+      "source_sg_zip_checked": false
+    }
+  },
+  "manifest_timestamp_field_correction": {
+    "artifact": "source_manifest.json inside JobGrid-GeoNames-Sample-20261010-163234.zip",
+    "original_field": "last_modified_utc",
+    "actual_semantics": "local filesystem path.stat().st_mtime converted to UTC; not HTTP Last-Modified",
+    "corrected_field": "local_file_mtime_utc",
+    "http_last_modified_utc": null,
+    "original_evidence_archive_mutated": false
   }
 }
