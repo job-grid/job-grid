@@ -195,6 +195,7 @@ def main() -> int:
                         key_metrics["target_admin1_code_matches"] += 1
                     else:
                         key_metrics["target_admin1_code_mismatches"] += 1
+                        total["admin1_crosswalk_target_admin1_code_mismatch"] += 1
                         record_issue(row, "ADMIN1_CROSSWALK_TARGET_ADMIN1_CODE_MISMATCH")
                 if parent_id == gid:
                     if feature_class == "A" and feature_code == "ADM1":
@@ -237,11 +238,13 @@ def main() -> int:
                             key_metrics["target_admin1_code_matches"] += 1
                         else:
                             key_metrics["target_admin1_code_mismatches"] += 1
+                            total["admin2_crosswalk_target_admin1_code_mismatch"] += 1
                             record_issue(row, "ADMIN2_CROSSWALK_TARGET_ADMIN1_CODE_MISMATCH")
                         if parent["admin2_code"] == a2:
                             key_metrics["target_admin2_code_matches"] += 1
                         else:
                             key_metrics["target_admin2_code_mismatches"] += 1
+                            total["admin2_crosswalk_target_admin2_code_mismatch"] += 1
                             record_issue(row, "ADMIN2_CROSSWALK_TARGET_ADMIN2_CODE_MISMATCH")
                         if parent["admin1_code"] == a1 and parent["admin2_code"] == a2:
                             key_metrics["complete_composite_key_matches"] += 1
