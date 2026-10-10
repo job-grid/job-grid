@@ -252,7 +252,7 @@ def main() -> int:
     report = {
         "report_version": "1.0",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "status": "MEASURED_REVIEW_REQUIRED",
+        "status": "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND" if (total["admin1_candidate_self_reference"] + total["admin2_candidate_self_reference"]) else ("BLOCKED_CANDIDATE_PRESENCE_MISMATCHES" if issues else "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED"),
         "scope": {
             "implementation": "Read-only Python crosswalk candidate-presence audit",
             "parent_links_written": False,
