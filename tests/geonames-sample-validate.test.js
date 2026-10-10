@@ -44,7 +44,7 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
 
   for (const document of [readme, report, design, sourceManifest, builderReport]) {
     assert.match(document, /13472324|13,472,324/);
-    if (document === design) assert.match(document, /## 5C\. Reconciled evidence status/);\n    else assert.match(document, /independently reproduced|independently_reproduced|not independently reproduced|builder did not/i);
+    if (document === design) {\n      assert.match(document, /## 5C\\. Reconciled evidence status/);\n    } else {\n      assert.match(document, /independently reproduced|independently_reproduced|not independently reproduced|builder did not/i);\n    }
     assert.match(document, /catalog acceptance.*BLOCKED|BLOCKED.*catalog acceptance|catalog_acceptance.*BLOCKED/i);
   }
   assert.match(readme, /last_modified_utc/);
