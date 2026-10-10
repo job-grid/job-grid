@@ -189,3 +189,29 @@ The owner approved the conservative feature/selectability defaults documented in
 **Still unapproved/unverified:** individual parent links and full country-specific hierarchy paths; the official ISO snapshot/comparison; remote source-origin/retrieval metadata; and worldwide completeness. No paid ISO subscription, parent link, migration, seed, import, database or production change was authorized by this policy decision.
 
 PR #27 remains open, draft and unmerged. No parent links, database operations, migrations, seeds, imports, source-file changes, production changes, deployments, secrets/Cloudflare changes or backup/recovery actions occurred.
+
+
+## Owner-approved exception dispositions — 2026-10-11
+
+The owner-approved defaults have now been applied reproducibly to all row-level exception references, using feature-type definitions and preserving the original exports. This is a **disposition/classification pass**, not a relabeling of missing keys as found and not an approval of parent links. The generated artifacts are:
+
+- [Row-level approved-disposition CSV](geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv)
+- [Machine-readable disposition summary](geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-disposition-summary.json)
+- Reproducible generator: `scripts/geonames-approved-exception-dispositions.mjs`
+- Policy record: [owner-approved conservative defaults](geonames-feature-selectability-policy-proposal-2026-10-11.md)
+
+| Disposition | Reference rows | Unique GeoNames IDs | Current-selector outcome |
+|---|---:|---:|---|
+| Country-level `PCLI`, no administrative parent required | 5 | 5 | Keep as country entities; do not add a synthetic admin parent. The raw source codes are retained. |
+| Current administrative feature with unresolved hierarchy | 128 | 128 | **Still needs parent-path evidence:** 2 `ADM3` and 126 `ADM4`; exclude from current administrative selectors until the path is verified. |
+| Historical administrative features | 1,187 | 1,030 | Preserve; not current administrative selector options or current parents by default. |
+| Undifferentiated `ADMD` features | 1,109 | 1,109 | Preserve; do not infer a level; exclude from current administrative selectors by default. |
+| Populated places with unresolved administrative association | 139 | 139 | Preserve place identity; keep the association independently unresolved. |
+| Historical populated places with unresolved association | 2 | 2 | Preserve historic identity; not a current administrative boundary. |
+| Other non-administrative features (`ZN`) | 3 | 3 | Preserve the entity; do not treat it as an administrative boundary. |
+
+The disposition summary reconciles to the input exports: **2,333 admin1 references + 240 admin2 references = 2,573 references**, with **157 IDs shared between levels** and **2,416 unique affected IDs**. The original export counts and raw codes remain unchanged. Five PCLI country-level records are explicitly treated as not requiring an administrative parent; the other **2,568 reference rows affect 2,411 unique IDs** and retain their hierarchy/association review state.
+
+The official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html) identifies `PCLI` as an independent political entity, `ADM3`/`ADM4` as current administrative levels, `ADM1H`–`ADM4H` as former administrative levels, and `ADMD` as an unspecified administrative level. The policy uses those feature definitions to select a conservative disposition, not to infer missing hierarchy.
+
+**Remaining technical priority:** the 128 current `ADM3`/`ADM4` records are now the clearly bounded current-selector ancestor-path review set, concentrated in Japan (126) and Kenya (2). Parent-path verification, source-origin/retrieval metadata, official ISO comparison, and worldwide completeness remain unverified. Historical/undifferentiated/non-administrative records stay preserved under their approved default treatment; no parent IDs, database migrations, seeds, imports or production changes were made.
