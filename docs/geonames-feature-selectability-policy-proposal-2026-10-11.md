@@ -1,8 +1,9 @@
-# GeoNames unresolved hierarchy and feature-selectability policy — proposal for owner review
+# GeoNames unresolved hierarchy and feature-selectability policy — owner-approved conservative defaults
 
-**Status: DRAFT / NOT APPROVED.**  
-**Purpose:** define a conservative review rule for unresolved administrative codes and historical/undifferentiated feature types observed in PR #27.  
-**Scope:** documentation and decision support only. This proposal does not alter source data, assign parent IDs, create migrations/seeds, import records, change production, or approve catalog acceptance.
+**Status: CONSERVATIVE DEFAULTS APPROVED BY OWNER — 2026-10-11. Parent hierarchy and catalog acceptance remain blocked.**  
+**Purpose:** record the conservative review and selectability defaults approved for PR #27.  
+**Approval scope:** retain source entities and raw codes; preserve unresolved states; exclude unresolved/historical/undifferentiated rows from current administrative selectors by default; never infer parentage from names or candidate presence alone.  
+**Explicit exclusions:** approval does not validate each unresolved row, approve any parent link, certify ISO codes, authorize a paid ISO subscription, authorize schema/migration/seed/import work, or approve production deployment.
 
 ## 1. Evidence baseline
 
@@ -38,9 +39,9 @@ Job Grid should keep these concepts separate in its eventual catalog:
 
 An unresolved hierarchy reference must not automatically invalidate the geographic entity. Conversely, a valid source record must not automatically become a selectable administrative parent.
 
-## 3. Proposed default treatment matrix
+## 3. Owner-approved conservative treatment defaults
 
-These are recommendations for explicit owner review, not approved production rules.
+The following defaults are approved at the policy/design level. They guide future implementation and review; they do not create mappings or change production data.
 
 | Case | Evidence seen | Proposed conservative treatment | Must not do |
 |---|---|---|---|
@@ -56,9 +57,9 @@ These are recommendations for explicit owner review, not approved production rul
 
 GeoNames feature definitions are documented in the official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html). Feature codes provide descriptive context; they do not alone establish that a specific row is current, invalid, selectable, or a valid parent for another row.
 
-## 4. Proposed review statuses
+## 4. Approved review-status semantics
 
-Use hierarchy-resolution statuses independently from record and selector status. Suggested values:
+Use hierarchy-resolution statuses independently from record and selector status. These labels are approved for documentation and review; they are not yet a claim that the application schema or runtime behavior implements them:
 
 - `RESOLVED_CANDIDATE_REVIEW_REQUIRED` — exact key and source candidate are present, but parentage is not yet approved.
 - `UNRESOLVED_PLACEHOLDER_CODE` — source uses a placeholder/nonstandard code such as raw `00`.
@@ -86,27 +87,28 @@ A future parent link should not be eligible for automatic approval unless all re
 
 Passing the first five checks does not automatically satisfy the ancestor-path, history, ISO, or selectability gates.
 
-## 6. Decisions requiring owner approval
+## 6. Owner decision recorded — 2026-10-11
 
-| Decision | Conservative proposed default | Current state |
+The owner approved the conservative defaults for the first six decisions below. ISO source acquisition and worldwide completeness remain separate evidence gates.
+
+| Decision | Approved conservative default or remaining gate | Status |
 |---|---|---|
-| Raw `00` handling | Leave unresolved; no normalization or parent link | Not approved |
-| Nonzero unmatched codes | Keep unresolved until version/format evidence is found | Not approved |
-| Historical admin features | Preserve; do not use as current parents/selectable current boundaries by default | Not approved |
-| Undifferentiated `ADMD` / `ADMDH` | Keep level unresolved until evidence resolves the level | Not approved |
-| Populated places with unresolved admin codes | Preserve place identity; unresolved admin association remains separate | Not approved |
-| Selector default for unresolved or historical rows | Do not display as current administrative options until explicit selection policy approves it; retain non-destructive record and referenceability | Not approved |
-| Current official ISO snapshot | Obtain only from an approved, permitted source path; no paid acquisition without separate cost approval | Unverified |
-| Worldwide completeness/source pinning | Requires reproducible source evidence beyond the selected sample | Unverified |
+| Raw `00` handling | Leave unresolved; no normalization or parent link | **Approved conservative default** |
+| Nonzero unmatched codes | Keep unresolved until version/format evidence is found | **Approved conservative default** |
+| Historical admin features | Preserve; do not use as current parents/selectable current boundaries by default; keep historical identity | **Approved conservative default** |
+| Undifferentiated `ADMD` / `ADMDH` | Keep level unresolved until evidence resolves the level | **Approved conservative default** |
+| Populated places with unresolved admin codes | Preserve place identity; unresolved admin association remains separate | **Approved conservative default** |
+| Selector default for unresolved or historical rows | Do not display unresolved, historical, or undifferentiated rows as current administrative choices by default; retain records and referenceability | **Approved conservative default** |
+| Current official ISO snapshot | Obtain only from an approved, permitted source path; no paid acquisition without separate cost approval | **Unverified; separate source/cost gate** |
+| Worldwide completeness/source pinning | Requires reproducible source evidence beyond the selected sample | **Unverified** |
 
-## 7. Acceptance remains blocked
+## 7. Remaining acceptance blockers
 
-The current audit confirms candidate presence, feature-level consistency, and source-key consistency for the selected sample, but the following are not complete:
+The audit confirms candidate presence, feature-level consistency, and source-key consistency for the selected sample. Catalog acceptance remains blocked pending:
 
-- 2,333 unresolved admin1 references and 240 unresolved admin2 key/context cases;
-- owner approval of placeholder, historical, undifferentiated, and selectability policies;
-- complete country-specific parent-hierarchy path validation;
-- a current official ISO snapshot and deterministic comparison under approved access terms;
-- independent verification of source origin and worldwide completeness.
+- review/disposition of the 2,333 unresolved admin1 references and 240 unresolved admin2 key/context cases under the approved non-destructive defaults;
+- complete country-specific parent-hierarchy path validation and source-backed approval of individual parent links;
+- a current official ISO snapshot and deterministic comparison under permitted access terms; a paid subscription still requires separate cost authorization;
+- independent verification of source origin/retrieval metadata and worldwide completeness.
 
-**No database migration, seed, import, production deployment, Cloudflare change, or backup/recovery operation is authorized by this proposal.** The proposal is documentation for owner review and must remain unapproved until the decisions above are explicitly accepted.
+**No database migration, seed, import, production deployment, Cloudflare change, or backup/recovery operation is authorized by this policy approval.** The policy defaults are approved; the catalog itself is not accepted, and parent links remain unassigned.
