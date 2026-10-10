@@ -1,0 +1,144 @@
+{
+  "report_version": "1.0",
+  "generated_on_utc_date": "2026-10-10",
+  "pr": 27,
+  "status": {
+    "local_crosswalk_candidate_presence": "PASS_NO_CANDIDATE_ID_PRESENCE_MISMATCHES_FOUND",
+    "admin1_crosswalk_reconciliation": "PARTIAL_2333_UNRESOLVED_REFERENCES",
+    "admin2_crosswalk_reconciliation": "PARTIAL_240_UNRESOLVED_CONTEXT_OR_KEY_REFERENCES",
+    "approved_parent_hierarchy": "NOT_APPROVED_OR_ASSIGNED",
+    "current_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED",
+    "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "scope": {
+    "implementation": "Separately authored read-only Python audit executed on owner-connected Windows computer",
+    "source_sample": "sample-output-20261010-163234/geonames_places_sample.tsv",
+    "crosswalk_sources": [
+      "admin1CodesASCII.txt",
+      "admin2Codes.txt"
+    ],
+    "database_operations": false,
+    "parent_links_written": false,
+    "source_files_modified": false,
+    "method": "For each non-empty raw admin code, determine whether its composite key exists in the full crosswalk; for found keys, check whether the crosswalk GeoNames ID appears in the selected sample as a same-country feature-class A administrative record."
+  },
+  "input_integrity": {
+    "sample_rows": 25685,
+    "unique_sample_ids": 25685,
+    "duplicate_sample_ids": 0,
+    "admin1_unique_keys": 3865,
+    "admin1_malformed_rows": 0,
+    "admin1_duplicate_keys": 0,
+    "admin2_unique_keys": 47642,
+    "admin2_malformed_rows": 0,
+    "admin2_duplicate_keys": 0,
+    "administrative_feature_rows_in_sample": 24693
+  },
+  "admin1": {
+    "nonblank_code_references": 25653,
+    "code_references_with_exact_crosswalk_key": 23320,
+    "code_references_without_exact_key": 2333,
+    "raw_00_placeholder_candidates": 2284,
+    "unmatched_nonzero_code_references": 49,
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 23320,
+    "candidate_id_presence_mismatches": 0
+  },
+  "admin2": {
+    "nonblank_code_references": 20685,
+    "references_with_exact_composite_crosswalk_key": 20445,
+    "references_missing_composite_crosswalk_key": 239,
+    "references_uncheckable_due_to_blank_admin1_context": 1,
+    "total_unresolved_admin2_rows_in_export": 240,
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 20445,
+    "candidate_id_presence_mismatches": 0
+  },
+  "per_country": {
+    "KE": {
+      "sample_rows": 2631,
+      "administrative_features": 2424,
+      "admin1_key_found_references": 2605,
+      "admin1_key_missing_references": 26,
+      "admin1_raw_00_candidates": 1,
+      "admin1_unmatched_nonzero_references": 25,
+      "admin2_key_found_references": 32,
+      "admin2_key_missing_references": 5,
+      "admin2_blank_admin1_context": 0
+    },
+    "GB": {
+      "sample_rows": 12096,
+      "administrative_features": 11895,
+      "admin1_key_found_references": 12092,
+      "admin1_key_missing_references": 3,
+      "admin1_raw_00_candidates": 3,
+      "admin2_key_found_references": 12004,
+      "admin2_key_missing_references": 29,
+      "admin2_blank_admin1_context": 0
+    },
+    "JP": {
+      "sample_rows": 4899,
+      "administrative_features": 4697,
+      "admin1_key_found_references": 2736,
+      "admin1_key_missing_references": 2161,
+      "admin1_raw_00_candidates": 2161,
+      "admin2_key_found_references": 2554,
+      "admin2_key_missing_references": 205,
+      "admin2_blank_admin1_context": 1
+    },
+    "BR": {
+      "sample_rows": 5888,
+      "administrative_features": 5676,
+      "admin1_key_found_references": 5887,
+      "admin1_key_missing_references": 1,
+      "admin1_raw_00_candidates": 1,
+      "admin2_key_found_references": 5855,
+      "admin2_key_missing_references": 0,
+      "admin2_blank_admin1_context": 0
+    },
+    "SG": {
+      "sample_rows": 171,
+      "administrative_features": 1,
+      "admin1_key_found_references": 0,
+      "admin1_key_missing_references": 142,
+      "admin1_raw_00_candidates": 118,
+      "admin1_unmatched_nonzero_references": 24,
+      "admin2_key_found_references": 0,
+      "admin2_key_missing_references": 0,
+      "admin2_blank_admin1_context": 0
+    }
+  },
+  "review_case": {
+    "reason": "One admin2 exported row has an empty raw admin1 code and a non-empty raw admin2 code. No complete composite key can be formed, so the row is classified as unresolved missing admin1 context, not as a confirmed missing admin2 key.",
+    "export_updated": true,
+    "classification": "UNRESOLVED_MISSING_ADMIN1_CONTEXT",
+    "crosswalk_lookup_key": null,
+    "raw_values_preserved": true
+  },
+  "outcome": {
+    "candidate_presence_mismatches": 0,
+    "candidate_id_checks": "The crosswalk candidate IDs referenced by resolved admin1/admin2 code rows were all present in the sample as same-country administrative features.",
+    "caveat": "This is source-candidate presence only. It is not proof that every child-to-parent relationship is semantically correct and it does not approve or create any parent links.",
+    "outstanding": [
+      "Interpretation of placeholder/nonstandard codes",
+      "ISO snapshot acquisition and comparison under permitted terms",
+      "Source-origin and remote retrieval metadata",
+      "Worldwide geographic completeness",
+      "Feature inclusion/selectability policies",
+      "Full approved parent-hierarchy rules"
+    ],
+    "catalog_acceptance": "BLOCKED"
+  },
+  "governance": {
+    "pr_merged": false,
+    "migrations": false,
+    "seeds": false,
+    "database_imports": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "secrets_changes": false,
+    "deployment": false,
+    "backup_recovery_changes": false,
+    "phase_4c_recovery_readiness": "BLOCKED"
+  }
+}
