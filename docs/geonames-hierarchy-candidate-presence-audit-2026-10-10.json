@@ -1,5 +1,5 @@
 {
-  "report_version": "1.4",
+  "report_version": "1.5",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -194,22 +194,22 @@
   },
   "audit_script": {
     "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
-    "sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
+    "sha256": "7cbcc2602f5916b1ef6b2589d4fdb3353f55e01afe991336a32f551d0fe4088a",
     "hash_method": "SHA-256 calculated by the audit script for the exact repository script fetched and executed byte-for-byte",
-    "executed_copy_sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
-    "executed_copy_filename": "hierarchy_audit_key_consistency.py",
+    "executed_copy_sha256": "7cbcc2602f5916b1ef6b2589d4fdb3353f55e01afe991336a32f551d0fe4088a",
+    "executed_copy_filename": "hierarchy_audit_key_consistency_v2.py",
     "repository_branch": "docs/country-catalog-foundation",
-    "repository_commit_at_fetch": "2985199a6d802332bc2e18e80b881b3e9357f472",
-    "repository_blob_sha1": "5c3c2656ef8671602d35766dd50035485a4356e2",
-    "generated_summary_at_utc": "2026-10-10T22:16:36.279808+00:00",
+    "repository_commit_at_fetch": "12cfb7092044140229474a8665e5f09b58ffa2b4",
+    "repository_blob_sha1": "30adce927bf9334f526c3a24e03b9f16f3d79a70",
+    "generated_summary_at_utc": "2026-10-10T22:19:49.887425+00:00",
     "report_generation_scope": "Exact current repository script fetched from PR branch, copied byte-for-byte to owner-connected Windows computer, and run against owner-local sample and full crosswalk files.",
     "current_repository_script_reexecuted_against_source_data_after_hardening": true,
     "current_repository_script_is_covered_by_synthetic_tests": true
   },
   "latest_execution": {
     "status": "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED",
-    "execution_time_utc": "2026-10-10T22:16:36.279808+00:00",
-    "execution_time_africa_nairobi": "2026-10-11T01:16:36.279808+03:00",
+    "execution_time_utc": "2026-10-10T22:19:49.887425+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:19:49.887425+03:00",
     "exit_code": 0,
     "exit_code_meaning": "Candidate presence, candidate feature-code profile, and resolved target key-code consistency checks passed for the selected sample. Unresolved codes remain open, and no parent links were written.",
     "input_manifest": [
@@ -260,12 +260,89 @@
       "admin2_complete_composite_key_matches": 20445,
       "admin2_complete_composite_key_mismatches": 0,
       "admin2_self_reference_candidates": 0,
+      "total_identity_matches": 7102,
+      "total_self_reference_candidates": 0,
       "other_candidate_presence_mismatches": 0,
+      "resolved_key_code_field_matches": 43765,
+      "resolved_key_code_field_mismatches": 0,
+      "distinct_admin1_candidate_feature_code_rows": 23195,
+      "distinct_admin2_candidate_feature_code_rows": 13468,
+      "distinct_candidate_feature_codes_by_level_and_country": {
+        "admin1": {
+          "BR": {
+            "ADM1": 5860
+          },
+          "GB": {
+            "ADM1": 12088
+          },
+          "JP": {
+            "ADM1": 2689
+          },
+          "KE": {
+            "ADM1": 2558
+          }
+        },
+        "admin2": {
+          "BR": {
+            "ADM2": 285
+          },
+          "GB": {
+            "ADM2": 11819
+          },
+          "JP": {
+            "ADM2": 1364
+          }
+        }
+      },
+      "candidate_key_code_consistency_by_level_and_country": {
+        "admin1": {
+          "BR": {
+            "target_admin1_code_matches": 5887,
+            "target_admin_rows_checked": 5887
+          },
+          "GB": {
+            "target_admin1_code_matches": 12092,
+            "target_admin_rows_checked": 12092
+          },
+          "JP": {
+            "target_admin1_code_matches": 2736,
+            "target_admin_rows_checked": 2736
+          },
+          "KE": {
+            "target_admin1_code_matches": 2605,
+            "target_admin_rows_checked": 2605
+          }
+        },
+        "admin2": {
+          "BR": {
+            "complete_composite_key_matches": 5855,
+            "target_admin1_code_matches": 5855,
+            "target_admin2_code_matches": 5855,
+            "target_admin_rows_checked": 5855
+          },
+          "GB": {
+            "complete_composite_key_matches": 12004,
+            "target_admin1_code_matches": 12004,
+            "target_admin2_code_matches": 12004,
+            "target_admin_rows_checked": 12004
+          },
+          "JP": {
+            "complete_composite_key_matches": 2554,
+            "target_admin1_code_matches": 2554,
+            "target_admin2_code_matches": 2554,
+            "target_admin_rows_checked": 2554
+          },
+          "KE": {
+            "complete_composite_key_matches": 32,
+            "target_admin1_code_matches": 32,
+            "target_admin2_code_matches": 32,
+            "target_admin_rows_checked": 32
+          }
+        }
+      },
       "parent_links_written": false,
       "database_operations": false,
-      "source_files_modified": false,
-      "total_identity_matches": 7102,
-      "total_self_reference_candidates": 0
+      "source_files_modified": false
     }
   },
   "total_metrics": {
@@ -400,10 +477,10 @@
   "hierarchy_candidate_feature_level_profile": {
     "status": "PASS_OBSERVED_EXPECTED_ADMIN_LEVEL_FEATURE_CODES",
     "source": "Current repository audit script, executed locally against the exact hashed sample and crosswalk files in input_manifest",
-    "script_sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
-    "repository_script_blob_sha1": "838c9cffd70e57d5a6b35237bf64f1cf73e08d80",
-    "execution_time_utc": "2026-10-10T22:13:59.701207+00:00",
-    "execution_time_africa_nairobi": "2026-10-11T01:13:59.701207+03:00",
+    "script_sha256": "7cbcc2602f5916b1ef6b2589d4fdb3353f55e01afe991336a32f551d0fe4088a",
+    "repository_script_blob_sha1": "30adce927bf9334f526c3a24e03b9f16f3d79a70",
+    "execution_time_utc": "2026-10-10T22:19:49.887425+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:19:49.887425+03:00",
     "admin1": {
       "distinct_same_country_admin_candidate_rows": 23195,
       "observed_feature_code_counts_by_country": {
@@ -511,10 +588,10 @@
       "mismatch_rate": 0
     },
     "source": "Local execution of current repository audit against original source sample and full admin1/admin2 crosswalk files; same input fingerprints as previous audit.",
-    "execution_time_utc": "2026-10-10T22:16:36.279808+00:00",
-    "execution_time_africa_nairobi": "2026-10-11T01:16:36.279808+03:00",
-    "script_sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
-    "repository_script_blob_sha1": "5c3c2656ef8671602d35766dd50035485a4356e2",
+    "execution_time_utc": "2026-10-10T22:19:49.887425+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:19:49.887425+03:00",
+    "script_sha256": "7cbcc2602f5916b1ef6b2589d4fdb3353f55e01afe991336a32f551d0fe4088a",
+    "repository_script_blob_sha1": "30adce927bf9334f526c3a24e03b9f16f3d79a70",
     "interpretation": "Every crosswalk candidate ID present in the selected sample has its own raw administrative code fields matching the key that resolved it. This confirms source-key consistency in the measured sample, not semantic parentage or a complete hierarchy path. No parent links were created.",
     "catalog_acceptance": "BLOCKED"
   }
