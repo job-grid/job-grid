@@ -8,6 +8,7 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const VERSION = "1.1.0";
 const BASE = "https://download.geonames.org/export/dump/";
@@ -85,9 +86,19 @@ async function fetchToFile(source, target) {
   }
 }
 
+function isPathInside(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return relative === "" ||
+    (relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative));
+}
+
 async function main() {
   const { workspace, download } = parseArgs(process.argv.slice(2));
   const root = path.resolve(workspace);
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  if (isPathInside(repositoryRoot, root)) {
+    throw new Error("--workspace must be outside the repository root to keep source archives and private outputs out of Git.");
+  }
   await mkdir(root, { recursive: true });
   const manifestPath = path.join(root, "source-manifest.json");
   let previous = { sources: {} };
