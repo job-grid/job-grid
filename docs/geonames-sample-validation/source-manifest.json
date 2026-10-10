@@ -101,5 +101,35 @@
     "Do not treat prior browser-readable search pages as downloaded source files",
     "Do not report measured counts for missing files",
     "Do not authorize import or production activity from this report"
-  ]
+  ],
+  "evidence_stages": {
+    "stage_a_owner_laptop_sample_generation_and_artifact_inspection": {
+      "status": "READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
+      "owner_local_script_reported_worldwide_records_scanned": 13472324,
+      "owner_local_script_reported_malformed_rows": 0,
+      "uploaded_sample_archive": "JobGrid-GeoNames-Sample-20261010-163234.zip",
+      "uploaded_sample_zip_sha256": "feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf",
+      "uploaded_sample_zip_integrity": "PASS",
+      "selected_rows_independently_measured": 25685,
+      "unique_geonames_ids_independently_measured": 25685,
+      "duplicate_ids_in_sample": 0,
+      "invalid_coordinates_in_sample": 0,
+      "admin1_crosswalk_misses": {
+        "total": 24,
+        "country": "SG",
+        "classification": "UNRESOLVED_CROSSWALK_EXCEPTION_NOT_AUTOMATIC_INVALID_RECORD"
+      },
+      "full_scan_independently_reproduced_by_builder": false
+    },
+    "stage_b_independent_source_pinned_reproducibility": {
+      "status": "INCOMPLETE",
+      "original_source_archives_in_uploaded_sample": false,
+      "builder_original_source_retrievals": 0,
+      "original_source_sha256_verified": false,
+      "owner_full_scan_reproduced": false,
+      "current_approved_iso_authority_compared": false,
+      "complete_parent_hierarchy_reconciled": false
+    }
+  },
+  "note": "The FAILED_DNS statuses below describe only the isolated builder's attempted retrieval of the original official source files. They are not a statement that the owner-laptop sample generation did not occur. Owner-local full-scan counts are reported by the owner's script and have not been independently reproduced by the builder. Original source hashes/byte sizes remain unverified because source bytes are absent from the uploaded sample."
 }
