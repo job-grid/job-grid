@@ -1,10 +1,10 @@
 # GeoNames hierarchy candidate-presence audit — 2026-10-10
 
-**Result:** PASS for source candidate presence; no crosswalk candidate ID presence mismatches were found. Parent relationships remain unapproved, and catalog acceptance remains BLOCKED.
+**Current result: BLOCKED — crosswalk lookup self-references found.** The stricter, reproducible audit detects **125 admin1** and **6,977 admin2** lookups where the crosswalk candidate ID equals the record being checked. These are not valid parent links. Other found candidate IDs were present as distinct same-country administrative features in the sample, but that availability alone does not approve a parent relationship.
 
 ## Scope
 
-A read-only audit was run on the owner-connected Windows computer against the existing 25,685-row GeoNames sample and the full `admin1CodesASCII.txt` and `admin2Codes.txt` crosswalk files. It checked exact composite-key existence, and for each found key checked whether the associated GeoNames ID was present in the sample as a same-country feature-class `A` administrative record.
+A read-only audit was run using the committed, reproducible [hierarchy audit script](../../scripts/geonames-hierarchy-candidate-presence-audit.py) against the existing 25,685-row GeoNames sample and full `admin1CodesASCII.txt` and `admin2Codes.txt` crosswalk files. The first presence-only check did not exclude self-reference candidates. A stricter follow-up of the same source set explicitly compared each candidate ID with the child ID and found 7,102 self-reference cases in total. The JSON report and this section now reflect the stricter result.
 
 No source file was modified, no parent ID was written, and no database operation was performed. Aggregate evidence is in [the JSON report](geonames-hierarchy-candidate-presence-audit-2026-10-10.json).
 
@@ -20,12 +20,17 @@ No source file was modified, no parent ID was written, and no database operation
 | Malformed rows / duplicate keys in admin2 crosswalk | 0 / 0 |
 | Administrative feature rows present in sample | 24,693 |
 | Admin1 references with a key found | 23,320 |
-| Found admin1 references whose candidate ID exists as same-country administrative feature | 23,320 |
+| Admin1 references with a resolved key | 23,320 |
+| Admin1 candidates that are a distinct same-country administrative feature | 23,195 |
+| Admin1 self-reference candidates (candidate ID equals current record ID) | 125 |
 | Admin2 references with a key found | 20,445 |
-| Found admin2 references whose candidate ID exists as same-country administrative feature | 20,445 |
-| Candidate ID presence mismatches | 0 |
+| Admin2 references with a resolved composite key | 20,445 |
+| Admin2 candidates that are a distinct same-country administrative feature | 13,468 |
+| Admin2 self-reference candidates (candidate ID equals current record ID) | 6,977 |
+| Other candidate presence mismatches (missing ID, wrong country or non-admin feature, excluding self-reference) | 0 |
+| **Self-reference cases that must not become parent links** | **7,102** |
 
-This confirms that the administrative source records referenced by those resolved crosswalk entries are available in the selected sample and use the expected country context. It does **not** confirm the semantic correctness of every place-to-parent relationship and does not approve or create any parent links.
+Resolved keys often point to administrative-feature rows in the sample, but **the key finding is that 7,102 lookups point back to the child record itself** (125 admin1 and 6,977 admin2). Those self-references must never become `parent_id` links. The remaining distinct candidate IDs are availability evidence only; they do not prove semantically correct parentage and do not approve any links.
 
 ## Unresolved crosswalk references
 
@@ -49,10 +54,25 @@ The admin1 “unresolved” counts are reference-row counts; the per-country val
 
 ## Disposition
 
-- **PASS:** Crosswalk candidate IDs for resolved admin1/admin2 references are present in the sample as same-country administrative features.
+- **PARTIAL / BLOCKED:** 7,102 resolved crosswalk lookups are self-references (125 admin1; 6,977 admin2), so they cannot be used as parent links. A separate 23,195 admin1 and 13,468 admin2 distinct same-country administrative candidate IDs are present in the sample, but those links also remain unapproved.
 - **PARTIAL / UNRESOLVED:** 2,333 admin1 references and 240 admin2 reference/context cases remain open.
 - **UNVERIFIED:** Official source-origin/remote retrieval metadata, current ISO authority comparison, global geographic completeness, and full parent-hierarchy correctness.
 - **BLOCKED:** Catalog acceptance and feature-code/selectability policy decisions.
 - **SEPARATELY BLOCKED:** Phase 4C recovery readiness.
 
 PR #27 remains open, draft and unmerged. No migrations, seeds, database imports, production changes, deployments, secrets/Cloudflare changes or backup/recovery actions were performed.
+
+## Strict self-reference review — 2026-10-10
+
+The first audit checked only that crosswalk candidate IDs existed as administrative features in the same country; it did not explicitly reject the case where the candidate ID was the current row's own GeoNames ID. The committed reusable script now flags this condition.
+
+| Country | Admin1 self-references | Admin2 self-references |
+|---|---:|---:|
+| KE | 47 | 32 |
+| GB | 4 | 185 |
+| JP | 47 | 1,190 |
+| BR | 27 | 5,570 |
+| SG | 0 | 0 |
+| **Total** | **125** | **6,977** |
+
+These are crosswalk-key lookup results, not relationships to adopt. Do not create self-parent links. The stricter report supersedes the earlier statement that there were no candidate-presence mismatches: the earlier check found no absent/wrong-country/non-admin candidates, but missed self-reference as its own failure category. All parent relationships remain unapproved and catalog acceptance remains **BLOCKED**.
