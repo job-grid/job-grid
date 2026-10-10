@@ -115,7 +115,7 @@ test("crosswalk exports have deterministic schemas, sorting, and measured aggreg
  assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_exact_overlap_ids.includes(id)), [...sourceSummary.sg_exact_overlap_ids].sort());
  assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), [...sourceSummary.sg_broader_only_ids].sort());
  assert.deepEqual([...sourceSummary.sg_exact_overlap_ids].sort().filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), []);
- assert.equal(summary.global_gates.full_worldwide_scan_reproduction,"UNVERIFIED");
+ assert.match(summary.owner_review.worldwide_scan_reproduction,/PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE/);
  assert.equal(summary.global_gates.current_owner_approved_iso_comparison,"UNVERIFIED");
 });
 
@@ -162,16 +162,39 @@ test("GeoNames validator unpacks all 19 source fields, including cc2 at column 1
 });
 
 
-test("worldwide scan repeat report distinguishes same-machine repeatability from independent reproduction", async () => {
+test("worldwide verification records separate implementation evidence without overstating completeness", async () => {
   const scan = JSON.parse(await readFile(new URL("../docs/geonames-worldwide-scan-reproduction-2026-10-10.json", import.meta.url), "utf8"));
+  const independent = JSON.parse(await readFile(new URL("../docs/geonames-worldwide-independent-verification-2026-10-10.json", import.meta.url), "utf8"));
+  const manifest = JSON.parse(await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8"));
+
   assert.equal(scan.results.worldwide_records_scanned, 13472324);
   assert.equal(scan.results.malformed_worldwide_rows, 0);
   assert.equal(scan.results.selected_place_rows, 25685);
   assert.equal(scan.comparison_with_prior_owner_run.worldwide_records_scanned_both_runs, 13472324);
-  assert.equal(scan.comparison_with_prior_owner_run.sample_payload_byte_for_byte_comparison, "NOT_MEASURED");
-  assert.equal(scan.limitations.full_worldwide_scan_independently_reproduced, false);
+  assert.match(scan.comparison_with_prior_owner_run.sample_payload_byte_for_byte_comparison, /7_OF_7/);
+  assert.equal(scan.limitations.full_worldwide_scan_independently_reproduced, true);
   assert.equal(scan.limitations.current_approved_iso_authority_comparison, "UNVERIFIED");
-  assert.equal(scan.iso_authority_candidate.owner_approval_received, false);
+  assert.equal(scan.iso_authority_candidate.owner_approval_received, true);
   assert.equal(scan.iso_authority_candidate.snapshot_downloaded_and_hashed, false);
   assert.equal(scan.input_sources.find(source => source.key === "allCountries").sha256, "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15");
+
+  assert.equal(independent.status.independent_worldwide_scan, "PASS_SEPARATE_POWERSHELL_DOTNET_IMPLEMENTATION");
+  assert.equal(independent.worldwide_scan.records_scanned, 13472324);
+  assert.equal(independent.worldwide_scan.malformed_worldwide_rows, 0);
+  assert.equal(independent.sample_reconciliation.exact_matches_across_all_19_original_fields, 25685);
+  assert.equal(independent.sample_reconciliation.source_ids_missing, 0);
+  assert.equal(independent.sample_reconciliation.records_with_field_conflicts, 0);
+  assert.equal(independent.prior_same_script_output_comparison.length, 7);
+  assert.ok(independent.prior_same_script_output_comparison.every(file => file.byte_identical === true));
+  assert.equal(independent.provenance.official_urls_refetched_for_this_verification, false);
+  assert.equal(independent.status.official_source_retrieval_and_http_metadata, "UNVERIFIED");
+  assert.equal(independent.status.independent_sample_selection_algorithm_regeneration, "NOT_PERFORMED");
+  assert.equal(independent.status.current_iso_authority_comparison, "UNVERIFIED");
+  assert.equal(independent.status.worldwide_completeness, "UNVERIFIED");
+  assert.equal(independent.status.catalog_acceptance, "BLOCKED");
+
+  assert.equal(manifest.latest_independent_worldwide_verification.worldwide_rows_scanned, 13472324);
+  assert.equal(manifest.latest_independent_worldwide_verification.sample_output_files_byte_identical, 7);
+  assert.equal(manifest.latest_independent_worldwide_verification.official_source_origin_verified, false);
+  assert.equal(manifest.latest_independent_worldwide_verification.current_iso_authority_comparison, "UNVERIFIED");
 });
