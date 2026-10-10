@@ -138,6 +138,10 @@ def main() -> int:
     countries = sorted({row["country_code"].upper() for row in rows if row["country_code"]})
     per_country: dict[str, Counter[str]] = {cc: Counter() for cc in countries}
     feature_code_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    candidate_feature_codes_by_level: dict[str, dict[str, Counter[str]]] = {
+        "admin1": defaultdict(Counter),
+        "admin2": defaultdict(Counter),
+    }
     issues: list[dict[str, str]] = []
     total = Counter()
 
@@ -197,6 +201,7 @@ def main() -> int:
                     record_issue(row, "ADMIN1_CROSSWALK_ID_COUNTRY_CONFLICT")
                 else:
                     metrics["admin1_candidate_id_present_as_same_country_admin_feature"] += 1
+                    candidate_feature_codes_by_level["admin1"][cc][parent["feature_code"]] += 1
 
         if not a2:
             metrics["admin2_code_blank"] += 1
@@ -230,6 +235,7 @@ def main() -> int:
                         record_issue(row, "ADMIN2_CROSSWALK_ID_COUNTRY_CONFLICT")
                     else:
                         metrics["admin2_candidate_id_present_as_same_country_admin_feature"] += 1
+                        candidate_feature_codes_by_level["admin2"][cc][parent["feature_code"]] += 1
 
     for metrics in per_country.values():
         total.update(metrics)
@@ -307,6 +313,13 @@ def main() -> int:
             cc: dict(sorted(counts.items()))
             for cc, counts in sorted(feature_code_counts.items())
         },
+        "distinct_candidate_feature_codes_by_level_and_country": {
+            level: {
+                cc: dict(sorted(counts.items()))
+                for cc, counts in sorted(by_country.items())
+            }
+            for level, by_country in sorted(candidate_feature_codes_by_level.items())
+        },
         "admin1": {
             "nonblank_code_references": total["admin1_code_present"],
             "code_references_with_exact_crosswalk_key": total["admin1_key_found"],
@@ -373,6 +386,7 @@ def main() -> int:
             "blank_admin1_with_nonblank_admin2": "The composite key cannot be checked; classify as unresolved missing admin1 context.",
             "administrative_feature_identity_match": "A feature_class A row with feature_code ADM1 or ADM2 whose corresponding code crosswalk resolves to its own GeoNames ID is an identity match, not a parent relationship.",
             "crosswalk_candidate_id_present": "Evidence of source candidate availability only; does not approve a parent link.",
+            "distinct_candidate_feature_codes": "Aggregate feature-code counts for distinct same-country administrative candidate IDs; this profile does not prove correct administrative level or approve parentage.",
             "catalog_acceptance": "BLOCKED",
             "worldwide_completeness": "UNVERIFIED",
             "iso_authority_comparison": "UNVERIFIED",
@@ -395,6 +409,12 @@ def main() -> int:
         "admin2_identity_matches": total["admin2_candidate_identity_match"],
         "candidate_presence_issues": len(issues),
         "parent_links_written": False,
+        "distinct_admin1_candidate_feature_code_rows": sum(
+            sum(counts.values()) for counts in candidate_feature_codes_by_level["admin1"].values()
+        ),
+        "distinct_admin2_candidate_feature_code_rows": sum(
+            sum(counts.values()) for counts in candidate_feature_codes_by_level["admin2"].values()
+        ),
     }, indent=2))
     fatal_input = bool(malformed_sample_rows or duplicate_sample_ids or admin1_malformed or admin2_malformed or admin1_duplicates or admin2_duplicates)
     return 2 if fatal_input else (1 if issues else 0)
