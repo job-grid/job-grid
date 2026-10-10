@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const script = fileURLToPath(new URL("../scripts/compare-iso3166-current-codes.py", import.meta.url));
 const python = process.platform === "win32" ? "python" : "python3";
 
-async function runFixture(t, isoCsv, geonamesText) {
+async function runFixture(t, isoCsv, geonamesText, extraArgs = []) {
   const dir = await mkdtemp(join(tmpdir(), "job-grid-iso-test-"));
   t.after(async () => rm(dir, { recursive: true, force: true }));
 
@@ -28,11 +28,17 @@ async function runFixture(t, isoCsv, geonamesText) {
     "--retrieved-at-utc", "2026-10-10T00:00:00Z",
     "--alpha2-column", "Alpha-2 code",
     "--alpha3-column", "Alpha-3 code",
-    "--numeric-column", "Numeric code"
+    "--numeric-column", "Numeric code",
+    ...extraArgs
   ], { encoding: "utf8" });
 
   assert.equal(result.error, undefined, result.error?.message);
-  const report = JSON.parse(await readFile(reportPath, "utf8"));
+  let report = null;
+  try {
+    report = JSON.parse(await readFile(reportPath, "utf8"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
   return { result, report };
 }
 
@@ -71,4 +77,65 @@ test("ISO comparator distinguishes a clean shared-code comparison from approval"
   assert.equal(report.counts.numeric3_conflict_rows_for_matching_alpha2, 0);
   assert.equal(report.counts.geonames_rows_without_iso_alpha2_match, 1);
   assert.ok(report.governance.database_operations === false);
+});
+
+
+test("empty ISO snapshots are blocked instead of reported as passing", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    "Alpha-2 code,Alpha-3 code,Numeric code\\n",
+    "AA\\tAAA\\t001\\n"
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report.status, "BLOCKED_INVALID_SNAPSHOT");
+  assert.equal(report.counts.iso_valid_rows, 0);
+});
+
+test("malformed GeoNames rows block acceptance of an otherwise matching comparison", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    "Alpha-2 code,Alpha-3 code,Numeric code\\nAA,AAA,001\\n",
+    "AA\\tAAA\\t001\\nMALFORMED\\n"
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report.status, "BLOCKED_INVALID_GEONAMES_INPUT");
+  assert.equal(report.counts.geonames_malformed_rows, 1);
+});
+
+test("invalid GeoNames alpha-2 values block acceptance", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    "Alpha-2 code,Alpha-3 code,Numeric code\\nAA,AAA,001\\n",
+    "AA\\tAAA\\t001\\n?A\\tBAD\\t999\\n"
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report.status, "BLOCKED_INVALID_GEONAMES_INPUT");
+  assert.equal(report.counts.geonames_invalid_alpha2_rows, 1);
+});
+
+test("no shared alpha-2 codes are blocked rather than treated as a passing comparison", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    "Alpha-2 code,Alpha-3 code,Numeric code\\nAA,AAA,001\\n",
+    "BB\\tBBB\\t002\\n"
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report.status, "BLOCKED_NO_SHARED_ALPHA2_CODES");
+});
+
+test("retrieval timestamp must include an explicit UTC timezone", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    "Alpha-2 code,Alpha-3 code,Numeric code\\nAA,AAA,001\\n",
+    "AA\\tAAA\\t001\\n",
+    ["--retrieved-at-utc", "2026-10-10T19:00:00+03:00"]
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /must be an actual ISO-8601 UTC timestamp/);
 });
