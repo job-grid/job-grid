@@ -66,7 +66,7 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(stageCReport, /NOT MEASURED/);
   assert.match(stageCReport, /SG.zip.*NOT RETRIEVED/s);
   assert.match(stageCReport, /local_file_mtime_utc/);
-  assert.match(stageCJson, /"requested_archives_present": 0/);
+  assert.match(stageCJson, /"available_country_archives": 0/);
   assert.match(stageCJson, /"matched_ids": null/);
   assert.match(stageCJson, /"official_ke_zip_verified": false/);
   assert.match(stageCJson, /"source_sg_zip_checked": false/);
