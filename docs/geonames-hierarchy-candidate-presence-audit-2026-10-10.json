@@ -1,5 +1,5 @@
 {
-  "report_version": "1.3",
+  "report_version": "1.4",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -194,24 +194,24 @@
   },
   "audit_script": {
     "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
-    "sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
+    "sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
     "hash_method": "SHA-256 calculated by the audit script for the exact repository script fetched and executed byte-for-byte",
-    "executed_copy_sha256": "e8b5a8d6a1c3583a91e0bdac34b57ff25b9962194287b3775ec6c76d4747865a",
-    "executed_copy_filename": "hierarchy_audit_feature_profile.py",
+    "executed_copy_sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
+    "executed_copy_filename": "hierarchy_audit_key_consistency.py",
     "repository_branch": "docs/country-catalog-foundation",
-    "repository_commit_at_fetch": "f07beb87e26071aa086f8ea636a1e891462ce499",
-    "repository_blob_sha1": "838c9cffd70e57d5a6b35237bf64f1cf73e08d80",
-    "generated_summary_at_utc": "2026-10-10T22:13:59.701207+00:00",
+    "repository_commit_at_fetch": "2985199a6d802332bc2e18e80b881b3e9357f472",
+    "repository_blob_sha1": "5c3c2656ef8671602d35766dd50035485a4356e2",
+    "generated_summary_at_utc": "2026-10-10T22:16:36.279808+00:00",
     "report_generation_scope": "Exact current repository script fetched from PR branch, copied byte-for-byte to owner-connected Windows computer, and run against owner-local sample and full crosswalk files.",
     "current_repository_script_reexecuted_against_source_data_after_hardening": true,
     "current_repository_script_is_covered_by_synthetic_tests": true
   },
   "latest_execution": {
     "status": "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED",
-    "execution_time_utc": "2026-10-10T22:13:59.701207+00:00",
-    "execution_time_africa_nairobi": "2026-10-11T01:13:59.701207+03:00",
+    "execution_time_utc": "2026-10-10T22:16:36.279808+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:16:36.279808+03:00",
     "exit_code": 0,
-    "exit_code_meaning": "Candidate-presence audit passed; feature-code profile recorded for distinct same-country administrative candidate IDs; no parent links were written.",
+    "exit_code_meaning": "Candidate presence, candidate feature-code profile, and resolved target key-code consistency checks passed for the selected sample. Unresolved codes remain open, and no parent links were written.",
     "input_manifest": [
       {
         "key": "sample",
@@ -244,44 +244,23 @@
       "admin2_malformed_rows": 0,
       "admin2_duplicate_keys": 0,
       "administrative_feature_rows": 24693,
+      "admin1_resolved_key_references": 23320,
       "admin1_unresolved_references": 2333,
       "admin1_identity_matches": 125,
+      "admin1_distinct_candidate_targets": 23195,
+      "admin1_target_admin1_code_matches": 23320,
+      "admin1_target_admin1_code_mismatches": 0,
       "admin1_self_reference_candidates": 0,
+      "admin2_resolved_composite_key_references": 20445,
       "admin2_unresolved_key_or_context_cases": 240,
       "admin2_identity_matches": 6977,
+      "admin2_distinct_candidate_targets": 13468,
+      "admin2_target_admin1_code_matches": 20445,
+      "admin2_target_admin2_code_matches": 20445,
+      "admin2_complete_composite_key_matches": 20445,
+      "admin2_complete_composite_key_mismatches": 0,
       "admin2_self_reference_candidates": 0,
-      "total_identity_matches": 7102,
-      "total_self_reference_candidates": 0,
       "other_candidate_presence_mismatches": 0,
-      "distinct_admin1_candidate_feature_code_rows": 23195,
-      "distinct_admin2_candidate_feature_code_rows": 13468,
-      "distinct_candidate_feature_codes_by_level_and_country": {
-        "admin1": {
-          "BR": {
-            "ADM1": 5860
-          },
-          "GB": {
-            "ADM1": 12088
-          },
-          "JP": {
-            "ADM1": 2689
-          },
-          "KE": {
-            "ADM1": 2558
-          }
-        },
-        "admin2": {
-          "BR": {
-            "ADM2": 285
-          },
-          "GB": {
-            "ADM2": 11819
-          },
-          "JP": {
-            "ADM2": 1364
-          }
-        }
-      },
       "parent_links_written": false,
       "database_operations": false,
       "source_files_modified": false
@@ -463,6 +442,78 @@
     },
     "interpretation": "Every distinct same-country administrative candidate ID observed in this sample uses the expected level-specific feature code: ADM1 for admin1 crosswalk candidates and ADM2 for admin2 crosswalk candidates. This is a measured feature-level consistency result only. It does not confirm that each candidate is the semantically correct parent for each child record and does not approve any parent links.",
     "official_feature_code_reference": "https://www.geonames.org/export/codes.html",
+    "catalog_acceptance": "BLOCKED"
+  },
+  "candidate_key_code_consistency_by_level_and_country": {
+    "admin1": {
+      "BR": {
+        "target_admin1_code_matches": 5887,
+        "target_admin_rows_checked": 5887
+      },
+      "GB": {
+        "target_admin1_code_matches": 12092,
+        "target_admin_rows_checked": 12092
+      },
+      "JP": {
+        "target_admin1_code_matches": 2736,
+        "target_admin_rows_checked": 2736
+      },
+      "KE": {
+        "target_admin1_code_matches": 2605,
+        "target_admin_rows_checked": 2605
+      }
+    },
+    "admin2": {
+      "BR": {
+        "complete_composite_key_matches": 5855,
+        "target_admin1_code_matches": 5855,
+        "target_admin2_code_matches": 5855,
+        "target_admin_rows_checked": 5855
+      },
+      "GB": {
+        "complete_composite_key_matches": 12004,
+        "target_admin1_code_matches": 12004,
+        "target_admin2_code_matches": 12004,
+        "target_admin_rows_checked": 12004
+      },
+      "JP": {
+        "complete_composite_key_matches": 2554,
+        "target_admin1_code_matches": 2554,
+        "target_admin2_code_matches": 2554,
+        "target_admin_rows_checked": 2554
+      },
+      "KE": {
+        "complete_composite_key_matches": 32,
+        "target_admin1_code_matches": 32,
+        "target_admin2_code_matches": 32,
+        "target_admin_rows_checked": 32
+      }
+    }
+  },
+  "candidate_key_code_consistency": {
+    "status": "PASS_ALL_RESOLVED_CANDIDATE_TARGET_CODES_MATCH_CROSSWALK_KEYS",
+    "admin1": {
+      "crosswalk_key_references_with_target_rows_checked": 23320,
+      "target_admin1_code_matches": 23320,
+      "target_admin1_code_mismatches": 0,
+      "mismatch_rate": 0
+    },
+    "admin2": {
+      "crosswalk_key_references_with_target_rows_checked": 20445,
+      "target_admin1_code_matches": 20445,
+      "target_admin1_code_mismatches": 0,
+      "target_admin2_code_matches": 20445,
+      "target_admin2_code_mismatches": 0,
+      "complete_composite_key_matches": 20445,
+      "complete_composite_key_mismatches": 0,
+      "mismatch_rate": 0
+    },
+    "source": "Local execution of current repository audit against original source sample and full admin1/admin2 crosswalk files; same input fingerprints as previous audit.",
+    "execution_time_utc": "2026-10-10T22:16:36.279808+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:16:36.279808+03:00",
+    "script_sha256": "555c4dab5dddab5f3a7d81b56a802e0262dd25c24839c3901850b9ec747c3143",
+    "repository_script_blob_sha1": "5c3c2656ef8671602d35766dd50035485a4356e2",
+    "interpretation": "Every crosswalk candidate ID present in the selected sample has its own raw administrative code fields matching the key that resolved it. This confirms source-key consistency in the measured sample, not semantic parentage or a complete hierarchy path. No parent links were created.",
     "catalog_acceptance": "BLOCKED"
   }
 }
