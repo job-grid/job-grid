@@ -328,7 +328,7 @@
         "admin2_exact_key_matches": 20445,
         "admin2_unmatched_code_rows": 240,
         "resolved_admin2_keys_whose_admin1_key_was_missing": 0,
-        "row_level_exception_export_persisted": false
+        "row_level_exception_export_persisted": true
       },
       "per_country": [
         {
@@ -417,9 +417,11 @@
       "policy_notes": [
         "Preserve all original raw admin codes. A raw value such as 00 is an unresolved placeholder/nonstandard-code candidate until an owner-approved interpretation rule exists; do not automatically reject the associated record.",
         "Unmatched nonzero codes are missing-reference or possible legacy/version-dependent candidates. Their history has not been established; do not label them legacy as a fact.",
-        "Existing sample exceptions.csv has 24 SG admin1_crosswalk_not_found rows. The full exact-key lookup flagged 142 SG sample rows with nonblank admin1 codes missing from the full crosswalk, including 118 raw 00 values and 24 nonzero-code rows. Individual-ID overlap with the prior exception set has not been compared; do not assume the sets are identical.",
+        "Exact ID comparison established 24/24 overlap with the prior Singapore exception set; 118 IDs in the broader set are additional.",
         "Zero resolved admin2 keys with absent admin1 keys is limited to rows whose admin2 key resolved; it is not proof of complete geographic parentage.",
-        "A durable per-record crosswalk-exception CSV/JSON has not yet been persisted; summary counts were computed by iterating every sample row."
+        "Row-level crosswalk exception exports are now persisted; review their classifications and obtain owner decisions.",
+        "Row-level CSV/JSON exception exports are now persisted in docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/.",
+        "Exact ID reconciliation establishes 24/24 overlap between prior Singapore exceptions and the broader 142-row set, with 118 additional IDs and no prior-only IDs."
       ]
     },
     "full_worldwide_scan_reproduced": false,
@@ -577,5 +579,19 @@
       "catalog_acceptance": "BLOCKED",
       "phase_4c": "BLOCKED"
     }
+  },
+  "row_level_crosswalk_reconciliation": {
+    "status": "EXPORTED_PENDING_OWNER_REVIEW",
+    "admin1_unmatched_references": 2333,
+    "admin2_unmatched_references": 240,
+    "admin1_admin2_id_overlap": 157,
+    "union_unique_affected_records": 2416,
+    "singapore_prior_exception_ids": 24,
+    "singapore_broader_admin1_misses": 142,
+    "singapore_exact_id_overlap": 24,
+    "singapore_prior_only_ids": 0,
+    "singapore_broader_only_ids": 118,
+    "exports_directory": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/",
+    "catalog_acceptance": "BLOCKED"
   }
 }

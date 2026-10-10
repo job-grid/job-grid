@@ -123,3 +123,15 @@ test("unmatched codes remain unresolved and exports prohibit fabricated parent l
   else assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE");
  }
 });
+
+
+test("row-level CSV files mirror the JSON counts and expected field schema", async () => {
+  const dir = new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/", import.meta.url);
+  const admin1Csv = await readFile(new URL("unmatched_admin1_references.csv", dir), "utf8");
+  const admin2Csv = await readFile(new URL("unmatched_admin2_references.csv", dir), "utf8");
+  const expectedHeader = "geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code,missing_reference_category,proposed_review_classification,crosswalk_lookup_key,raw_missing_code";
+  assert.equal(admin1Csv.split(/\\r?\\n/)[0], expectedHeader);
+  assert.equal(admin2Csv.split(/\\r?\\n/)[0], expectedHeader);
+  assert.equal(admin1Csv.split(/\\r?\\n/).filter(Boolean).length - 1, 2333);
+  assert.equal(admin2Csv.split(/\\r?\\n/).filter(Boolean).length - 1, 240);
+});

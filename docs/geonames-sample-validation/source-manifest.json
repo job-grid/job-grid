@@ -131,7 +131,7 @@
       "complete_parent_hierarchy_reconciled": false
     }
   },
-  "note": "The FAILED_DNS statuses and sources[] entries below describe only the isolated builder's attempted retrieval and remain historically accurate for that environment. Separately, the owner's connected Windows computer contained the five country ZIPs; measured sizes, hashes, ZIP CRC, source counts, record comparisons and crosswalk counts are in owner_laptop_five_country_archive_comparison. Five-country sample comparison passed; hierarchy exceptions, row-level exception export, worldwide source pinning, current ISO comparison and catalog acceptance remain blocked. allCountries.zip was not parsed for this task. Owner sample manifest last_modified_utc is local filesystem mtime, not HTTP metadata.",
+  "note": "The FAILED_DNS statuses and sources[] entries below describe only the isolated builder's attempted retrieval and remain historically accurate for that environment. Separately, the owner's connected Windows computer contained the five country ZIPs; measured sizes, hashes, ZIP CRC, source counts, record comparisons and crosswalk counts are in owner_laptop_five_country_archive_comparison. Five-country sample comparison passed; hierarchy exceptions, row-level exception export, worldwide source pinning, current ISO comparison and catalog acceptance remain blocked. allCountries.zip was not parsed for this task. Owner sample manifest last_modified_utc is local filesystem mtime, not HTTP metadata. Current addendum: row-level exception exports are now persisted; exact Singapore ID overlap is 24/24 with 118 additional IDs, and the admin1/admin2 exception union contains 2,416 unique GeoNames IDs. Previous statements about unpersisted exports or unmeasured overlap are historical and superseded by this measured reconciliation.",
   "current_stage_status": "PASS_FIVE_COUNTRY_SAMPLE_COMPARISON_CATALOG_ACCEPTANCE_BLOCKED",
   "last_checked_owner_input_directory": {
     "path": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
@@ -292,7 +292,7 @@
         "admin2_exact_key_matches": 20445,
         "admin2_unmatched_code_rows": 240,
         "resolved_admin2_keys_whose_admin1_key_was_missing": 0,
-        "row_level_exception_export_persisted": false
+        "row_level_exception_export_persisted": true
       },
       "per_country": [
         {
@@ -381,9 +381,7 @@
       "policy_notes": [
         "Preserve all original raw admin codes. A raw value such as 00 is an unresolved placeholder/nonstandard-code candidate until an owner-approved interpretation rule exists; do not automatically reject the associated record.",
         "Unmatched nonzero codes are missing-reference or possible legacy/version-dependent candidates. Their history has not been established; do not label them legacy as a fact.",
-        "Existing sample exceptions.csv has 24 SG admin1_crosswalk_not_found rows. The full exact-key lookup flagged 142 SG sample rows with nonblank admin1 codes missing from the full crosswalk, including 118 raw 00 values and 24 nonzero-code rows. Individual-ID overlap with the prior exception set has not been compared; do not assume the sets are identical.",
-        "Zero resolved admin2 keys with absent admin1 keys is limited to rows whose admin2 key resolved; it is not proof of complete geographic parentage.",
-        "A durable per-record crosswalk-exception CSV/JSON has not yet been persisted; summary counts were computed by iterating every sample row."
+        "Zero resolved admin2 keys with absent admin1 keys is limited to rows whose admin2 key resolved; it is not proof of complete geographic parentage."
       ]
     }
   },
@@ -550,7 +548,9 @@
         "admin2_exact_key_matches": 20445,
         "admin2_unmatched_code_rows": 240,
         "resolved_admin2_keys_whose_admin1_key_was_missing": 0,
-        "row_level_exception_export_persisted": false
+        "row_level_exception_export_persisted": true,
+        "admin1_admin2_record_overlap": 157,
+        "union_unique_affected_records": 2416
       },
       "per_country": [
         {
@@ -638,10 +638,11 @@
       ],
       "policy_notes": [
         "Preserve all original raw admin codes. A raw value such as 00 is an unresolved placeholder/nonstandard-code candidate until an owner-approved interpretation rule exists; do not automatically reject the associated record.",
-        "Unmatched nonzero codes are missing-reference or possible legacy/version-dependent candidates. Their history has not been established; do not label them legacy as a fact.",
-        "Existing sample exceptions.csv has 24 SG admin1_crosswalk_not_found rows. The full exact-key lookup flagged 142 SG sample rows with nonblank admin1 codes missing from the full crosswalk, including 118 raw 00 values and 24 nonzero-code rows. Individual-ID overlap with the prior exception set has not been compared; do not assume the sets are identical.",
         "Zero resolved admin2 keys with absent admin1 keys is limited to rows whose admin2 key resolved; it is not proof of complete geographic parentage.",
-        "A durable per-record crosswalk-exception CSV/JSON has not yet been persisted; summary counts were computed by iterating every sample row."
+        "Row-level CSV and JSON exception exports are persisted in docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/.",
+        "Exact ID reconciliation establishes that all 24 previously recorded Singapore exception IDs overlap with the wider 142 admin1-miss set; there are 118 additional Singapore IDs and no prior-only IDs.",
+        "The admin1/admin2 exception sets overlap by 157 GeoNames IDs and contain 2,416 unique IDs across their union.",
+        "Raw 00 remains an unresolved placeholder/nonstandard candidate; unmatched nonzero codes are unresolved missing-reference or possible version-dependent cases; no synthetic parent links are permitted."
       ]
     },
     "global_scope": {
@@ -871,5 +872,38 @@
       "JSON"
     ],
     "deterministic_sort": "country_code, geonames_id, raw_admin1_code, raw_admin2_code, feature_code, name"
+  },
+  "row_level_crosswalk_reconciliation": {
+    "status": "EXPORTED_PENDING_OWNER_REVIEW",
+    "counts": {
+      "admin1": 2333,
+      "admin2": 240,
+      "record_overlap": 157,
+      "unique_union": 2416
+    },
+    "singapore": {
+      "prior_ids": 24,
+      "broader_misses": 142,
+      "exact_id_overlap": 24,
+      "prior_only": 0,
+      "broader_only": 118,
+      "raw_code_counts": {
+        "00": 118,
+        "01": 4,
+        "02": 7,
+        "03": 7,
+        "04": 3,
+        "05": 3
+      }
+    },
+    "paths": {
+      "summary": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/summary.json",
+      "admin1_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.csv",
+      "admin1_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+      "admin2_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.csv",
+      "admin2_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+    },
+    "owner_approved_interpretation": false,
+    "catalog_acceptance": "BLOCKED"
   }
 }
