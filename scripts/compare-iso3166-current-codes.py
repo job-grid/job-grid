@@ -139,7 +139,25 @@ def main() -> int:
             parser.error(f"Input file not found: {path}")
 
     repo_root = Path(__file__).resolve().parents[1]
-    restricted_paths = [("ISO source snapshot", args.iso_csv)]
+    iso_path = args.iso_csv.resolve()
+    country_info_path = args.country_info.resolve()
+    output_path = args.output.resolve()
+    private_details_path = args.private_details_path.resolve() if args.private_details_path is not None else None
+
+    if iso_path == country_info_path:
+        parser.error("ISO snapshot and GeoNames countryInfo input must be different files.")
+    if output_path in {iso_path, country_info_path}:
+        parser.error("aggregate report path must not overwrite either input file.")
+    if private_details_path is not None:
+        if private_details_path in {iso_path, country_info_path}:
+            parser.error("row-level mismatch details path must not overwrite an input file.")
+        if private_details_path == output_path:
+            parser.error("row-level mismatch details and aggregate report must use different output paths.")
+
+    restricted_paths = [
+        ("ISO source snapshot", args.iso_csv),
+        ("aggregate report", args.output),
+    ]
     if args.private_details_path is not None:
         restricted_paths.append(("row-level mismatch details", args.private_details_path))
     for label, path in restricted_paths:
