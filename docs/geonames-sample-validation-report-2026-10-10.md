@@ -1,6 +1,6 @@
 # GeoNames five-country sample validation report
 
-**Disposition: READY FOR OWNER REVIEW OF SAMPLE EVIDENCE; BLOCKED FOR CATALOG ACCEPTANCE.**  
+**Current disposition: SEPARATE-IMPLEMENTATION WORLDWIDE SCAN AND SAMPLE COMPARISON PASS; SOURCE ORIGIN, ISO COMPARISON AND HIERARCHY POLICY REMAIN OPEN; CATALOG ACCEPTANCE BLOCKED.**  
 **Input artifact:** `JobGrid-GeoNames-Sample-20261010-163234.zip`  
 **Builder inspection date:** 2026-10-10  
 **Scope:** uploaded sample artifact and internal consistency; no database writes/imports/migrations, production changes or merge.
