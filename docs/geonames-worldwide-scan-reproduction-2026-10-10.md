@@ -1,6 +1,6 @@
 # Worldwide GeoNames scan repeat-run evidence — 2026-10-10
 
-**Disposition: SAME-OWNER-COMPUTER COUNTS REPRODUCED; INDEPENDENT REPRODUCTION AND CATALOG ACCEPTANCE REMAIN BLOCKED.**
+**Current disposition: SEPARATE-IMPLEMENTATION LOCAL WORLDWIDE SCAN AND SAMPLE COMPARISON PASS; OFFICIAL SOURCE ORIGIN AND CATALOG ACCEPTANCE REMAIN BLOCKED.** The same-script repeat-run measurements below are historical evidence; the later independent verifier is recorded in the follow-up section.
 
 ## What was run
 
