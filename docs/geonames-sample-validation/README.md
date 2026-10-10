@@ -48,3 +48,37 @@ At `2026-10-10T11:21:52Z`, all nine configured official `download.geonames.org/e
 - No migrations, seeds, database imports, production/Cloudflare/secrets/backup/recovery changes or PR merge are authorized or performed. PR #27 remains open, draft and unmerged. Phase 4C recovery readiness remains separately BLOCKED.
 
 GeoNames attribution/licensing must be retained. This package makes no worldwide-completeness, production-readiness, sovereignty, or employment-eligibility claim.
+
+
+## Stage C — official five-country archive comparison: BLOCKED pending input transfer
+
+Checked the owner's reported input folder `C:\Users\jonat\OneDrive\Desktop\JobGrid-GeoNames` on the connected Windows computer at approximately `2026-10-10T14:29Z`. The folder listing contained `allCountries.zip`, `countryInfo.txt.txt`, the admin1/admin2 crosswalks, `readme.txt`, and the sample ZIP/output folder. It did **not** contain the five requested country archives `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, or `SG.zip`. The same five archives were not present in the owner's Downloads listing. The available worldwide archive was not opened or parsed for this task, and no worldwide archive download was started.
+
+The requested official source URLs are recorded below. Because the five country ZIPs were not available in the checked input folder, they have not been retrieved or examined in this stage; do not infer source-match counts from their absence.
+
+| Archive | Official source URL | Retrieval date | Byte size | SHA-256 | ZIP integrity | Source records parsed | Sample match status |
+|---|---|---|---:|---|---|---:|---|
+| KE.zip | https://download.geonames.org/export/dump/KE.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+| GB.zip | https://download.geonames.org/export/dump/GB.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+| JP.zip | https://download.geonames.org/export/dump/JP.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+| BR.zip | https://download.geonames.org/export/dump/BR.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+| SG.zip | https://download.geonames.org/export/dump/SG.zip | NOT RETRIEVED | NOT MEASURED | NOT MEASURED | NOT RUN | NOT MEASURED | BLOCKED — archive absent |
+
+**Independent source match counts:** matched = NOT MEASURED; missing from source = NOT MEASURED; conflicting original fields = NOT MEASURED; ambiguous source matches = NOT MEASURED. No selected sample row has yet been compared to the five official country ZIPs in this stage. These are null/unmeasured results, not zero.
+
+### Kenya candidate checks currently available
+
+The following observations are from the previously inspected sample and included sample crosswalk only. They are **not** independent comparisons against `KE.zip`:
+
+| Candidate | Sample GeoNames ID | Sample feature/admin code | Included sample crosswalk candidate | Current classification |
+|---|---:|---|---:|---|
+| Nairobi | 184745 | PPLC; KE admin1 `05` | Nairobi County ID 184742 | Sample-level candidate; source-archive comparison pending |
+| Kisumu | 191245 | PPLA; KE admin1 `26` | Kisumu County ID 191242 | Sample-level candidate; source-archive comparison pending |
+| Mombasa | 186301 | PPLA; KE admin1 `37` | Mombasa County ID 186298 | Sample-level candidate; source-archive comparison pending |
+| Mombasa same-name alternative | 186300 | PPL; KE admin1 `27` | Not to be collapsed by name | Keep distinct; semantic/parent review pending |
+
+No name-only identity matching is accepted. Compare the five official archives by GeoNames ID and all 19 original fields; report the original values for any conflict. The 24 Singapore admin1 crosswalk misses remain unresolved and must not be rejected automatically.
+
+### Required next input
+
+Provide `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, and `SG.zip` via the approved file-transfer method into a dedicated verification input directory. Include transfer provenance if available. Once present, record the actual file byte sizes and SHA-256, ZIP CRC/integrity results, source record counts, exact-ID comparisons and field-level differences. Do not download `allCountries.zip` again, and do not claim a five-country comparison independently reproduces the worldwide scan.
