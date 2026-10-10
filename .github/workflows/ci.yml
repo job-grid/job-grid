@@ -157,10 +157,10 @@ jobs:
             url="https://download.geonames.org/export/dump/${country}.zip"
             archive="$RUNNER_TEMP_DIR/geonames-source/${country}.zip"
             headers="$RUNNER_TEMP_DIR/geonames-source/${country}.headers"
-            retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
               --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
             test "$status" = "200"
+            retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             unzip -tq "$archive"
             test -s "$archive"
 
@@ -251,6 +251,22 @@ jobs:
             "$RUNNER_TEMP_DIR/current-admin-parent-path-audit" \
             "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
           cat "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 128:
+              raise SystemExit(f"Expected 128 reviewed admin targets, got {report.get('target_count')}")
+          if report.get("source", {}).get("remote_retrieval_metadata_verified") is not True:
+              raise SystemExit("Official archive retrieval metadata did not validate.")
+          if report.get("source", {}).get("sha256") is None:
+              raise SystemExit("Combined source text SHA-256 is missing.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: operational parent links must remain zero.")
+          print("Source-pinned audit preconditions verified; paths are candidates only, not approved parent links.")
+          PY
 
       - name: Upload row-level audit and retrieval manifest (no source archives)
         uses: actions/upload-artifact@v4
