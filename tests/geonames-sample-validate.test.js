@@ -204,3 +204,30 @@ test("worldwide verification records separate implementation evidence without ov
   assert.equal(manifest.latest_independent_worldwide_verification.official_source_origin_verified, false);
   assert.equal(manifest.latest_independent_worldwide_verification.current_iso_authority_comparison, "UNVERIFIED");
 });
+ 
+test("hierarchy candidate audit verifies crosswalk IDs without creating parent links", async () => {
+  const fs = await import("node:fs/promises");
+  const audit = JSON.parse(await fs.readFile(new URL("../docs/geonames-hierarchy-candidate-presence-audit-2026-10-10.json", import.meta.url), "utf8"));
+  const admin2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
+  assert.equal(audit.input_integrity.sample_rows, 25685);
+  assert.equal(audit.input_integrity.sample_unique_ids, 25685);
+  assert.equal(audit.input_integrity.admin1_unique_keys, 3865);
+  assert.equal(audit.input_integrity.admin2_unique_keys, 47642);
+  assert.equal(audit.admin1.code_references_with_exact_crosswalk_key, 23320);
+  assert.equal(audit.admin1.code_references_without_exact_key, 2333);
+  assert.equal(audit.admin1.raw_00_placeholder_candidates, 2284);
+  assert.equal(audit.admin1.unmatched_nonzero_code_references, 49);
+  assert.equal(audit.admin1.candidate_id_presence_mismatches, 0);
+  assert.equal(audit.admin2.references_with_exact_composite_crosswalk_key, 20445);
+  assert.equal(audit.admin2.references_missing_composite_crosswalk_key, 239);
+  assert.equal(audit.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
+  assert.equal(audit.admin2.total_unresolved_admin2_rows_in_export, 240);
+  assert.equal(audit.admin2.candidate_id_presence_mismatches, 0);
+  assert.equal(audit.outcome.candidate_presence_mismatches, 0);
+  assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
+  assert.equal(audit.governance.parent_links_written, false);
+  const contextCase = admin2.find(row => row.proposed_review_classification === "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
+  assert.ok(contextCase);
+  assert.equal(contextCase.raw_admin1_code, "");
+  assert.equal(contextCase.crosswalk_lookup_key, null);
+});
