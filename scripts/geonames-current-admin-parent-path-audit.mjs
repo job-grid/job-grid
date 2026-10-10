@@ -203,15 +203,20 @@ const OUTPUT_FIELDS = [
 
 export function validateRemoteSourceMetadata(metadata) {
   const sources = metadata?.remote_sources;
-  if (!Array.isArray(sources) || sources.length !== 2) return false;
+  if (!Array.isArray(sources) || sources.length !== 3) return false;
   const byCountry = new Map(sources.map((source) => [source.country_code, source]));
-  if (byCountry.size !== 2 || !byCountry.has("JP") || !byCountry.has("KE")) return false;
+  const expected = {
+    JP: { filename: "JP.zip", url: "https://download.geonames.org/export/dump/JP.zip" },
+    KE: { filename: "KE.zip", url: "https://download.geonames.org/export/dump/KE.zip" },
+    HIERARCHY: { filename: "hierarchy.zip", url: "https://download.geonames.org/export/dump/hierarchy.zip" },
+  };
+  if (byCountry.size !== Object.keys(expected).length || Object.keys(expected).some((code) => !byCountry.has(code))) return false;
 
-  return ["JP", "KE"].every((countryCode) => {
+  return Object.entries(expected).every(([countryCode, required]) => {
     const source = byCountry.get(countryCode);
     const timestamp = Date.parse(source?.retrieved_at_utc ?? "");
-    return source?.archive_filename === countryCode + ".zip" &&
-      source?.source_url === "https://download.geonames.org/export/dump/" + countryCode + ".zip" &&
+    return source?.archive_filename === required.filename &&
+      source?.source_url === required.url &&
       Number(source?.http_status) === 200 &&
       Number.isFinite(timestamp) &&
       /^[a-f0-9]{64}$/i.test(source?.archive_sha256 ?? "") &&
