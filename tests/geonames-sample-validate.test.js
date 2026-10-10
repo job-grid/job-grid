@@ -210,7 +210,7 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   const audit = JSON.parse(await fs.readFile(new URL("../docs/geonames-hierarchy-candidate-presence-audit-2026-10-10.json", import.meta.url), "utf8"));
   const admin2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
   assert.equal(audit.input_integrity.sample_rows, 25685);
-  assert.equal(audit.input_integrity.sample_unique_ids, 25685);
+  assert.equal(audit.input_integrity.unique_sample_ids, 25685);
   assert.equal(audit.input_integrity.admin1_unique_keys, 3865);
   assert.equal(audit.input_integrity.admin2_unique_keys, 47642);
   assert.equal(audit.admin1.code_references_with_exact_crosswalk_key, 23320);
