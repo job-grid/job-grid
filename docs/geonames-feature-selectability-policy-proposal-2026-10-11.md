@@ -47,7 +47,8 @@ The following defaults are approved at the policy/design level. They guide futur
 |---|---|---|---|
 | Exact admin1 crosswalk key, candidate present as same-country `ADM1` | Key and candidate checks pass in sample | Mark the crosswalk candidate as **resolved for review**; keep parent link unapproved until country-level hierarchy policy is approved | Do not treat code consistency alone as approval to assign a parent |
 | Exact admin2 composite key, candidate present as same-country `ADM2` | Composite key and candidate checks pass in sample | Mark the crosswalk candidate as **resolved for review**; require the admin1 context and approved parent-path rule | Do not assign a parent based only on name, proximity, or candidate presence |
-| Raw admin code `00` | Placeholder/nonstandard candidate; 2,284 admin1 and 2 admin2 cases | Preserve raw value and source row; mark **UNRESOLVED_PLACEHOLDER_CODE**; require a documented country/feature rule before hierarchy use | Do not silently convert `00` to blank, zero, a real code, or a synthetic parent |
+| Raw admin code `00` | Placeholder/nonstandard candidate in 2,284 admin1 and 2 admin2 references | Preserve raw value and source row; keep **UNRESOLVED_PLACEHOLDER_CODE** for unresolved hierarchy/association cases. Five `PCLI` country entities receive a separate **COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED** disposition; their raw `00` remains unchanged. | Do not silently convert `00` to blank, zero, a real code, or a synthetic parent |
+| Country-level `PCLI` record with raw admin code `00` | Five country entities: Brazil, United Kingdom, Japan, Kenya, Singapore | Preserve the country record and raw fields; no administrative parent is required because the entity is a country-level independent political entity. | Do not fabricate an administrative parent or normalize the raw code |
 | Nonzero code with no exact crosswalk key | 49 admin1 plus 237 admin2 cases are currently classified missing/version-dependent | Preserve raw code; compare source version and country-specific format; keep **UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE** until evidenced | Do not label the code legacy or invalid without source/version evidence |
 | Admin2 code exists but admin1 context is blank | One admin2 case | Preserve both raw fields; mark **UNRESOLVED_MISSING_ADMIN1_CONTEXT**; do not generate a composite lookup key | Do not guess admin1 context from name or a neighboring record |
 | Historical administrative feature codes `ADM1H`–`ADM4H` | 952 rows in admin1-unresolved records; 235 historical administrative rows in admin2-unresolved records | Preserve identity and history; not selectable as current administrative options or used as current parents by default; decide any legacy display/search behavior separately in a future product-specific review | Do not delete these rows or overwrite their feature codes |
@@ -55,7 +56,7 @@ The following defaults are approved at the policy/design level. They guide futur
 | Populated-place and non-administrative feature types (`PPL`, `PPLX`, `PPLL`, `PPLH`, `PCLI`, `ZN`, etc.) with unresolved admin code | Present in admin1 exception export | Preserve the geographic entity and its feature type; represent administrative association as unresolved independently of entity validity | Do not classify a populated place as invalid merely because its admin reference is absent |
 | Same-name records with different GeoNames IDs | Repeated names occur in sample | Preserve distinct IDs and feature/admin context; require an explicit authority-backed crosswalk to combine identities | Do not deduplicate or merge by name alone |
 
-GeoNames feature definitions are documented in the official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html). Feature codes provide descriptive context; they do not alone establish that a specific row is current, invalid, selectable, or a valid parent for another row.
+GeoNames feature definitions are documented in the official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html), which defines `PCLI` as an independent political entity and distinguishes current administrative levels from historical and undifferentiated ones. Feature codes provide entity/level context; they do not alone establish that any individual candidate is a semantically correct parent.
 
 ## 4. Approved review-status semantics
 
@@ -104,9 +105,9 @@ The owner approved the conservative defaults for the first six decisions below. 
 
 ## 7. Remaining acceptance blockers
 
-The audit confirms candidate presence, feature-level consistency, and source-key consistency for the selected sample. Catalog acceptance remains blocked pending:
+The audit confirms candidate presence, feature-level consistency, and source-key consistency for the selected sample. The owner-approved disposition audit narrows the current administrative-selector parent-path review to 128 current `ADM3`/`ADM4` records (2 `ADM3`, 126 `ADM4`); other historical, undifferentiated and non-administrative records remain retained under the approved defaults. Catalog acceptance remains blocked pending:
 
-- review/disposition of the 2,333 unresolved admin1 references and 240 unresolved admin2 key/context cases under the approved non-destructive defaults;
+- review/disposition of the 2,333 admin1 and 240 admin2 exception references (2,573 total). Five country-level `PCLI` records do not require an administrative parent under the approved disposition; the other 2,568 reference rows remain in hierarchy/association review, affecting 2,411 unique GeoNames IDs;
 - complete country-specific parent-hierarchy path validation and source-backed approval of individual parent links;
 - a current official ISO snapshot and deterministic comparison under permitted access terms; a paid subscription still requires separate cost authorization;
 - independent verification of source origin/retrieval metadata and worldwide completeness.
