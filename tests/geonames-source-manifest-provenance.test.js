@@ -104,3 +104,25 @@ test("GeoNames countryInfo preflight rejects incomplete and overlong records", a
   assert.match(validator, /INVALID_COLUMN_COUNT_EXPECTED_19/);
 });
 
+test("preflight refuses staging workspaces inside the repository", async (t) => {
+  const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+  const workspace = join(repositoryRoot, ".test-forbidden-geonames-workspace-" + process.pid);
+  await rm(workspace, { recursive: true, force: true });
+  t.after(async () => rm(workspace, { recursive: true, force: true }));
+
+  const result = spawnSync(process.execPath, [script, "--workspace", workspace], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--workspace must be outside the repository root/);
+  await assert.rejects(readFile(join(workspace, "source-manifest.json")), { code: "ENOENT" });
+});
+
+test("preflight code explicitly keeps source archives outside Git", async () => {
+  const source = await readFile(new URL("../scripts/geonames-sample-validate.mjs", import.meta.url), "utf8");
+  assert.match(source, /http_last_modified_header/);
+  assert.match(source, /legacy_last_modified_utc_unverified/);
+  assert.match(source, /retrieval_started_at_utc/);
+  assert.match(source, /retrieved_at_utc/);
+  assert.match(source, /must be outside the repository root to keep source archives and private outputs out of Git/);
+});
+
