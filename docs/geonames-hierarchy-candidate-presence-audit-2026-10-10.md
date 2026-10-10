@@ -87,7 +87,7 @@ By feature code, the 240 cases are 220 `ADM2H`, 15 `ADM3H`, and 5 `ADMD`. By cou
 
 The official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html) defines `ADM1H`, `ADM2H`, `ADM3H`, and `ADM4H` as historical administrative divisions at their respective levels. It defines `ADMD` as an administrative division whose level is undifferentiated, and `ADMDH` as a historical administrative division whose level is undifferentiated. These definitions help prioritize review; **they do not prove that any specific row is invalid, current, selectable, or safe to assign a parent**.
 
-**Disposition:** keep every unresolved row, its raw code, GeoNames ID, feature code, and existing source context. Do not normalize `00`, relabel nonzero codes as legacy without evidence, reject rows automatically, or infer parent IDs. The remaining 2,333 admin1 and 240 admin2 cases stay **UNRESOLVED / REVIEW REQUIRED** pending approved inclusion, version, and country-specific hierarchy policies.
+**Disposition:** the owner has approved conservative defaults: preserve every unresolved row and raw field; do not normalize `00`, relabel nonzero codes as legacy without evidence, reject rows automatically, or infer parent IDs. The 2,333 admin1 and 240 admin2 cases stay **UNRESOLVED / REVIEW REQUIRED** for record-level disposition and country-specific hierarchy reconciliation.
 
 ## Candidate feature-level check — 2026-10-11
 
@@ -170,16 +170,22 @@ The admin2 unresolved set contains **235 historical administrative feature rows*
 
 The official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html) identifies `ADM1H` through `ADM4H` as historical administrative divisions and `ADMDH` as a historical division with undifferentiated level; `ADMD` is also undifferentiated by level. These definitions help prioritize review, but they do not establish current status or parentage for an individual row.
 
-**Handling rule remains unchanged:** preserve source IDs and raw codes; do not automatically normalize `00`, mark historical-looking rows invalid, or invent parent IDs. All 2,573 references remain unresolved pending approved country-specific inclusion and hierarchy policies. The machine-readable detail is in `unresolved_reference_triage.feature_code_cross_tab` in the audit JSON.
+**Handling rule:** preserve source IDs and raw codes; do not automatically normalize `00`, mark historical-looking rows invalid, or invent parent IDs. The owner has approved these conservative defaults, but all 2,573 references remain unresolved pending case-level review and country-specific hierarchy reconciliation. The machine-readable detail is in `unresolved_reference_triage.feature_code_cross_tab` in the audit JSON.
 
 ## Acceptance decision
 
 - **PASS:** Audit integrity and candidate-presence check on the hashed sample/crosswalk inputs.
 - **NOT APPROVED:** Parent hierarchy; no parent links or parent IDs were created.
-- **BLOCKED:** Catalog acceptance while 2,333 admin1 and 240 admin2 references remain unresolved and feature/selectability rules are not approved.
+- **BLOCKED:** Catalog acceptance while 2,333 admin1 and 240 admin2 references remain unresolved, country-specific parent paths remain unapproved, and ISO/source-provenance/completeness gates remain open. Conservative feature/selectability defaults are owner-approved.
 - **UNVERIFIED:** Current ISO authority comparison, source-origin/remote retrieval metadata, worldwide geographic completeness, and full parent-hierarchy correctness.
 - **SEPARATELY BLOCKED:** Phase 4C backup/recovery readiness.
 
 The ISO source-access check is documented in [the ISO authority protocol](iso-authority-approval-and-validation-protocol-2026-10-10.md). No paid ISO subscription was purchased, and no ISO source snapshot was captured or compared. The official ISO source-choice approval alone does not satisfy that gate.
+
+## Owner-approved conservative defaults — 2026-10-11
+
+The owner approved the conservative feature/selectability defaults documented in [the policy record](geonames-feature-selectability-policy-proposal-2026-10-11.md). This approves the handling defaults, not the disposition of each individual unresolved row. Raw `00` remains unresolved; unmatched nonzero references remain unresolved until source/version evidence exists; historical features remain preserved and are not current selector options or current parents by default; undifferentiated levels remain unresolved; populated-place identity stays separate from unresolved administrative association; same-name records with different IDs remain distinct; and unresolved/historical/undifferentiated rows stay out of current administrative selectors by default.
+
+**Still unapproved/unverified:** individual parent links and full country-specific hierarchy paths; the official ISO snapshot/comparison; remote source-origin/retrieval metadata; and worldwide completeness. No paid ISO subscription, parent link, migration, seed, import, database or production change was authorized by this policy decision.
 
 PR #27 remains open, draft and unmerged. No parent links, database operations, migrations, seeds, imports, source-file changes, production changes, deployments, secrets/Cloudflare changes or backup/recovery actions occurred.
