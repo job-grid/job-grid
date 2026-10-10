@@ -154,3 +154,13 @@ The per-record crosswalk exception exports are now persisted in `docs/geonames-s
 - Singapore: all 24 prior exception IDs overlap exactly with the wider 142-row set; 118 additional Singapore IDs remain open.
 
 The exports classify exceptions for review, not as automatic invalid-record decisions. Raw code `00` remains unresolved pending owner approval; unmatched nonzero codes must not be called legacy without evidence. Parent links must not be invented. The full worldwide scan, current approved ISO authority comparison, global completeness, and catalog acceptance remain UNVERIFIED/BLOCKED.
+
+## Follow-up independent verification — 2026-10-10
+
+This update supersedes the earlier pending statement that the full worldwide scan had not been independently reproduced. A separately authored PowerShell/.NET streaming implementation scanned the existing local `allCountries.zip` and found **13,472,324** worldwide records with **0** malformed rows. It matched the existing 25,685 sample records against the full archive by GeoNames ID and all 19 original fields: **25,685 exact matches; 0 missing IDs; 0 field conflicts; 0 duplicate hits**.
+
+The five local source file sizes and SHA-256 values were independently recalculated and matched the prior manifest. Original versus same-script repeat-run output byte comparison is now measured: **7/7** output/attribution files are byte-identical.
+
+Full details are in [the independent worldwide verification report](geonames-worldwide-independent-verification-2026-10-10.md) and [JSON evidence](geonames-worldwide-independent-verification-2026-10-10.json).
+
+Remaining boundaries: the official URLs were not re-fetched and no remote Last-Modified or exact retrieval timestamp was recorded; the sample-selection algorithm itself was not reimplemented independently; the ISO snapshot comparison, worldwide completeness, crosswalk interpretation and hierarchy/feature policy decisions remain open. Catalog acceptance remains **BLOCKED**. PR #27 remains open, draft and unmerged; no database or production action was performed.
