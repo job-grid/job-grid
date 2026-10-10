@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 
 const directory = new URL(
   "../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/",
@@ -127,7 +126,7 @@ test("proposed exception classifications preserve raw codes and distinguish miss
 
     if (!row.raw_admin1_code) {
       missingContext.push(row);
-      assert.equal(row.missing_reference_category, "MISSING_ADMIN1_CONTEXT");
+      assert.equal(row.missing_reference_category, "ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT");
       assert.equal(row.proposed_review_classification, "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
       assert.equal(row.crosswalk_lookup_key, null);
     } else if (row.raw_admin2_code === "00") {
