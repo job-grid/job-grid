@@ -82,3 +82,6 @@ No name-only identity matching is accepted. Compare the five official archives b
 ### Required next input
 
 Provide `KE.zip`, `GB.zip`, `JP.zip`, `BR.zip`, and `SG.zip` via the approved file-transfer method into a dedicated verification input directory. Include transfer provenance if available. Once present, record the actual file byte sizes and SHA-256, ZIP CRC/integrity results, source record counts, exact-ID comparisons and field-level differences. Do not download `allCountries.zip` again, and do not claim a five-country comparison independently reproduces the worldwide scan.
+
+
+For the current five-country input-discovery result, see the [independent source-verification report](../geonames-sample-independent-source-verification-2026-10-10.md) and its [machine-readable JSON](../geonames-sample-independent-source-verification-2026-10-10.json). This Stage C report is **BLOCKED** pending the five official ZIP inputs; it does not change the separate Stage A sample-review status.
