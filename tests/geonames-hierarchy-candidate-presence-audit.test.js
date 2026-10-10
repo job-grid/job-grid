@@ -96,6 +96,36 @@ test("hierarchy audit refuses to place generated source-data reports inside a Gi
   assert.match(result.stderr, /outside the repository root/);
 });
 
+test("hierarchy audit rejects duplicate sample column headers", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-duplicate-header-test-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+
+  const sourceRoot = join(root, "sources");
+  const outputDir = join(root, "audit-output");
+  const sampleDir = join(sourceRoot, "sample-output-20261010-163234");
+  await mkdir(sampleDir, { recursive: true });
+
+  const duplicateHeader = header.replace("feature_class", "geonameid");
+  const sample = [
+    duplicateHeader,
+    row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
+    row("10", "Fixture Admin1", "A", "ADM1", "AA"),
+    row("11", "Fixture Admin2", "A", "ADM2", "AA", "01", "001")
+  ].join("\\n") + "\\n";
+  await writeFile(join(sampleDir, "geoname_places_sample.tsv"), sample, "utf8");
+  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\\tFixture Admin1\\tFixture Admin1\\t10\\n", "utf8");
+  await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\\tFixture Admin2\\tFixture Admin2\\t11\\n", "utf8");
+
+  const result = spawnSync(python, [
+    script,
+    "--source-root", sourceRoot,
+    "--output-dir", outputDir
+  ], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /Sample TSV has duplicate column headers/);
+});
+
 test("hierarchy audit blocks self-parent candidates and emits row-level exceptions", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-self-reference-test-"));
   t.after(async () => rm(root, { recursive: true, force: true }));
