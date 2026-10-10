@@ -42,11 +42,14 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   const sourceManifest = await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8");
   const builderReport = await readFile(new URL("../docs/geonames-sample-validation/results/validation-report.json", import.meta.url), "utf8");
 
-  for (const document of [readme, report, design, sourceManifest, builderReport]) {
+  for (const document of [readme, report, sourceManifest, builderReport]) {
     assert.match(document, /13472324|13,472,324/);
-    if (document === design) {\n      assert.match(document, /## 5C\\. Reconciled evidence status/);\n    } else {\n      assert.match(document, /independently reproduced|independently_reproduced|not independently reproduced|builder did not/i);\n    }
+    assert.match(document, /independently reproduced|independently_reproduced|not independently reproduced|builder did not/i);
     assert.match(document, /catalog acceptance.*BLOCKED|BLOCKED.*catalog acceptance|catalog_acceptance.*BLOCKED/i);
   }
+  assert.match(design, /## 5C\. Reconciled evidence status/);
+  assert.match(design, /13,472,324/);
+  assert.match(design, /Stage A.*Stage B/s);
   assert.match(readme, /last_modified_utc/);
   assert.match(readme, /Singapore/);
   assert.match(readme, /not automatic invalid/i);
