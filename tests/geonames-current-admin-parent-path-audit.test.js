@@ -7,10 +7,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   auditCurrentAdminParents,
+  buildAuditSummary,
   buildCurrentAdminTargets,
   parseCsv,
   parseGeoNamesLine,
   renderAuditCsv,
+  validateRemoteSourceMetadata,
 } from "../scripts/geonames-current-admin-parent-path-audit.mjs";
 
 function geoRow({
@@ -219,4 +221,30 @@ test("CLI reads a pinned source fixture, writes auditable artifacts, and records
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
+});
+
+test("validates exact official JP and KE archive retrieval metadata without inventing Last-Modified", () => {
+  const metadata = {
+    remote_sources: ["JP", "KE"].map((countryCode, index) => ({
+      country_code: countryCode,
+      archive_filename: countryCode + ".zip",
+      source_url: "https://download.geonames.org/export/dump/" + countryCode + ".zip",
+      retrieved_at_utc: "2026-10-11T01:00:00Z",
+      http_status: 200,
+      http_last_modified_utc: index === 0 ? "Sat, 10 Oct 2026 00:54:00 GMT" : null,
+      archive_sha256: "a".repeat(64),
+      archive_size_bytes: 12345 + index,
+    })),
+  };
+  assert.equal(validateRemoteSourceMetadata(metadata), true);
+  const summary = buildAuditSummary([], {
+    remote_sources: metadata.remote_sources,
+    remote_retrieval_metadata_verified: validateRemoteSourceMetadata(metadata),
+  });
+  assert.equal(summary.source.remote_retrieval_metadata_verified, true);
+  assert.equal(summary.source.http_last_modified_captured, false);
+  assert.equal(validateRemoteSourceMetadata({ remote_sources: metadata.remote_sources.slice(0, 1) }), false);
+  assert.equal(validateRemoteSourceMetadata({
+    remote_sources: metadata.remote_sources.map((source) => ({ ...source, http_status: 404 })),
+  }), false);
 });
