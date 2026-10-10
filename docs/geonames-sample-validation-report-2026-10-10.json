@@ -1,5 +1,5 @@
 {
-  "report_version": "1.0",
+  "report_version": "1.1",
   "generated_utc": "2026-10-10",
   "input_artifact": {
     "filename": "JobGrid-GeoNames-Sample-20261010-163234.zip",
@@ -9,105 +9,123 @@
     "members": 10,
     "original_source_archives_included": false
   },
-  "disposition": "BLOCKED_FOR_CATALOG_ACCEPTANCE_READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
-  "worldwide_records_scanned_reported_by_local_parser": 13472324,
-  "malformed_worldwide_rows_reported": 0,
-  "selected_source_records_reported": 481942,
-  "sample_rows_measured": 25685,
-  "unique_geoname_ids_measured": 25685,
-  "duplicate_ids_in_sample_measured": 0,
-  "invalid_coordinates_in_sample_measured": 0,
-  "country_info_rows": 5,
-  "admin1_crosswalk_rows": 125,
-  "admin2_crosswalk_rows": 6977,
-  "exception_rows": 24,
-  "exception_issue_counts": {
-    "admin1_crosswalk_not_found": 24
+  "disposition": {
+    "stage_a_owner_laptop_sample_generation_and_artifact_inspection": "READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
+    "stage_b_independent_source_pinned_reproducibility": "INCOMPLETE",
+    "catalog_acceptance": "BLOCKED"
   },
-  "exception_country_counts": {
-    "SG": 24
-  },
-  "admin2_crosswalk_exceptions": 0,
-  "country_counts": {
-    "KE": {
-      "source_records": 31490,
-      "administrative_features": 2424,
-      "populated_places": 6957,
-      "selected_records": 2631
+  "stage_a": {
+    "worldwide_records_scanned_reported_by_owner_local_script": 13472324,
+    "malformed_worldwide_rows_reported_by_owner_local_script": 0,
+    "builder_independently_reproduced_full_scan": false,
+    "selected_country_source_records_reported_by_owner_local_script": 481942,
+    "sample_rows_measured_by_builder": 25685,
+    "unique_geoname_ids_measured_by_builder": 25685,
+    "duplicate_ids_in_sample_measured_by_builder": 0,
+    "invalid_coordinates_in_sample_measured_by_builder": 0,
+    "country_info_rows_measured": 5,
+    "admin1_crosswalk_rows_measured": 125,
+    "admin2_crosswalk_rows_measured": 6977,
+    "exception_rows_measured": 24,
+    "exception_issue_counts": {
+      "admin1_crosswalk_not_found": 24
     },
-    "GB": {
-      "source_records": 109181,
-      "administrative_features": 11895,
-      "populated_places": 43712,
-      "selected_records": 12096
+    "exception_country_counts": {
+      "SG": 24
     },
-    "JP": {
-      "source_records": 103762,
-      "administrative_features": 4697,
-      "populated_places": 50801,
-      "selected_records": 4899
-    },
-    "BR": {
-      "source_records": 235530,
-      "administrative_features": 5676,
-      "populated_places": 72392,
-      "selected_records": 5888
-    },
-    "SG": {
-      "source_records": 1979,
-      "administrative_features": 1,
-      "populated_places": 387,
-      "selected_records": 171
+    "admin2_crosswalk_exceptions_in_sample": 0,
+    "country_counts_reported_by_owner_local_script": {
+      "KE": {
+        "source_records": 31490,
+        "administrative_features": 2424,
+        "populated_places": 6957,
+        "selected_records": 2631
+      },
+      "GB": {
+        "source_records": 109181,
+        "administrative_features": 11895,
+        "populated_places": 43712,
+        "selected_records": 12096
+      },
+      "JP": {
+        "source_records": 103762,
+        "administrative_features": 4697,
+        "populated_places": 50801,
+        "selected_records": 4899
+      },
+      "BR": {
+        "source_records": 235530,
+        "administrative_features": 5676,
+        "populated_places": 72392,
+        "selected_records": 5888
+      },
+      "SG": {
+        "source_records": 1979,
+        "administrative_features": 1,
+        "populated_places": 387,
+        "selected_records": 171
+      }
     }
   },
-  "kenya_source_id_checks": {
+  "stage_b": {
+    "original_source_archives_included": false,
+    "builder_download_attempts": 9,
+    "builder_sources_retrieved": 0,
+    "builder_retrieval_status": "FAILED_DNS",
+    "independent_original_sha256_verification": false,
+    "independent_reproduction_of_full_scan": false,
+    "sample_selection_reproduced_from_pinned_original_inputs": false,
+    "current_approved_iso_authority_snapshot_compared": false,
+    "complete_parent_hierarchy_resolved": false
+  },
+  "singapore_exception_treatment": {
+    "classification": "UNRESOLVED_SOURCE_MODEL_OR_CROSSWALK_EXCEPTION",
+    "automatic_invalid_record_rejection": false,
+    "preserve_source_ids_and_admin_codes": true,
+    "invent_admin_records_or_parent_links": false,
+    "next_state": "NEEDS_REVIEW_UNTIL_AN_APPROPRIATE_AUTHORITY_OR_APPROVED_MAPPING_RULE_RESOLVES_RELATIONSHIP"
+  },
+  "sample_source_id_checks": {
     "Nairobi": {
       "geoname_id": "184745",
       "feature_code": "PPLC",
       "admin1_code": "05",
       "admin1_crosswalk_id": "184742",
-      "result": "MATCH"
+      "result": "SAMPLE_CROSSWALK_CODE_MATCH"
     },
     "Kisumu": {
       "geoname_id": "191245",
       "feature_code": "PPLA",
       "admin1_code": "26",
       "admin1_crosswalk_id": "191242",
-      "result": "MATCH"
+      "result": "SAMPLE_CROSSWALK_CODE_MATCH"
     },
     "Mombasa_candidate": {
       "geoname_id": "186301",
       "feature_code": "PPLA",
       "admin1_code": "37",
       "admin1_crosswalk_id": "186298",
-      "result": "MATCH"
+      "result": "SAMPLE_CROSSWALK_CODE_MATCH"
     },
     "Mombasa_same_name_alternative": {
       "geoname_id": "186300",
       "feature_code": "PPL",
       "admin1_code": "27",
       "result": "AMBIGUOUS_NAME_KEEP_DISTINCT"
-    }
-  },
-  "other_name_collision_checks": {
-    "London": [
-      {
-        "geoname_id": "2643743",
-        "feature_code": "PPLC",
-        "country_code": "GB",
-        "admin1_code": "ENG",
-        "admin2_code": "GLA"
-      }
-    ],
-    "Tokyo": [
-      {
-        "geoname_id": "1850147",
-        "feature_code": "PPLC",
-        "country_code": "JP",
-        "admin1_code": "40"
-      }
-    ],
-    "Brasilia_name_matches": 11,
+    },
+    "London": {
+      "geoname_id": "2643743",
+      "feature_code": "PPLC",
+      "country_code": "GB",
+      "admin1_code": "ENG",
+      "admin2_code": "GLA"
+    },
+    "Tokyo": {
+      "geoname_id": "1850147",
+      "feature_code": "PPLC",
+      "country_code": "JP",
+      "admin1_code": "40"
+    },
     "Brasilia_capital_candidate": {
       "geoname_id": "3469058",
       "feature_code": "PPLC",
@@ -115,26 +133,39 @@
       "admin1_code": "07",
       "admin2_code": "5300108"
     },
-    "Singapore": [
-      {
-        "geoname_id": "1880252",
-        "feature_code": "PPLC",
-        "country_code": "SG",
-        "admin1_code": "",
-        "admin2_code": ""
-      }
-    ]
+    "Brasilia_same_name_matches": 11,
+    "Singapore": {
+      "geoname_id": "1880252",
+      "feature_code": "PPLC",
+      "country_code": "SG",
+      "admin1_code": "",
+      "admin2_code": ""
+    }
   },
   "integrity_caveats": [
-    "Original allCountries.zip and full metadata/crosswalk files are not in the uploaded archive; source manifest hashes and byte sizes were not independently recomputed.",
-    "manifest last_modified_utc is populated from local file mtime by the supplied script, not a verified HTTP Last-Modified header.",
-    "Crosswalk checks are not parent relationship validation; parent links were not resolved.",
-    "Current ISO authority snapshot was not independently obtained."
+    "Sample ZIP hash verifies only the received package, not original GeoNames source archives.",
+    "Original allCountries.zip and original countryInfo/full crosswalk files are absent; original-source declared byte sizes and SHA-256 hashes were not independently recomputed.",
+    "Manifest last_modified_utc is populated from local file st_mtime, not an HTTP Last-Modified header; rename to local_file_mtime_utc or preserve verified HTTP metadata separately.",
+    "Crosswalk presence/code match is not proof of complete parent-child hierarchy; parent links remain unresolved.",
+    "Current approved ISO authority snapshot was not independently obtained or compared.",
+    "The sample is biased by feature inclusion, population/rservoir selection and priority-name matching; it does not establish worldwide completeness."
+  ],
+  "acceptance_blockers": [
+    "Obtain original source bytes or independently trustworthy source-pinned snapshots and verify byte sizes/SHA-256.",
+    "Independently reproduce the owner-local 13,472,324-record scan and selected sample from pinned original inputs, recording parser version and input hashes.",
+    "Obtain and record a current owner-approved ISO authority snapshot and compare candidate fields.",
+    "Owner approval of feature-code inclusion, selectability and exception policies.",
+    "Resolve or explicitly classify hierarchy relationships from source IDs and approved geographic authorities; report unresolved links.",
+    "Correct manifest timestamp semantics so local mtime is not presented as server Last-Modified metadata."
   ],
   "governance": {
     "database_operations": false,
+    "migrations_or_seeds": false,
+    "database_imports": false,
     "production_changes": false,
     "cloudflare_changes": false,
+    "secrets_changes": false,
+    "backup_recovery_changes": false,
     "pr_merged": false,
     "phase_4c_recovery_readiness": "BLOCKED"
   }
