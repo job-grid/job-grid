@@ -224,7 +224,7 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.admin2.references_with_exact_composite_crosswalk_key, 20445);
   assert.equal(audit.admin2.references_missing_composite_crosswalk_key, 239);
   assert.equal(audit.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
-  assert.equal(audit.admin2.total_unresolved_admin2_rows, 240);
+  assert.equal(audit.admin2.total_unresolved_admin2_rows_in_export, 240);
   assert.equal(audit.admin2.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 13468);
   assert.equal(audit.admin2.candidate_self_references, 6977);
   assert.equal(audit.admin2.candidate_presence_mismatches_other_than_self_reference, 0);
