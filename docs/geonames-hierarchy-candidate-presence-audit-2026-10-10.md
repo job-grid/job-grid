@@ -127,6 +127,51 @@ For admin1, the target record's own `admin1_code` matched every resolved `countr
 
 This provides evidence that the crosswalk target IDs are internally consistent with the raw codes used to look them up. It still does **not** demonstrate each target is the correct parent for every child record, verify a full ancestor path, or authorize parent assignment. The machine-readable per-country counters, run time, and script hash are recorded in `candidate_key_code_consistency` and `candidate_key_code_consistency_by_level_and_country` in the JSON report.
 
+## Unresolved feature-code cross-tab — 2026-10-11
+
+The existing row-level exception exports were cross-tabulated by their review classification and GeoNames feature code. This is an aggregate triage of the same **2,333 admin1** and **240 admin2** unresolved rows; it does not change the exception classifications or resolve any code.
+
+### Admin1 — 2,333 unresolved rows
+
+| Review classification | Feature code | Rows |
+|---|---|---:|
+| Missing or version-dependent reference | `ADM1H` | 7 |
+| Missing or version-dependent reference | `ADM2H` | 6 |
+| Missing or version-dependent reference | `ADM3` | 2 |
+| Missing or version-dependent reference | `ADMD` | 10 |
+| Missing or version-dependent reference | `PPL` | 22 |
+| Missing or version-dependent reference | `PPLX` | 2 |
+| Raw-code placeholder/nonstandard candidate | `ADM2H` | 165 |
+| Raw-code placeholder/nonstandard candidate | `ADM3H` | 89 |
+| Raw-code placeholder/nonstandard candidate | `ADM4` | 126 |
+| Raw-code placeholder/nonstandard candidate | `ADM4H` | 678 |
+| Raw-code placeholder/nonstandard candidate | `ADMD` | 1,094 |
+| Raw-code placeholder/nonstandard candidate | `ADMDH` | 7 |
+| Raw-code placeholder/nonstandard candidate | `PCLI` | 5 |
+| Raw-code placeholder/nonstandard candidate | `PPL` | 32 |
+| Raw-code placeholder/nonstandard candidate | `PPLH` | 2 |
+| Raw-code placeholder/nonstandard candidate | `PPLL` | 4 |
+| Raw-code placeholder/nonstandard candidate | `PPLX` | 79 |
+| Raw-code placeholder/nonstandard candidate | `ZN` | 3 |
+
+The historical administrative feature types in these unresolved admin1 rows total **952**: `ADM1H` 7, `ADM2H` 171, `ADM3H` 89, `ADM4H` 678, and `ADMDH` 7. There are also **2** `PPLH` historical populated-place rows. These are feature-type observations, not evidence that the raw admin1 codes should be rewritten or that the records should be deleted.
+
+### Admin2 — 240 unresolved rows
+
+| Review classification | Feature code | Rows |
+|---|---|---:|
+| Missing admin1 context | `ADM2H` | 1 |
+| Missing or version-dependent reference | `ADM2H` | 219 |
+| Missing or version-dependent reference | `ADM3H` | 15 |
+| Missing or version-dependent reference | `ADMD` | 3 |
+| Raw-code placeholder/nonstandard candidate | `ADMD` | 2 |
+
+The admin2 unresolved set contains **235 historical administrative feature rows**: `ADM2H` 220 and `ADM3H` 15. A further **5** rows use `ADMD`, an administrative division whose level is unspecified. Keep the one missing-context case unresolved; a complete composite key cannot be formed without admin1 context.
+
+The official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html) identifies `ADM1H` through `ADM4H` as historical administrative divisions and `ADMDH` as a historical division with undifferentiated level; `ADMD` is also undifferentiated by level. These definitions help prioritize review, but they do not establish current status or parentage for an individual row.
+
+**Handling rule remains unchanged:** preserve source IDs and raw codes; do not automatically normalize `00`, mark historical-looking rows invalid, or invent parent IDs. All 2,573 references remain unresolved pending approved country-specific inclusion and hierarchy policies. The machine-readable detail is in `unresolved_reference_triage.feature_code_cross_tab` in the audit JSON.
+
 ## Acceptance decision
 
 - **PASS:** Audit integrity and candidate-presence check on the hashed sample/crosswalk inputs.
