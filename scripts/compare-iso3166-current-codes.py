@@ -102,7 +102,7 @@ def read_geonames_country_info(path: Path) -> tuple[list[dict[str, str]], int, i
             fields = line.split("\t")
             # GeoNames countryInfo rows currently define 19 tab-separated fields.
             # Reject truncated rows rather than silently accepting a 3-field fragment.
-            if len(fields) < 19:
+            if len(fields) != 19:
                 malformed += 1
                 continue
             alpha2, alpha3, numeric3 = (clean(value) for value in fields[:3])
