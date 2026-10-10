@@ -66,6 +66,8 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(report.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
   assert.equal(report.admin2.total_unresolved_admin2_rows, 1);
   assert.equal(report.admin2.candidate_presence_issues, 0);
+  assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin1.AA, { ADM1: 1 });
+  assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin2.AA, { ADM2: 1 });
   assert.equal(report.exceptions.rows, 0);
   assert.equal(report.scope.parent_links_written, false);
   assert.equal(report.input_manifest.length, 3);
