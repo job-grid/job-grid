@@ -249,10 +249,18 @@ def main() -> int:
 
     admin2_missing_key = total["admin2_key_missing"]
     admin2_missing_context = total["admin2_uncheckable_due_to_blank_admin1_context"]
+    fatal_input = bool(
+        malformed_sample_rows or duplicate_sample_ids or admin1_malformed
+        or admin2_malformed or admin1_duplicates or admin2_duplicates
+    )
     report = {
-        "report_version": "1.0",
+        "report_version": "1.1",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "status": "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND" if (total["admin1_candidate_self_reference"] + total["admin2_candidate_self_reference"]) else ("BLOCKED_CANDIDATE_PRESENCE_MISMATCHES" if issues else "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED"),
+        "status": "BLOCKED_INVALID_INPUT" if fatal_input else (
+            "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND"
+            if (total["admin1_candidate_self_reference"] + total["admin2_candidate_self_reference"])
+            else ("BLOCKED_CANDIDATE_PRESENCE_MISMATCHES" if issues else "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED")
+        ),
         "scope": {
             "implementation": "Read-only Python crosswalk candidate-presence audit",
             "parent_links_written": False,
