@@ -68,7 +68,7 @@ def main() -> int:
                         f=line.split('\t'); report['source_records_read']+=1; raw_by_country[cc]+=1
                         if len(f)!=FIELD_COUNT:
                             report['rejected_or_quarantined']+=1; report['exceptions'].append({"file":name,"record_id":f[0] if f else '',"country_code":f[8] if len(f)>8 else cc,"reason_code":"INVALID_COLUMN_COUNT","detail":f'line {lineno}: {len(f)} columns'}); continue
-                        gid,nm,ascii_name,alt,lat,lon,fc,ft,country,a1,a2,a3,a4,pop,elev,dem,tz,mod=f
+                        gid,nm,ascii_name,alt,lat,lon,fc,ft,country,cc2,a1,a2,a3,a4,pop,elev,dem,tz,mod=f
                         reason=None
                         if not gid.isdigit(): reason='INVALID_GEONAME_ID'
                         elif gid in seen[cc]: reason='DUPLICATE_GEONAME_ID'; dupes+=1; report['duplicate_source_identifiers']+=1
