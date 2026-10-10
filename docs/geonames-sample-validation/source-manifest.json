@@ -131,5 +131,108 @@
       "complete_parent_hierarchy_reconciled": false
     }
   },
-  "note": "The FAILED_DNS statuses below describe only the isolated builder's attempted retrieval of the original official source files. They are not a statement that the owner-laptop sample generation did not occur. Owner-local full-scan counts are reported by the owner's script and have not been independently reproduced by the builder. Original source hashes/byte sizes remain unverified because source bytes are absent from the uploaded sample."
+  "note": "The FAILED_DNS statuses below describe only the isolated builder's attempted retrieval of the original official source files. They are not a statement that the owner-laptop sample generation did not occur. Owner-local full-scan counts are reported by the owner's script and have not been independently reproduced by the builder. Original source hashes/byte sizes remain unverified because source bytes are absent from the uploaded sample. Official five-country source archives were not present in the inspected owner input directory. Stage C source-match counts remain null/unmeasured. The owner sample manifest's last_modified_utc field is local filesystem mtime, not HTTP metadata; see manifest_field_semantics_correction.",
+  "current_stage_status": "BLOCKED_OFFICIAL_COUNTRY_ARCHIVES_NOT_PRESENT",
+  "last_checked_owner_input_directory": {
+    "path": "C:\\\\Users\\\\jonat\\\\OneDrive\\\\Desktop\\\\JobGrid-GeoNames",
+    "checked_at_utc": "2026-10-10T14:29:13Z",
+    "presence_check": {
+      "KE.zip": false,
+      "GB.zip": false,
+      "JP.zip": false,
+      "BR.zip": false,
+      "SG.zip": false,
+      "allCountries.zip": true,
+      "countryInfo.txt.txt": true,
+      "admin1CodesASCII.txt": true,
+      "admin2Codes.txt": true,
+      "readme.txt": true,
+      "JobGrid-GeoNames-Sample-20261010-163234.zip": true
+    },
+    "scope_note": "Presence check only. The worldwide allCountries.zip was not opened or parsed for this task; no worldwide archive download was started."
+  },
+  "stage_c_official_country_archive_verification": {
+    "status": "BLOCKED_INPUT_ARCHIVES_NOT_PRESENT",
+    "sources": [
+      {
+        "file": "KE.zip",
+        "url": "https://download.geonames.org/export/dump/KE.zip",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_sample_ids": null,
+        "missing_sample_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "GB.zip",
+        "url": "https://download.geonames.org/export/dump/GB.zip",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_sample_ids": null,
+        "missing_sample_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "JP.zip",
+        "url": "https://download.geonames.org/export/dump/JP.zip",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_sample_ids": null,
+        "missing_sample_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "BR.zip",
+        "url": "https://download.geonames.org/export/dump/BR.zip",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_sample_ids": null,
+        "missing_sample_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      },
+      {
+        "file": "SG.zip",
+        "url": "https://download.geonames.org/export/dump/SG.zip",
+        "retrieved_at_utc": null,
+        "bytes": null,
+        "sha256": null,
+        "zip_integrity": "NOT_RUN",
+        "source_records_parsed": null,
+        "matched_sample_ids": null,
+        "missing_sample_ids": null,
+        "conflicting_records": null,
+        "ambiguous_matches": null
+      }
+    ],
+    "matched_sample_records": null,
+    "missing_sample_records": null,
+    "conflicting_records": null,
+    "ambiguous_matches": null,
+    "null_means": "NOT MEASURED, not zero; archives were not present in the checked input directory."
+  },
+  "manifest_field_semantics_correction": {
+    "owner_uploaded_sample_manifest": "source_manifest.json inside JobGrid-GeoNames-Sample-20261010-163234.zip",
+    "field_as_originally_written": "last_modified_utc",
+    "actual_semantics": "Value is generated from local filesystem path.stat().st_mtime in prepare_sample.py; it is not an HTTP Last-Modified header.",
+    "correct_field_name": "local_file_mtime_utc",
+    "separate_server_header_field": "http_last_modified_utc",
+    "server_header_value": null,
+    "note": "Original uploaded sample ZIP is retained unchanged as evidence. Its timestamp label is corrected semantically in reports; a future regenerated manifest must use the corrected field name."
+  }
 }
