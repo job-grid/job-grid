@@ -4,6 +4,8 @@
 The tool checks composite-key availability and verifies that IDs referenced by
 resolved crosswalk entries occur in the sample as same-country administrative
 features. It emits no parent_id assignments and does not approve parent links.
+An ADM1/ADM2 feature whose own code resolves to its own ID is a crosswalk
+identity match, not a parent relationship; other self-references remain issues.
 """
 
 from __future__ import annotations
@@ -179,8 +181,11 @@ def main() -> int:
                 parent_id = candidate1["geonames_id"]
                 parent = by_id.get(parent_id)
                 if parent_id == gid:
-                    metrics["admin1_candidate_self_reference"] += 1
-                    record_issue(row, "ADMIN1_CROSSWALK_CANDIDATE_SELF_REFERENCE")
+                    if feature_class == "A" and feature_code == "ADM1":
+                        metrics["admin1_candidate_identity_match"] += 1
+                    else:
+                        metrics["admin1_candidate_self_reference"] += 1
+                        record_issue(row, "ADMIN1_CROSSWALK_CANDIDATE_SELF_REFERENCE")
                 elif parent is None:
                     metrics["admin1_candidate_id_not_in_sample"] += 1
                     record_issue(row, "ADMIN1_CROSSWALK_ID_NOT_PRESENT_IN_SAMPLE")
@@ -209,8 +214,11 @@ def main() -> int:
                     parent_id = candidate2["geonames_id"]
                     parent = by_id.get(parent_id)
                     if parent_id == gid:
-                        metrics["admin2_candidate_self_reference"] += 1
-                        record_issue(row, "ADMIN2_CROSSWALK_CANDIDATE_SELF_REFERENCE")
+                        if feature_class == "A" and feature_code == "ADM2":
+                            metrics["admin2_candidate_identity_match"] += 1
+                        else:
+                            metrics["admin2_candidate_self_reference"] += 1
+                            record_issue(row, "ADMIN2_CROSSWALK_CANDIDATE_SELF_REFERENCE")
                     elif parent is None:
                         metrics["admin2_candidate_id_not_in_sample"] += 1
                         record_issue(row, "ADMIN2_CROSSWALK_ID_NOT_PRESENT_IN_SAMPLE")
@@ -306,13 +314,25 @@ def main() -> int:
             "raw_00_placeholder_candidates": total["admin1_raw_00_key_missing"],
             "unmatched_nonzero_code_references": total["admin1_key_missing"] - total["admin1_raw_00_key_missing"],
             "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": total["admin1_candidate_id_present_as_same_country_admin_feature"],
+            "candidate_identity_matches": total["admin1_candidate_identity_match"],
             "candidate_self_references": total["admin1_candidate_self_reference"],
             "candidate_presence_mismatches_other_than_self_reference": sum(
                 count for name, count in total.items()
                 if name.startswith("admin1_candidate_")
-                and name not in {"admin1_candidate_id_present_as_same_country_admin_feature", "admin1_candidate_self_reference"}
+                and name not in {
+                    "admin1_candidate_id_present_as_same_country_admin_feature",
+                    "admin1_candidate_identity_match",
+                    "admin1_candidate_self_reference",
+                }
             ),
-            "candidate_presence_issues": sum(count for name, count in total.items() if name.startswith("admin1_candidate_") and name != "admin1_candidate_id_present_as_same_country_admin_feature"),
+            "candidate_presence_issues": sum(
+                count for name, count in total.items()
+                if name.startswith("admin1_candidate_")
+                and name not in {
+                    "admin1_candidate_id_present_as_same_country_admin_feature",
+                    "admin1_candidate_identity_match",
+                }
+            ),
         },
         "admin2": {
             "nonblank_code_references": total["admin2_code_present"],
@@ -321,13 +341,25 @@ def main() -> int:
             "references_uncheckable_due_to_blank_admin1_context": admin2_missing_context,
             "total_unresolved_admin2_rows": admin2_missing_key + admin2_missing_context,
             "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": total["admin2_candidate_id_present_as_same_country_admin_feature"],
+            "candidate_identity_matches": total["admin2_candidate_identity_match"],
             "candidate_self_references": total["admin2_candidate_self_reference"],
             "candidate_presence_mismatches_other_than_self_reference": sum(
                 count for name, count in total.items()
                 if name.startswith("admin2_candidate_")
-                and name not in {"admin2_candidate_id_present_as_same_country_admin_feature", "admin2_candidate_self_reference"}
+                and name not in {
+                    "admin2_candidate_id_present_as_same_country_admin_feature",
+                    "admin2_candidate_identity_match",
+                    "admin2_candidate_self_reference",
+                }
             ),
-            "candidate_presence_issues": sum(count for name, count in total.items() if name.startswith("admin2_candidate_") and name != "admin2_candidate_id_present_as_same_country_admin_feature"),
+            "candidate_presence_issues": sum(
+                count for name, count in total.items()
+                if name.startswith("admin2_candidate_")
+                and name not in {
+                    "admin2_candidate_id_present_as_same_country_admin_feature",
+                    "admin2_candidate_identity_match",
+                }
+            ),
         },
         "exceptions": {
             "csv": issue_path.name,
@@ -356,8 +388,10 @@ def main() -> int:
         "admin1_keys": len(admin1),
         "admin2_keys": len(admin2),
         "admin1_key_missing": report["admin1"]["code_references_without_exact_key"],
+        "admin1_identity_matches": total["admin1_candidate_identity_match"],
         "admin2_key_missing": admin2_missing_key,
         "admin2_blank_admin1_context": admin2_missing_context,
+        "admin2_identity_matches": total["admin2_candidate_identity_match"],
         "candidate_presence_issues": len(issues),
         "parent_links_written": False,
     }, indent=2))
