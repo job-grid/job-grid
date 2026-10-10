@@ -198,6 +198,9 @@ def main() -> int:
         row["alpha2"] for row in geonames_rows if ALPHA2_RE.fullmatch(row["alpha2"])
     )
     geonames_alpha2_set = set(geonames_alpha2_counts)
+    geonames_duplicate_alpha2_groups = sum(
+        1 for count in geonames_alpha2_counts.values() if count > 1
+    )
 
     alpha2_matches = 0
     alpha3_conflicts = 0
@@ -250,7 +253,8 @@ def main() -> int:
 
     snapshot_integrity_issues = bool(iso_invalid or any(iso_duplicates.values()) or not iso_rows)
     geonames_input_quality_issues = bool(
-        geonames_malformed or geonames_empty or invalid_geonames_alpha2 or not geonames_rows
+        geonames_malformed or geonames_empty or invalid_geonames_alpha2
+        or geonames_duplicate_alpha2_groups or not geonames_rows
     )
     code_conflicts = bool(alpha3_conflicts or numeric_conflicts)
     if snapshot_integrity_issues:
@@ -293,6 +297,7 @@ def main() -> int:
             "geonames_rows_with_no_codes": geonames_empty,
             "geonames_invalid_alpha2_rows": invalid_geonames_alpha2,
             "unique_geonames_alpha2_candidates": len(geonames_alpha2_set),
+            "geonames_duplicate_alpha2_groups": geonames_duplicate_alpha2_groups,
             "geonames_rows_with_alpha2_found_in_iso": alpha2_matches,
             "geonames_rows_without_iso_alpha2_match": geonames_rows_without_iso_alpha2_match,
             "iso_alpha2_codes_without_geonames_country_info_match": iso_rows_without_geonames_alpha2_match,
