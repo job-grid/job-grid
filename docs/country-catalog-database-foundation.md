@@ -441,3 +441,18 @@ A stricter read-only audit checked exact composite-key existence, candidate-ID p
 The earlier presence-only result did not explicitly test self-reference and is superseded by the stricter finding. See the [updated hierarchy candidate-presence audit](geonames-hierarchy-candidate-presence-audit-2026-10-10.md), [machine-readable report](geonames-hierarchy-candidate-presence-audit-2026-10-10.json), and reproducible [audit script](../scripts/geonames-hierarchy-candidate-presence-audit.py).
 
 This is candidate availability evidence only. It does not approve any parent link or prove global hierarchy correctness. Do not assign `parent_id` from a raw key when the candidate ID is the child's own ID, and do not synthesize missing parents. Catalog acceptance remains **BLOCKED** pending ISO comparison, source-origin evidence, feature/selectability decisions, and explicit hierarchy/exception policy approval.
+
+
+## 5H. Owner approval of conservative geography defaults — 2026-10-11
+
+This addendum supersedes earlier status statements in this document saying owner approval of the general feature/selectability defaults was still pending. The owner has now approved the non-destructive defaults documented in [the policy record](geonames-feature-selectability-policy-proposal-2026-10-11.md):
+
+- Preserve source GeoNames IDs, source entity records, feature codes and raw admin codes without automatic normalization or deletion.
+- Keep raw `00`, unmatched nonzero references, missing admin1 context, historical features and undifferentiated admin levels in explicit unresolved/review states until evidence resolves the individual case.
+- Do not infer hierarchy from name similarity, proximity, feature-code consistency or candidate presence alone. Parent IDs remain unassigned until country-specific parent-path evidence is reviewed.
+- Preserve populated-place identity separately from its administrative association, and preserve distinct records with different GeoNames IDs even where names repeat.
+- Do not expose unresolved, historical or undifferentiated rows as current administrative selector options by default; retain the records and their referenceability.
+
+**Approval scope:** policy/design defaults only. This is not approval of any individual unresolved row or parent link, is not catalog acceptance, and does not authorize a schema change, migration, seed, import, database/production/deployment change or paid ISO subscription.
+
+The outstanding gates remain: 2,333 unresolved admin1 references and 240 unresolved admin2 key/context cases; full country-specific hierarchy-path validation; a current official ISO snapshot and deterministic comparison under permitted access terms; remote source-origin/retrieval metadata; and worldwide completeness. ISO comparison remains unverified. Phase 4C recovery readiness remains separately blocked. PR #27 remains open, draft and unmerged.
