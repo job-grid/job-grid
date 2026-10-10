@@ -404,3 +404,26 @@ A second run of the owner-computer `prepare_sample.py` completed against the sam
 **ISO source choice approved by the owner on 2026-10-10:** the proposed authority is ISO's [3166 Maintenance Agency page](https://committee.iso.org/iso-3166-country-codes.html) and its [Online Browsing Platform (OBP)](https://www.iso.org/obp/ui/). The exact snapshot has not been downloaded, hashed or compared. ISO's current terms restrict use of non-Open-Data content with AI tools; the current [ISO Open Data catalogue](https://committee.iso.org/open-data.html) does not list the ISO 3166 code list. Follow [the ISO approval and validation protocol](iso-authority-approval-and-validation-protocol-2026-10-10.md): keep the source local and run deterministic comparison without sending source rows or code tuples to AI.
 
 The main counts are reproduced on the owner computer; independent full-scan reproduction, current owner-approved ISO comparison, byte-level sample-output comparison, full hierarchy decisions and catalog acceptance remain outstanding. Phase 4C remains separately BLOCKED.
+
+## 5D. Follow-up independent worldwide scan verification — 2026-10-10
+
+This follow-up supersedes earlier Stage B/§5C status text above where it says that the complete worldwide scan or output byte comparison had not been independently measured.
+
+A separately authored PowerShell/.NET streaming verifier scanned the owner's existing local `allCountries.zip`, independently recalculated the local input-file sizes and SHA-256 hashes, and matched the existing 25,685-row sample against the full `allCountries.txt` source member.
+
+| Verification | Result |
+|---|---:|
+| Worldwide rows scanned by separate implementation | 13,472,324 |
+| Malformed worldwide rows | 0 |
+| Five-country source records | 481,942 |
+| Existing sample rows | 25,685 |
+| Exact ID plus 19-field sample matches | 25,685 |
+| Missing sample IDs / field conflicts / duplicate sample hits | 0 / 0 / 0 |
+| Source-file sizes and SHA-256 recalculated separately | PASS; values match prior manifest |
+| Original/repeat output and attribution files compared by bytes and SHA-256 | 7/7 identical |
+
+The separate verifier and resulting measurements are recorded in [the independent worldwide verification Markdown report](geonames-worldwide-independent-verification-2026-10-10.md) and [JSON report](geonames-worldwide-independent-verification-2026-10-10.json). The original and repeat output file identity is now measured; this supersedes the earlier `NOT_MEASURED` status for that comparison.
+
+**Important boundaries:** the official GeoNames URLs were not re-fetched during the independent scan; remote source origin, exact remote retrieval timestamps and server HTTP `Last-Modified` headers therefore remain unverified. The separate implementation scanned the existing archive and checked the already-selected sample against it; it did not reimplement the sample-selection algorithm. The current ISO snapshot has not been captured or compared. Worldwide geographic completeness, feature-code/selectability policy and full place-parent correctness have not been established.
+
+**Current disposition:** local separate-implementation scan and sample-record comparison **PASS**; output byte comparison **PASS**; official source origin and remote retrieval metadata **UNVERIFIED**; ISO authority comparison **UNVERIFIED**; unresolved crosswalk/parent hierarchy and business policy decisions remain. Country-catalog acceptance remains **BLOCKED**. No migrations, seeds, imports, production, Cloudflare, secret, deployment or backup/recovery operations were performed. Phase 4C remains separately **BLOCKED**.
