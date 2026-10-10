@@ -88,7 +88,7 @@ test("hierarchy audit refuses to place generated source-data reports inside a Gi
   const result = spawnSync(python, [
     script,
     "--source-root", sourceRoot,
-    "--output-dir", join(new URL("..", import.meta.url).pathname, "forbidden-audit-output")
+    "--output-dir", join(fileURLToPath(new URL("..", import.meta.url)), "forbidden-audit-output")
   ], { encoding: "utf8" });
 
   assert.equal(result.status, 2);
