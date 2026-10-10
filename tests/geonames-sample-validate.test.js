@@ -75,3 +75,45 @@ test("documentation keeps owner-laptop sample evidence distinct from builder ret
   assert.match(stageCJson, /"source_record_exact_match_to_KE_zip": true/);
   assert.match(sourceManifest, /owner_laptop_five_country_archive_comparison/);
 });
+
+ 
+test("crosswalk exports have deterministic schemas, sorting, and measured aggregate counts", async () => {
+ const fs = await import("node:fs/promises");
+ const a1 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json", import.meta.url), "utf8"));
+ const a2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
+ const summary = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.json", import.meta.url), "utf8")).crosswalk_exception_reconciliation;
+ const keys = ["geonames_id","name","country_code","feature_code","raw_admin1_code","raw_admin2_code","missing_reference_category","proposed_review_classification","crosswalk_lookup_key","raw_missing_code"];
+ for (const rows of [a1,a2]) {
+  for (const row of rows) assert.deepEqual(Object.keys(row), keys);
+  const sortKey = r => [r.country_code,r.geonames_id,r.raw_admin1_code,r.raw_admin2_code,r.feature_code,r.name].join("\\0");
+  assert.deepEqual(rows.map(sortKey), [...rows].sort((x,y)=>sortKey(x).localeCompare(sortKey(y))));
+  assert.ok(rows.every(r => !("parent_id" in r) && !("proposed_parent_id" in r)));
+ }
+ assert.equal(a1.length,2333); assert.equal(new Set(a1.map(r=>r.geonames_id)).size,2333);
+ assert.equal(a2.length,240); assert.equal(new Set(a2.map(r=>r.geonames_id)).size,240);
+ assert.equal(summary.counts.records_in_both_exception_categories,157);
+ assert.equal(summary.counts.unique_records_in_either_exception_category,2416);
+ assert.equal(summary.singapore.prior_exception_count,24);
+ assert.equal(summary.singapore.broader_admin1_miss_count,142);
+ assert.equal(summary.singapore.exact_id_overlap_count,24);
+ assert.equal(summary.singapore.prior_only_count,0);
+ assert.equal(summary.singapore.broader_only_count,118);
+ assert.equal(summary.singapore.raw_admin1_code_counts["00"],118);
+ assert.equal(summary.global_gates.full_worldwide_scan_reproduction,"UNVERIFIED");
+ assert.equal(summary.global_gates.current_owner_approved_iso_comparison,"UNVERIFIED");
+});
+
+test("unmatched codes remain unresolved and exports prohibit fabricated parent links", async () => {
+ const fs = await import("node:fs/promises");
+ const rows = [
+  ...JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json", import.meta.url), "utf8")),
+  ...JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"))
+ ];
+ for (const row of rows) {
+  assert.ok(row.missing_reference_category);
+  assert.ok(row.proposed_review_classification.startsWith("UNRESOLVED_"));
+  assert.ok(!("parent_id" in row) && !("proposed_parent_id" in row));
+  if (row.raw_missing_code === "00") assert.equal(row.proposed_review_classification,"UNRESOLVED_PLACEHOLDER_CODE");
+  else assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE");
+ }
+});

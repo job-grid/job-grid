@@ -651,5 +651,225 @@
       "worldwide_completeness_verified": false,
       "catalog_acceptance": "BLOCKED"
     }
+  },
+  "crosswalk_exception_reconciliation": {
+    "generated_from": "Owner-computer full crosswalk files and selected 25,685-row sample; read-only",
+    "crosswalk_key_counts": {
+      "admin1": 3865,
+      "admin2": 47642
+    },
+    "counts": {
+      "sample_rows": 25685,
+      "admin1_nonblank": 25653,
+      "admin1_matched": 23320,
+      "admin1_unmatched": 2333,
+      "admin1_unique_affected_records": 2333,
+      "admin2_nonblank": 20685,
+      "admin2_matched": 20445,
+      "admin2_unmatched": 240,
+      "admin2_unique_affected_records": 240,
+      "records_in_both_exception_categories": 157,
+      "unique_records_in_either_exception_category": 2416
+    },
+    "per_country": {
+      "KE": {
+        "admin1_unmatched": 26,
+        "admin2_unmatched": 5
+      },
+      "GB": {
+        "admin1_unmatched": 3,
+        "admin2_unmatched": 29
+      },
+      "JP": {
+        "admin1_unmatched": 2161,
+        "admin2_unmatched": 206
+      },
+      "BR": {
+        "admin1_unmatched": 1,
+        "admin2_unmatched": 0
+      },
+      "SG": {
+        "admin1_unmatched": 142,
+        "admin2_unmatched": 0
+      }
+    },
+    "singapore": {
+      "prior_exception_count": 24,
+      "broader_admin1_miss_count": 142,
+      "exact_id_overlap_count": 24,
+      "prior_only_count": 0,
+      "broader_only_count": 118,
+      "overlap_ids": [
+        "1880137",
+        "1880177",
+        "1880226",
+        "1880294",
+        "1880348",
+        "1880351",
+        "1880469",
+        "1880536",
+        "1880639",
+        "1881952",
+        "1881953",
+        "1882033",
+        "1882155",
+        "1882316",
+        "1882778",
+        "1884365",
+        "1884367",
+        "1884382",
+        "1884385",
+        "1884737",
+        "7281987",
+        "7289746",
+        "7289760",
+        "7289766"
+      ],
+      "raw_admin1_code_counts": {
+        "00": 118,
+        "01": 4,
+        "02": 7,
+        "03": 7,
+        "04": 3,
+        "05": 3
+      },
+      "all_cases_remain_unresolved": true
+    },
+    "review_policy": {
+      "raw_00": "UNRESOLVED_PLACEHOLDER_OR_NONSTANDARD_CODE_CANDIDATE",
+      "unmatched_nonzero": "UNRESOLVED_MISSING_REFERENCE_OR_POSSIBLE_VERSION_DEPENDENT; not asserted legacy",
+      "missing_crosswalk": "Not automatic invalidity",
+      "parent_relationship": "Do not infer or fabricate",
+      "same_name": "Keep distinct by GeoNames ID and raw codes"
+    },
+    "archives": [
+      {
+        "file": "KE.zip",
+        "bytes": 859668,
+        "sha256": "d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43",
+        "zip_crc": "PASS",
+        "source_rows": 31490,
+        "exact_sample_matches": 2631
+      },
+      {
+        "file": "GB.zip",
+        "bytes": 3639180,
+        "sha256": "eefc08df408aa4c3218151b5d9ca73768555fafac676a2ce5d612e2007c1f32a",
+        "zip_crc": "PASS",
+        "source_rows": 109181,
+        "exact_sample_matches": 12096
+      },
+      {
+        "file": "JP.zip",
+        "bytes": 4959247,
+        "sha256": "f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58",
+        "zip_crc": "PASS",
+        "source_rows": 103762,
+        "exact_sample_matches": 4899
+      },
+      {
+        "file": "BR.zip",
+        "bytes": 7177385,
+        "sha256": "4a9ddffb465ccad219127146f0678087cfece414ca0240bee53a5ea6750eebd8",
+        "zip_crc": "PASS",
+        "source_rows": 235530,
+        "exact_sample_matches": 5888
+      },
+      {
+        "file": "SG.zip",
+        "bytes": 69019,
+        "sha256": "7e18942c0241144089da0b9bea659c96fadc201573be9d25a02442eb7b7f09d8",
+        "zip_crc": "PASS",
+        "source_rows": 1979,
+        "exact_sample_matches": 171
+      }
+    ],
+    "timestamp_semantics": {
+      "local_file_mtime_utc": "Filesystem path.stat().st_mtime metadata, not server retrieval metadata",
+      "http_last_modified_utc": null,
+      "exact_remote_retrieval_time_utc": null
+    },
+    "global_gates": {
+      "full_worldwide_scan_reproduction": "UNVERIFIED",
+      "current_owner_approved_iso_comparison": "UNVERIFIED",
+      "worldwide_completeness": "UNVERIFIED",
+      "catalog_acceptance": "BLOCKED",
+      "phase_4c": "BLOCKED"
+    }
+  },
+  "manifest_timestamp_semantics": {
+    "original_sample_field": "last_modified_utc",
+    "corrected_field": "local_file_mtime_utc",
+    "local_file_mtime_utc": "filesystem path.stat().st_mtime metadata only",
+    "http_last_modified_utc": null,
+    "exact_remote_retrieval_timestamp_utc": null,
+    "original_sample_archive_mutated": false
+  },
+  "owner_computer_five_country_comparison": {
+    "status": "PASS_SELECTED_SAMPLE_COMPARISON",
+    "archives": [
+      {
+        "file": "KE.zip",
+        "bytes": 859668,
+        "sha256": "d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43",
+        "zip_crc": "PASS",
+        "source_rows": 31490,
+        "exact_sample_matches": 2631
+      },
+      {
+        "file": "GB.zip",
+        "bytes": 3639180,
+        "sha256": "eefc08df408aa4c3218151b5d9ca73768555fafac676a2ce5d612e2007c1f32a",
+        "zip_crc": "PASS",
+        "source_rows": 109181,
+        "exact_sample_matches": 12096
+      },
+      {
+        "file": "JP.zip",
+        "bytes": 4959247,
+        "sha256": "f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58",
+        "zip_crc": "PASS",
+        "source_rows": 103762,
+        "exact_sample_matches": 4899
+      },
+      {
+        "file": "BR.zip",
+        "bytes": 7177385,
+        "sha256": "4a9ddffb465ccad219127146f0678087cfece414ca0240bee53a5ea6750eebd8",
+        "zip_crc": "PASS",
+        "source_rows": 235530,
+        "exact_sample_matches": 5888
+      },
+      {
+        "file": "SG.zip",
+        "bytes": 69019,
+        "sha256": "7e18942c0241144089da0b9bea659c96fadc201573be9d25a02442eb7b7f09d8",
+        "zip_crc": "PASS",
+        "source_rows": 1979,
+        "exact_sample_matches": 171
+      }
+    ],
+    "source_records_parsed": 481942,
+    "sample_records_matched_exactly": 25685,
+    "fields_compared": 19,
+    "missing_sample_ids": 0,
+    "field_conflicts": 0,
+    "duplicate_source_ids": 0,
+    "malformed_source_rows": 0
+  },
+  "historical_builder_retrieval_failures": {
+    "status": "FAILED_DNS_HISTORICAL_BUILDER_ATTEMPT",
+    "scope": "isolated builder retrieval only; distinct from successful owner-computer local archive comparison",
+    "source_archives_retrieved_by_builder": 0
+  },
+  "row_level_crosswalk_exports": {
+    "directory": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/",
+    "admin1_rows": 2333,
+    "admin2_rows": 240,
+    "formats": [
+      "CSV",
+      "JSON"
+    ],
+    "deterministic_sort": "country_code, geonames_id, raw_admin1_code, raw_admin2_code, feature_code, name"
   }
 }
