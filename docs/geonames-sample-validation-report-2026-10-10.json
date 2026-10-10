@@ -1,0 +1,141 @@
+{
+  "report_version": "1.0",
+  "generated_utc": "2026-10-10",
+  "input_artifact": {
+    "filename": "JobGrid-GeoNames-Sample-20261010-163234.zip",
+    "bytes": 1346867,
+    "sha256": "feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf",
+    "zip_integrity": "PASS",
+    "members": 10,
+    "original_source_archives_included": false
+  },
+  "disposition": "BLOCKED_FOR_CATALOG_ACCEPTANCE_READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
+  "worldwide_records_scanned_reported_by_local_parser": 13472324,
+  "malformed_worldwide_rows_reported": 0,
+  "selected_source_records_reported": 481942,
+  "sample_rows_measured": 25685,
+  "unique_geoname_ids_measured": 25685,
+  "duplicate_ids_in_sample_measured": 0,
+  "invalid_coordinates_in_sample_measured": 0,
+  "country_info_rows": 5,
+  "admin1_crosswalk_rows": 125,
+  "admin2_crosswalk_rows": 6977,
+  "exception_rows": 24,
+  "exception_issue_counts": {
+    "admin1_crosswalk_not_found": 24
+  },
+  "exception_country_counts": {
+    "SG": 24
+  },
+  "admin2_crosswalk_exceptions": 0,
+  "country_counts": {
+    "KE": {
+      "source_records": 31490,
+      "administrative_features": 2424,
+      "populated_places": 6957,
+      "selected_records": 2631
+    },
+    "GB": {
+      "source_records": 109181,
+      "administrative_features": 11895,
+      "populated_places": 43712,
+      "selected_records": 12096
+    },
+    "JP": {
+      "source_records": 103762,
+      "administrative_features": 4697,
+      "populated_places": 50801,
+      "selected_records": 4899
+    },
+    "BR": {
+      "source_records": 235530,
+      "administrative_features": 5676,
+      "populated_places": 72392,
+      "selected_records": 5888
+    },
+    "SG": {
+      "source_records": 1979,
+      "administrative_features": 1,
+      "populated_places": 387,
+      "selected_records": 171
+    }
+  },
+  "kenya_source_id_checks": {
+    "Nairobi": {
+      "geoname_id": "184745",
+      "feature_code": "PPLC",
+      "admin1_code": "05",
+      "admin1_crosswalk_id": "184742",
+      "result": "MATCH"
+    },
+    "Kisumu": {
+      "geoname_id": "191245",
+      "feature_code": "PPLA",
+      "admin1_code": "26",
+      "admin1_crosswalk_id": "191242",
+      "result": "MATCH"
+    },
+    "Mombasa_candidate": {
+      "geoname_id": "186301",
+      "feature_code": "PPLA",
+      "admin1_code": "37",
+      "admin1_crosswalk_id": "186298",
+      "result": "MATCH"
+    },
+    "Mombasa_same_name_alternative": {
+      "geoname_id": "186300",
+      "feature_code": "PPL",
+      "admin1_code": "27",
+      "result": "AMBIGUOUS_NAME_KEEP_DISTINCT"
+    }
+  },
+  "other_name_collision_checks": {
+    "London": [
+      {
+        "geoname_id": "2643743",
+        "feature_code": "PPLC",
+        "country_code": "GB",
+        "admin1_code": "ENG",
+        "admin2_code": "GLA"
+      }
+    ],
+    "Tokyo": [
+      {
+        "geoname_id": "1850147",
+        "feature_code": "PPLC",
+        "country_code": "JP",
+        "admin1_code": "40"
+      }
+    ],
+    "Brasilia_name_matches": 11,
+    "Brasilia_capital_candidate": {
+      "geoname_id": "3469058",
+      "feature_code": "PPLC",
+      "country_code": "BR",
+      "admin1_code": "07",
+      "admin2_code": "5300108"
+    },
+    "Singapore": [
+      {
+        "geoname_id": "1880252",
+        "feature_code": "PPLC",
+        "country_code": "SG",
+        "admin1_code": "",
+        "admin2_code": ""
+      }
+    ]
+  },
+  "integrity_caveats": [
+    "Original allCountries.zip and full metadata/crosswalk files are not in the uploaded archive; source manifest hashes and byte sizes were not independently recomputed.",
+    "manifest last_modified_utc is populated from local file mtime by the supplied script, not a verified HTTP Last-Modified header.",
+    "Crosswalk checks are not parent relationship validation; parent links were not resolved.",
+    "Current ISO authority snapshot was not independently obtained."
+  ],
+  "governance": {
+    "database_operations": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "pr_merged": false,
+    "phase_4c_recovery_readiness": "BLOCKED"
+  }
+}
