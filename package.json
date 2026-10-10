@@ -1,0 +1,13 @@
+{
+  "name": "job-grid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Job Grid public website foundation",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "lint": "node scripts/lint.mjs",
+    "test": "node --test",
+    "typecheck": "node scripts/check-syntax.mjs"
+  }
+}
