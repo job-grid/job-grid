@@ -1,0 +1,205 @@
+{
+  "report_version": "1.0",
+  "generated_at_utc": "2026-10-10",
+  "pr": 27,
+  "verification_status": "BLOCKED_OFFICIAL_COUNTRY_ARCHIVES_NOT_PRESENT",
+  "recommendation": {
+    "independent_source_verification": "BLOCKED",
+    "prior_sample_evidence": "READY_FOR_OWNER_REVIEW",
+    "catalog_acceptance": "BLOCKED"
+  },
+  "input_discovery": {
+    "owner_directory_checked": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
+    "downloads_directory_checked": "C:\\Users\\jonat\\Downloads",
+    "checked_at_utc": "2026-10-10T14:29:13Z",
+    "available_files_in_source_folder": [
+      "allCountries.zip",
+      "countryInfo.txt.txt",
+      "admin1CodesASCII.txt",
+      "admin2Codes.txt",
+      "readme.txt",
+      "JobGrid-GeoNames-Sample-20261010-163234.zip",
+      "sample-output-20261010-163234/"
+    ],
+    "official_country_archives_present": [],
+    "worldwide_archive_opened_or_parsed_for_this_task": false,
+    "worldwide_archive_download_started": false
+  },
+  "source_archives": [
+    {
+      "file": "KE.zip",
+      "url": "https://download.geonames.org/export/dump/KE.zip",
+      "presence": "ABSENT_IN_CHECKED_INPUT_DIRECTORY",
+      "retrieved_at_utc": null,
+      "bytes": null,
+      "sha256": null,
+      "zip_integrity": "NOT_RUN",
+      "source_records_parsed": null,
+      "sample_ids_matched": null,
+      "sample_ids_missing_from_source": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null
+    },
+    {
+      "file": "GB.zip",
+      "url": "https://download.geonames.org/export/dump/GB.zip",
+      "presence": "ABSENT_IN_CHECKED_INPUT_DIRECTORY",
+      "retrieved_at_utc": null,
+      "bytes": null,
+      "sha256": null,
+      "zip_integrity": "NOT_RUN",
+      "source_records_parsed": null,
+      "sample_ids_matched": null,
+      "sample_ids_missing_from_source": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null
+    },
+    {
+      "file": "JP.zip",
+      "url": "https://download.geonames.org/export/dump/JP.zip",
+      "presence": "ABSENT_IN_CHECKED_INPUT_DIRECTORY",
+      "retrieved_at_utc": null,
+      "bytes": null,
+      "sha256": null,
+      "zip_integrity": "NOT_RUN",
+      "source_records_parsed": null,
+      "sample_ids_matched": null,
+      "sample_ids_missing_from_source": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null
+    },
+    {
+      "file": "BR.zip",
+      "url": "https://download.geonames.org/export/dump/BR.zip",
+      "presence": "ABSENT_IN_CHECKED_INPUT_DIRECTORY",
+      "retrieved_at_utc": null,
+      "bytes": null,
+      "sha256": null,
+      "zip_integrity": "NOT_RUN",
+      "source_records_parsed": null,
+      "sample_ids_matched": null,
+      "sample_ids_missing_from_source": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null
+    },
+    {
+      "file": "SG.zip",
+      "url": "https://download.geonames.org/export/dump/SG.zip",
+      "presence": "ABSENT_IN_CHECKED_INPUT_DIRECTORY",
+      "retrieved_at_utc": null,
+      "bytes": null,
+      "sha256": null,
+      "zip_integrity": "NOT_RUN",
+      "source_records_parsed": null,
+      "sample_ids_matched": null,
+      "sample_ids_missing_from_source": null,
+      "conflicting_records": null,
+      "ambiguous_matches": null
+    }
+  ],
+  "totals": {
+    "requested_country_archives": 5,
+    "available_country_archives": 0,
+    "archives_parsed": 0,
+    "source_records_compared": 0,
+    "sample_records_matched": null,
+    "sample_records_missing_from_source": null,
+    "conflicting_records": null,
+    "ambiguous_matches": null,
+    "null_counts_mean": "NOT MEASURED, not zero; no official country source rows were available."
+  },
+  "stage_a_prior_independent_sample_inspection": {
+    "uploaded_sample_archive": "JobGrid-GeoNames-Sample-20261010-163234.zip",
+    "uploaded_sample_sha256": "feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf",
+    "uploaded_sample_bytes": 1346867,
+    "zip_integrity": "PASS",
+    "selected_sample_rows": 25685,
+    "distinct_geonames_ids": 25685,
+    "duplicate_sample_ids": 0,
+    "invalid_sample_coordinates": 0,
+    "sg_admin1_crosswalk_exceptions": 24,
+    "full_worldwide_scan_reported_by_owner_local_script": 13472324,
+    "full_worldwide_scan_reproduced_by_builder": false
+  },
+  "kenya_sample_only_candidates": [
+    {
+      "name": "Nairobi",
+      "geoname_id": "184745",
+      "feature_code": "PPLC",
+      "country_code": "KE",
+      "admin1_code": "05",
+      "included_sample_crosswalk_candidate": "Nairobi County ID 184742",
+      "official_ke_zip_verified": false
+    },
+    {
+      "name": "Kisumu",
+      "geoname_id": "191245",
+      "feature_code": "PPLA",
+      "country_code": "KE",
+      "admin1_code": "26",
+      "included_sample_crosswalk_candidate": "Kisumu County ID 191242",
+      "official_ke_zip_verified": false
+    },
+    {
+      "name": "Mombasa candidate",
+      "geoname_id": "186301",
+      "feature_code": "PPLA",
+      "country_code": "KE",
+      "admin1_code": "37",
+      "included_sample_crosswalk_candidate": "Mombasa County ID 186298",
+      "official_ke_zip_verified": false
+    },
+    {
+      "name": "Mombasa same-name alternative",
+      "geoname_id": "186300",
+      "feature_code": "PPL",
+      "country_code": "KE",
+      "admin1_code": "27",
+      "included_sample_crosswalk_candidate": null,
+      "official_ke_zip_verified": false,
+      "handling": "Keep distinct; do not collapse by name alone."
+    }
+  ],
+  "singapore_exception_handling": {
+    "exception_count": 24,
+    "reason_code": "admin1_crosswalk_not_found",
+    "country_code": "SG",
+    "classification": "UNRESOLVED_SOURCE_MODEL_OR_CROSSWALK_EXCEPTION",
+    "official_sg_zip_checked": false,
+    "automatic_invalid_record_rejection": false,
+    "preserve_source_ids_and_admin_codes": true,
+    "synthesize_admin_records_or_parent_links": false
+  },
+  "manifest_timestamp_correction": {
+    "original_owner_sample_manifest": "source_manifest.json in uploaded sample ZIP",
+    "original_field_name": "last_modified_utc",
+    "actual_field_semantics": "Python path.stat().st_mtime converted to UTC; local filesystem modification time, not an HTTP Last-Modified header.",
+    "corrected_field_name": "local_file_mtime_utc",
+    "separate_http_header_field": "http_last_modified_utc",
+    "http_header_value": null,
+    "original_evidence_zip_mutated": false
+  },
+  "gaps_to_close": [
+    "Provide the five official country ZIPs in an approved transfer location.",
+    "Record actual byte sizes and SHA-256 values and run ZIP integrity tests.",
+    "Parse each archive and compare sample rows by GeoNames ID and all 19 original fields.",
+    "Report matched, missing, conflicting and ambiguous records with row-level exceptions.",
+    "Verify Nairobi, Kisumu, and Mombasa candidates against KE.zip with IDs and administrative codes.",
+    "Evaluate Singapore's 24 exceptions against SG.zip and source-supported hierarchy evidence without forced mappings.",
+    "Obtain and compare a current approved ISO authority snapshot.",
+    "Complete parent relationship reconciliation and report unresolved relationships."
+  ],
+  "governance": {
+    "pr_merged": false,
+    "database_migrations": false,
+    "seeds": false,
+    "database_imports": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "secrets_changes": false,
+    "backup_recovery_changes": false,
+    "phase_4c_recovery_readiness": "BLOCKED",
+    "worldwide_completeness_claim": false,
+    "production_readiness_claim": false
+  }
+}
