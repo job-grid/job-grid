@@ -427,3 +427,16 @@ The separate verifier and resulting measurements are recorded in [the independen
 **Important boundaries:** the official GeoNames URLs were not re-fetched during the independent scan; remote source origin, exact remote retrieval timestamps and server HTTP `Last-Modified` headers therefore remain unverified. The separate implementation scanned the existing archive and checked the already-selected sample against it; it did not reimplement the sample-selection algorithm. The current ISO snapshot has not been captured or compared. Worldwide geographic completeness, feature-code/selectability policy and full place-parent correctness have not been established.
 
 **Current disposition:** local separate-implementation scan and sample-record comparison **PASS**; output byte comparison **PASS**; official source origin and remote retrieval metadata **UNVERIFIED**; ISO authority comparison **UNVERIFIED**; unresolved crosswalk/parent hierarchy and business policy decisions remain. Country-catalog acceptance remains **BLOCKED**. No migrations, seeds, imports, production, Cloudflare, secret, deployment or backup/recovery operations were performed. Phase 4C remains separately **BLOCKED**.
+
+## 5E. Administrative crosswalk candidate-presence audit — 2026-10-10
+
+A separate read-only audit checked whether GeoNames IDs referenced by resolved admin crosswalk entries occur in the selected sample as same-country feature-class `A` administrative records.
+
+- **23,320** resolved admin1 code references had candidate IDs present as same-country administrative features.
+- **20,445** resolved admin2 composite-key references had candidate IDs present as same-country administrative features.
+- Candidate ID presence mismatches found: **0**.
+- The one admin2 export row with a blank raw admin1 code and non-empty raw admin2 code was reclassified as `UNRESOLVED_MISSING_ADMIN1_CONTEXT`; the 240-row unresolved admin2 export total is unchanged (239 missing composite keys plus one missing-context case).
+
+See the [hierarchy candidate-presence audit](geonames-hierarchy-candidate-presence-audit-2026-10-10.md) and [machine-readable report](geonames-hierarchy-candidate-presence-audit-2026-10-10.json).
+
+This demonstrates candidate-record availability only. It does not prove every child-to-parent relationship is semantically correct, validate every global hierarchy, resolve the remaining 2,333 admin1 references, or authorize any `parent_id` assignment. Do not synthesize missing parents. Country-catalog acceptance remains **BLOCKED** pending ISO comparison, source-origin evidence, feature/selectability decisions, and explicit hierarchy/exception policy approval.
