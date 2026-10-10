@@ -18,13 +18,34 @@
     {
       "reason_code": "SOURCE_DNS_FAILURE",
       "count": 9,
-      "detail": "All requested official GeoNames downloads failed in the isolated staging workspace with URLError: [Errno -3] Temporary failure in name resolution."
+      "detail": "All requested official GeoNames downloads failed in the isolated builder workspace with URLError: [Errno -3] Temporary failure in name resolution."
     }
   ],
   "notes": [
+    "This JSON is the builder's original-source retrieval result only. It does not describe or negate the separate owner-laptop sample generation and builder inspection of the uploaded sample ZIP.",
     "Null counts mean not measured; they must not be interpreted as zero records.",
-    "No checksum could be computed because no source bytes were retrieved.",
-    "No ZIP integrity checks, parsing, country hierarchy reconciliation, alternate-name validation, or ISO authority comparison was performed.",
+    "No checksum could be computed because no original source bytes were retrieved in the builder workspace.",
+    "No original-source ZIP integrity checks, full-source parsing, complete country hierarchy reconciliation, alternate-name validation, or ISO authority comparison were performed by the builder.",
+    "See ../../geonames-sample-validation-report-2026-10-10.json for separately measured uploaded-sample checks and owner-local-script-reported counts.",
     "No database, migration, seed, import, production, Cloudflare, secrets, backup, or recovery operation was performed."
-  ]
+  ],
+  "evidence_stages": {
+    "stage_a_owner_laptop_sample_generation_and_artifact_inspection": {
+      "owner_local_script_reported_worldwide_records_scanned": 13472324,
+      "owner_local_script_reported_malformed_rows": 0,
+      "sample_rows_independently_measured": 25685,
+      "unique_geoname_ids_independently_measured": 25685,
+      "duplicate_ids_in_sample": 0,
+      "invalid_coordinates_in_sample": 0,
+      "sg_admin1_crosswalk_exceptions_in_included_sample": 24,
+      "full_source_scan_independently_reproduced": false
+    },
+    "stage_b_independent_source_pinned_reproducibility": {
+      "status": "INCOMPLETE",
+      "original_source_sha256_verified": false,
+      "full_source_scan_reproduced": false,
+      "current_approved_iso_authority_compared": false,
+      "complete_parent_hierarchy_resolved": false
+    }
+  }
 }
