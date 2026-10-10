@@ -56,7 +56,10 @@ def read_iso_rows(
 
     with path.open("r", encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream)
-        headers = set(reader.fieldnames or [])
+        fieldnames = reader.fieldnames or []
+        headers = set(fieldnames)
+        if len(fieldnames) != len(headers):
+            raise ValueError("Snapshot CSV has duplicate column headers.")
         required = {alpha2_column, alpha3_column, numeric_column}
         missing = sorted(required - headers)
         if missing:
