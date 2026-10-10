@@ -169,8 +169,12 @@ def main() -> int:
         parser.error(f"{label} must be stored outside the repository root: {repo_root}")
 
     parsed_source_url = urlparse(args.source_url)
+    official_host = (parsed_source_url.hostname or "").lower()
+    is_iso_host = official_host == "iso.org" or official_host.endswith(".iso.org")
     if parsed_source_url.scheme != "https" or not parsed_source_url.netloc:
         parser.error("--source-url must be an HTTPS URL identifying the actual official source used.")
+    if not is_iso_host or parsed_source_url.username or parsed_source_url.password:
+        parser.error("--source-url must use an official ISO-controlled hostname under iso.org and must not embed credentials.")
 
     try:
         retrieved_at = datetime.fromisoformat(args.retrieved_at_utc.replace("Z", "+00:00"))
