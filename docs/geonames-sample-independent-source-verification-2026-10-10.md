@@ -126,3 +126,19 @@ A second run of the original local `prepare_sample.py` finished in a separate ou
 This is a repeated execution of the same implementation on the same computer, not an independent reproduction. Byte-for-byte comparison of the selected sample output files is NOT MEASURED. Full independent reproduction and worldwide completeness remain UNVERIFIED.
 
 The source manifest’s `last_modified_utc` was populated from local filesystem `st_mtime`; it is not a captured HTTP header. Use the meaning `local_file_mtime_utc` and leave `http_last_modified_utc` null absent an actual response header. The original sample package was not altered.
+
+## Independent worldwide scan follow-up — 2026-10-10
+
+This follow-up supersedes earlier statements in this report that the full worldwide scan had not been independently reproduced or that the original/repeat output byte comparison had not been measured.
+
+A separate PowerShell/.NET streaming implementation scanned the owner's existing local `allCountries.zip`, counting **13,472,324** rows with **0** malformed 19-field rows. The existing 25,685-row sample was compared to the full worldwide archive by GeoNames ID and all 19 source fields: **25,685 exact matches, 0 missing IDs, 0 field conflicts and 0 duplicate source hits**. The five-country source total was 481,942; no duplicate IDs or invalid coordinates were found in those selected-country records.
+
+The separate implementation recalculated the local source file sizes and SHA-256 hashes; they match the prior source manifest. Seven files from the original sample output and same-script repeat output were then checked by bytes and SHA-256; all **7/7 were byte-identical**.
+
+Detailed evidence:
+- [Independent worldwide verification report](geonames-worldwide-independent-verification-2026-10-10.md)
+- [Machine-readable verification report](geonames-worldwide-independent-verification-2026-10-10.json)
+
+This establishes a separate-implementation verification of the existing local worldwide archive and selected records. It does **not** establish official URL/source origin, exact remote retrieval timestamps, a captured server HTTP `Last-Modified` value, an independent reimplementation of the sample-selection algorithm, worldwide geographic completeness, or a completely correct place-parent hierarchy. The owner-approved ISO source snapshot has not yet been captured, hashed or compared under its applicable terms.
+
+**Current disposition:** separate implementation scan and exact sample-record reconciliation **PASS**; output byte comparison **PASS**; source-origin/remote retrieval metadata **UNVERIFIED**; ISO comparison **UNVERIFIED**; hierarchy/feature policies pending; catalog acceptance **BLOCKED**; Phase 4C remains separately **BLOCKED**.
