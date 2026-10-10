@@ -60,3 +60,15 @@ The 24 admin1 exceptions remain Singapore cases. This repeat run does not approv
 4. Resolve crosswalk and parent-hierarchy decisions without inventing records or links.
 
 **Current status:** same-owner-computer repeat counts matched; independent worldwide reproduction UNVERIFIED; current owner-approved ISO comparison UNVERIFIED; worldwide completeness UNVERIFIED; catalog acceptance BLOCKED; Phase 4C separately BLOCKED.
+
+## Follow-up: independent PowerShell/.NET verification — 2026-10-10
+
+This section supersedes the earlier pending-status statements above where they said that a separate implementation scan or the output-byte comparison had not been measured.
+
+A separately authored PowerShell/.NET streaming verifier ran against the existing local `allCountries.zip` and compared the original selected sample against the full `allCountries.txt` member. It measured **13,472,324** worldwide rows, **0** malformed worldwide rows, and **25,685/25,685** sample records exactly matching by GeoNames ID and all 19 original fields. Missing sample IDs, field conflicts and duplicate source hits were all **0**.
+
+The verifier independently recalculated local input-file sizes and SHA-256 values and found that they match the existing manifest. Seven original/repeat output and attribution files were also compared byte-for-byte; **7/7 were identical**. Full per-file details appear in [the independent verification report](geonames-worldwide-independent-verification-2026-10-10.md) and its [machine-readable summary](geonames-worldwide-independent-verification-2026-10-10.json).
+
+**Remaining limits:** the official GeoNames URLs were not re-fetched for this follow-up; no HTTP `Last-Modified` headers or exact remote retrieval timestamps were captured; the sample-selection algorithm itself was not independently reimplemented; worldwide geographic completeness is not established. The ISO snapshot is still not captured or compared. Parent-hierarchy and crosswalk policy decisions remain open, so **catalog acceptance remains BLOCKED**. Phase 4C recovery readiness remains separately BLOCKED.
+
+No source archive, database, production configuration, secrets, Cloudflare settings, deployment or recovery system was changed.
