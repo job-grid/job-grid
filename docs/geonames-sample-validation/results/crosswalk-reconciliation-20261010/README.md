@@ -43,3 +43,11 @@ All 24 earlier Singapore exception IDs occur in the broader 142-row Singapore se
 - Obtain owner approval for unresolved representations and hierarchy policy before catalog acceptance.
 
 These outputs address the row-level export requirement only. Full worldwide scan reproduction and current approved ISO-authority comparison remain UNVERIFIED; catalog acceptance and Phase 4C recovery readiness remain BLOCKED.
+
+## Broader verification update — 2026-10-10
+
+The row-level crosswalk exports and classifications above remain unchanged: they describe unresolved reference keys and do not approve or fabricate parent links. A separate PowerShell/.NET implementation has since scanned the full local `allCountries.zip` and matched all 25,685 existing sample records to the worldwide archive across all 19 original fields. Details are in [the independent worldwide scan report](../../../geonames-worldwide-independent-verification-2026-10-10.md) and [machine-readable evidence](../../../geonames-worldwide-independent-verification-2026-10-10.json).
+
+This advances the full-local-archive row-count/sample-match gate, but does not change the crosswalk outcomes: **2,333** admin1 misses, **240** admin2 misses, **157** records in both categories, **2,416** unique affected records, and **142** unresolved Singapore admin1 misses (24 prior exceptions overlap exactly; 118 additional rows with raw code `00`). Do not reject unmatched rows automatically or synthesize administrative parents.
+
+Current overall gates remain: ISO comparison **UNVERIFIED** (source choice approved, snapshot not yet compared); official GeoNames source-origin/remote retrieval metadata **UNVERIFIED**; worldwide completeness **UNVERIFIED**; parent/feature policies require review; catalog acceptance **BLOCKED**; Phase 4C recovery readiness separately **BLOCKED**.
