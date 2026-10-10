@@ -1,5 +1,5 @@
 {
-  "report_version": "1.7",
+  "report_version": "1.8",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -10,7 +10,8 @@
     "current_iso_authority_comparison": "UNVERIFIED",
     "worldwide_completeness": "UNVERIFIED",
     "catalog_acceptance": "BLOCKED",
-    "phase_4c_recovery_readiness": "BLOCKED"
+    "phase_4c_recovery_readiness": "BLOCKED",
+    "conservative_feature_selectability_policy": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS_2026_10_11"
   },
   "scope": {
     "implementation": "Committed reproducible read-only Python audit, executed locally on owner-connected Windows computer; ADM1/ADM2 crosswalk identity matches are separated from true self-reference candidates.",
@@ -168,11 +169,11 @@
     "outstanding": [
       "2,333 admin1 references remain without an exact crosswalk key (2,284 raw 00 candidates and 49 unmatched nonzero references).",
       "240 admin2 references remain unresolved: 239 absent composite keys and one missing admin1 context.",
-      "Interpretation of placeholder/nonstandard codes",
+      "Review/disposition of individual placeholder/nonstandard references under the owner-approved conservative default",
       "ISO snapshot acquisition and comparison under permitted terms",
       "Source-origin and remote retrieval metadata",
       "Worldwide geographic completeness",
-      "Feature inclusion/selectability policies",
+      "Implementation and regression testing of approved selector defaults when catalog functionality is introduced",
       "Full approved parent-hierarchy rules"
     ],
     "catalog_acceptance": "BLOCKED"
@@ -190,7 +191,9 @@
     "phase_4c_recovery_readiness": "BLOCKED",
     "parent_links_written": false,
     "source_files_modified": false,
-    "database_operations": false
+    "database_operations": false,
+    "owner_approved_conservative_defaults": true,
+    "owner_approved_conservative_defaults_date": "2026-10-11"
   },
   "audit_script": {
     "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
@@ -716,5 +719,27 @@
     "repository_script_blob_sha1": "1ca2aafb61acc231d8b0d17b547933b6c11e2fec",
     "interpretation": "Every crosswalk candidate ID present in the selected sample has its own raw administrative code fields matching the key that resolved it. This confirms source-key consistency in the measured sample, not semantic parentage or a complete hierarchy path. No parent links were created.",
     "catalog_acceptance": "BLOCKED"
+  },
+  "owner_policy_decision": {
+    "decision": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
+    "decision_date": "2026-10-11",
+    "scope": [
+      "Preserve every source GeoNames ID, entity record, feature code, and raw administrative code.",
+      "Leave raw 00 values unresolved; do not normalize or invent a hierarchy parent.",
+      "Leave unmatched nonzero codes unresolved until source/version evidence establishes an interpretation.",
+      "Preserve historical administrative identities; do not use historical features as current administrative parents or current selector options by default.",
+      "Keep ADMD/ADMDH level unresolved until country/source evidence establishes its level.",
+      "Preserve populated-place identity independently from unresolved administrative association.",
+      "Keep same-name records with different IDs distinct unless an authority-backed crosswalk establishes identity.",
+      "Exclude unresolved, historical, and undifferentiated rows from current administrative selectors by default while retaining the records and their referenceability."
+    ],
+    "explicit_non_authorizations": [
+      "No individual unresolved reference is thereby resolved or declared invalid.",
+      "No parent link or parent ID is approved or assigned by this decision.",
+      "No schema, migration, seed, import, database, production, deployment, Cloudflare, secret, or backup/recovery change is authorized.",
+      "No paid ISO subscription is authorized.",
+      "The current ISO comparison, source-origin/retrieval evidence, and worldwide completeness remain unverified."
+    ],
+    "policy_document": "docs/geonames-feature-selectability-policy-proposal-2026-10-11.md"
   }
 }
