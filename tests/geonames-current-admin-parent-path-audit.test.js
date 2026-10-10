@@ -189,12 +189,12 @@ test("CLI reads a pinned source fixture, writes auditable artifacts, and records
       "geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code,owner_approved_disposition",
       "20,Target ADM2,XX,ADM2,01,02,PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED",
       "",
-    ].join("\\n");
+    ].join("\n");
     await writeFile(sourcePath, sourceRows.map((row) => [
       row.geonames_id, row.name, row.ascii_name, "", "1", "2", row.feature_class, row.feature_code,
       row.country_code, "", row.admin1_code, row.admin2_code, row.admin3_code, row.admin4_code,
       "0", "", "", "UTC", row.modification_date,
-    ].join("\\t")).join("\\n") + "\\n", "utf8");
+    ].join("\t")).join("\n") + "\n", "utf8");
     await writeFile(targetPath, targetCsv, "utf8");
 
     const processResult = spawnSync(process.execPath, [scriptPath, sourcePath, targetPath, outputPrefix], {
