@@ -154,3 +154,30 @@ test("duplicate ISO CSV headers are rejected", async (t) => {
   assert.equal(report, null);
   assert.match(result.stderr, /duplicate column headers/);
 });
+
+test("ISO source snapshots inside the repository are refused", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--iso-csv", script]
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /ISO source snapshot must be stored outside the repository root/);
+});
+
+test("row-level code mismatch details inside the repository are refused", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--private-details-path", script]
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /row-level mismatch details must be stored outside the repository root/);
+});
+
