@@ -89,6 +89,23 @@ The official [GeoNames Feature Codes reference](https://www.geonames.org/export/
 
 **Disposition:** keep every unresolved row, its raw code, GeoNames ID, feature code, and existing source context. Do not normalize `00`, relabel nonzero codes as legacy without evidence, reject rows automatically, or infer parent IDs. The remaining 2,333 admin1 and 240 admin2 cases stay **UNRESOLVED / REVIEW REQUIRED** pending approved inclusion, version, and country-specific hierarchy policies.
 
+## Candidate feature-level check — 2026-10-11
+
+A further read-only check profiled the feature codes of **distinct same-country administrative candidate IDs** returned by the two crosswalks. Expected identity matches are excluded because they are not parent candidates.
+
+| Crosswalk level | Distinct candidate rows checked | Observed feature codes | Rows with unexpected code in this sample |
+|---|---:|---|---:|
+| Admin1 | 23,195 | `ADM1`: 23,195 | 0 |
+| Admin2 | 13,468 | `ADM2`: 13,468 | 0 |
+
+Admin1 by country: BR `ADM1` 5,860; GB `ADM1` 12,088; JP `ADM1` 2,689; KE `ADM1` 2,558. No distinct admin1 candidates were found for SG because its sample admin1 references remain unmatched.
+
+Admin2 by country: BR `ADM2` 285; GB `ADM2` 11,819; JP `ADM2` 1,364. KE's exact admin2 crosswalk rows in the selected sample are identity matches, not distinct candidate parents; no distinct admin2 candidates were found for SG.
+
+The results are consistent with the level-specific feature codes in the official [GeoNames Feature Codes reference](https://www.geonames.org/export/codes.html), which describes `ADM1` as a first-order administrative division and `ADM2` as a second-order subdivision. This is a **feature-level consistency check only**: it does not establish that each candidate is the semantically correct parent of each child, prove a complete hierarchy path, or authorize parent assignments. No parent IDs or links were written.
+
+The aggregate counts and source/script fingerprints are recorded in `hierarchy_candidate_feature_level_profile` in the JSON report.
+
 ## Acceptance decision
 
 - **PASS:** Audit integrity and candidate-presence check on the hashed sample/crosswalk inputs.
