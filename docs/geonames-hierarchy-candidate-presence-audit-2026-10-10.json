@@ -263,7 +263,9 @@
       "other_candidate_presence_mismatches": 0,
       "parent_links_written": false,
       "database_operations": false,
-      "source_files_modified": false
+      "source_files_modified": false,
+      "total_identity_matches": 7102,
+      "total_self_reference_candidates": 0
     }
   },
   "total_metrics": {
