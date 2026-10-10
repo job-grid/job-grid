@@ -1056,9 +1056,9 @@
       "standard_page": "https://www.iso.org/standard/72482.html",
       "source_note": "ISO states the OBP is always up to date. ISO's ISO 3166-1:2020 page says it was reviewed and confirmed in 2025 and remains current.",
       "snapshot_downloaded_and_hashed": false,
-      "owner_approval_received": false,
+      "owner_approval_received": true,
       "comparison_completed": false,
-      "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
+      "status": "OWNER_APPROVED_SNAPSHOT_NOT_CAPTURED_OR_COMPARED"
     }
   },
   "iso_authority_candidate": {
@@ -1067,8 +1067,8 @@
     "standard_page": "https://www.iso.org/standard/72482.html",
     "source_note": "ISO states the OBP is always up to date. ISO's ISO 3166-1:2020 page says it was reviewed and confirmed in 2025 and remains current.",
     "snapshot_downloaded_and_hashed": false,
-    "owner_approval_received": false,
+    "owner_approval_received": true,
     "comparison_completed": false,
-    "status": "PROPOSED_SOURCE_ONLY_NOT_APPROVED"
+    "status": "OWNER_APPROVED_SNAPSHOT_NOT_CAPTURED_OR_COMPARED"
   }
 }
