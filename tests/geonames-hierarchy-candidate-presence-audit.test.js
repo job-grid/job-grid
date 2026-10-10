@@ -68,6 +68,16 @@ test("hierarchy audit is read-only and distinguishes missing admin1 context", as
   assert.equal(report.admin2.candidate_presence_issues, 0);
   assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin1.AA, { ADM1: 1 });
   assert.deepEqual(report.distinct_candidate_feature_codes_by_level_and_country.admin2.AA, { ADM2: 1 });
+  assert.deepEqual(report.candidate_key_code_consistency_by_level_and_country.admin1.AA, {
+    target_admin_rows_checked: 2,
+    target_admin1_code_matches: 2
+  });
+  assert.deepEqual(report.candidate_key_code_consistency_by_level_and_country.admin2.AA, {
+    complete_composite_key_matches: 2,
+    target_admin1_code_matches: 2,
+    target_admin2_code_matches: 2,
+    target_admin_rows_checked: 2
+  });
   assert.equal(report.exceptions.rows, 0);
   assert.equal(report.scope.parent_links_written, false);
   assert.equal(report.input_manifest.length, 3);
@@ -207,4 +217,45 @@ test("a self-referencing candidate on a non-ADM1 row is blocked and exported", a
 
   const exceptionCsv = await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8");
   assert.match(exceptionCsv, /ADMIN1_CROSSWALK_CANDIDATE_SELF_REFERENCE/);
+});
+
+test("crosswalk target code fields must match the lookup key", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-target-code-mismatch-test-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+
+  const sourceRoot = join(root, "sources");
+  const outputDir = join(root, "audit-output");
+  const sampleDir = join(sourceRoot, "sample-output-20261010-163234");
+  await mkdir(sampleDir, { recursive: true });
+
+  const sample = [
+    header,
+    row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
+    row("10", "Wrong Admin1 Code", "A", "ADM1", "AA", "02", ""),
+    row("11", "Wrong Admin2 Codes", "A", "ADM2", "AA", "02", "999")
+  ].join("\\n") + "\\n";
+  await writeFile(join(sampleDir, "geonames_places_sample.tsv"), sample, "utf8");
+  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\\tFixture Admin1\\tFixture Admin1\\t10\\n", "utf8");
+  await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\\tFixture Admin2\\tFixture Admin2\\t11\\n", "utf8");
+
+  const result = spawnSync(python, [
+    script,
+    "--source-root", sourceRoot,
+    "--output-dir", outputDir
+  ], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 1, result.stderr);
+
+  const report = JSON.parse(await readFile(join(outputDir, "hierarchy-audit-summary.json"), "utf8"));
+  assert.equal(report.status, "BLOCKED_CANDIDATE_PRESENCE_MISMATCHES");
+  assert.equal(report.candidate_key_code_consistency_by_level_and_country.admin1.AA.target_admin1_code_matches, 0);
+  assert.equal(report.candidate_key_code_consistency_by_level_and_country.admin1.AA.target_admin1_code_mismatches, 1);
+  assert.equal(report.candidate_key_code_consistency_by_level_and_country.admin2.AA.target_admin1_code_mismatches, 1);
+  assert.equal(report.candidate_key_code_consistency_by_level_and_country.admin2.AA.target_admin2_code_mismatches, 1);
+  assert.equal(report.admin1.candidate_presence_issues, 1);
+  assert.equal(report.admin2.candidate_presence_issues, 2);
+  assert.equal(report.exceptions.rows, 3);
+  assert.match(await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8"), /ADMIN1_CROSSWALK_TARGET_ADMIN1_CODE_MISMATCH/);
+  assert.match(await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8"), /ADMIN2_CROSSWALK_TARGET_ADMIN2_CODE_MISMATCH/);
+  assert.equal(report.scope.parent_links_written, false);
 });
