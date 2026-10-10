@@ -193,10 +193,19 @@ def main() -> int:
 
     iso_rows_without_geonames_alpha2_match = len(iso_alpha2_set - geonames_alpha2_set)
 
+    snapshot_integrity_issues = bool(iso_invalid or any(iso_duplicates.values()))
+    code_conflicts = bool(alpha3_conflicts or numeric_conflicts)
+    if snapshot_integrity_issues:
+        comparison_status = "BLOCKED_INVALID_SNAPSHOT"
+    elif code_conflicts:
+        comparison_status = "MISMATCHES_FOUND_REVIEW_REQUIRED"
+    else:
+        comparison_status = "PASS_SHARED_CODE_FIELDS_UNMATCHED_CANDIDATES_REVIEW_REQUIRED"
+
     snapshot_bytes, snapshot_sha256 = sha256_file(args.iso_csv)
     report = {
         "report_type": "iso_3166_1_current_code_comparison",
-        "status": "MEASURED_REVIEW_REQUIRED",
+        "status": comparison_status,
         "source_snapshot": {
             "source_url": args.source_url,
             "scope_assertion": "ISO_3166_1_CURRENT_CODES_ONLY",
