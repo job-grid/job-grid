@@ -22,6 +22,12 @@ async function runFixture(t, isoCsv, geonamesText, extraArgs = []) {
   await writeFile(isoPath, isoCsv, "utf8");
   await writeFile(geonamesPath, geonamesText, "utf8");
 
+  const replacements = new Map([
+    ["__ISO_INPUT__", isoPath],
+    ["__GEONAMES_INPUT__", geonamesPath],
+    ["__AGGREGATE_OUTPUT__", reportPath]
+  ]);
+  const expandedExtraArgs = extraArgs.map(arg => replacements.get(arg) ?? arg);
   const result = spawnSync(python, [
     script,
     "--iso-csv", isoPath,
@@ -32,7 +38,7 @@ async function runFixture(t, isoCsv, geonamesText, extraArgs = []) {
     "--alpha2-column", "Alpha-2 code",
     "--alpha3-column", "Alpha-3 code",
     "--numeric-column", "Numeric code",
-    ...extraArgs
+    ...expandedExtraArgs
   ], { encoding: "utf8" });
 
   assert.equal(result.error, undefined, result.error?.message);
@@ -42,7 +48,7 @@ async function runFixture(t, isoCsv, geonamesText, extraArgs = []) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  return { result, report };
+  return { result, report, paths: { dir, isoPath, geonamesPath, reportPath } };
 }
 
 test("ISO comparator runs offline and emits aggregate counts without code tuples", async (t) => {
@@ -179,5 +185,65 @@ test("row-level code mismatch details inside the repository are refused", async 
   assert.equal(result.status, 2);
   assert.equal(report, null);
   assert.match(result.stderr, /row-level mismatch details must be stored outside the repository root/);
+});
+
+test("aggregate report cannot overwrite the ISO source snapshot", async (t) => {
+  const isoText = isoHeader + "\nAA,AAA,001\n";
+  const geoText = geoRow("AA", "AAA", "001") + "\n";
+  const { result, report, paths } = await runFixture(
+    t, isoText, geoText, ["--output", "__ISO_INPUT__"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /aggregate report path must not overwrite either input file/);
+  assert.equal(await readFile(paths.isoPath, "utf8"), isoText);
+});
+
+test("private mismatch details cannot overwrite GeoNames source input", async (t) => {
+  const isoText = isoHeader + "\nAA,AAA,001\n";
+  const geoText = geoRow("AA", "AAA", "001") + "\n";
+  const { result, report, paths } = await runFixture(
+    t, isoText, geoText, ["--private-details-path", "__GEONAMES_INPUT__"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /row-level mismatch details path must not overwrite an input file/);
+  assert.equal(await readFile(paths.geonamesPath, "utf8"), geoText);
+});
+
+test("aggregate report and private mismatch details must use distinct paths", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAZ", "002") + "\n",
+    ["--private-details-path", "__AGGREGATE_OUTPUT__"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /row-level mismatch details and aggregate report must use different output paths/);
+});
+
+test("aggregate JSON report path outside Git is required", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--output", script]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /aggregate report must be stored outside the repository root/);
+});
+
+test("ISO snapshot and GeoNames input cannot be the same file", async (t) => {
+  const { result, report } = await runFixture(
+    t,
+    isoHeader + "\nAA,AAA,001\n",
+    geoRow("AA", "AAA", "001") + "\n",
+    ["--country-info", "__ISO_INPUT__"]
+  );
+  assert.equal(result.status, 2);
+  assert.equal(report, null);
+  assert.match(result.stderr, /ISO snapshot and GeoNames countryInfo input must be different files/);
 });
 
