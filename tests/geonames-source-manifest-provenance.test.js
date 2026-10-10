@@ -1,4 +1,5 @@
 import test from "node:test";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -124,5 +125,42 @@ test("preflight code explicitly keeps source archives outside Git", async () => 
   assert.match(source, /retrieval_started_at_utc/);
   assert.match(source, /retrieved_at_utc/);
   assert.match(source, /must be outside the repository root to keep source archives and private outputs out of Git/);
+});
+
+test("countryInfo preflight accepts exact 19-field rows and rejects truncated rows", async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), "job-grid-countryinfo-shape-"));
+  t.after(async () => rm(workspace, { recursive: true, force: true }));
+
+  const goodFields = Array(19).fill("");
+  goodFields[0] = "KE";
+  goodFields[1] = "KEN";
+  goodFields[2] = "404";
+  goodFields[16] = "184745";
+  const goodRow = goodFields.join("\t");
+  const badRow = Array(18).fill("X").join("\t");
+  const countryInfo = goodRow + "\n" + badRow + "\n";
+  await writeFile(join(workspace, "countryInfo.txt"), countryInfo, "utf8");
+  const expectedSha = createHash("sha256").update(countryInfo, "utf8").digest("hex");
+  await writeFile(join(workspace, "source-manifest.json"), JSON.stringify({
+    schema_version: 1,
+    sources: {
+      "countryInfo.txt": { expected_sha256: expectedSha }
+    }
+  }, null, 2));
+
+  const result = spawnSync(process.execPath, [script, "--workspace", workspace], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 2, result.stderr);
+
+  const manifest = JSON.parse(await readFile(join(workspace, "source-manifest.json"), "utf8"));
+  assert.equal(manifest.sources["countryInfo.txt"].integrity, "CHECKSUM_MATCH");
+  assert.equal(manifest.validation.country_info_records_read, 2);
+  assert.ok(manifest.exceptions.some(exception =>
+    exception.file === "countryInfo.txt"
+    && exception.reason_code === "INVALID_COLUMN_COUNT_EXPECTED_19"
+    && exception.count === 18
+  ));
+  assert.ok(manifest.validation.iso_code_coverage.KE.country_info_match);
+  assert.equal(manifest.validation.iso_code_coverage.KE.country_info_match.alpha2_matches, true);
 });
 
