@@ -109,3 +109,15 @@ The earlier status above that marked the full-world scan as unverified has been 
 See [the independent worldwide verification report](../geonames-worldwide-independent-verification-2026-10-10.md) and its [machine-readable JSON](../geonames-worldwide-independent-verification-2026-10-10.json).
 
 Still unresolved: the official GeoNames URLs were not re-fetched, so source-origin and remote retrieval metadata remain unverified; the sample-selection algorithm has not been independently reimplemented; the ISO snapshot has not been compared; worldwide completeness and parent-hierarchy correctness remain unverified. The Singapore and other crosswalk exceptions remain unresolved and catalog acceptance remains **BLOCKED**. Phase 4C remains separately **BLOCKED**.
+
+## Source preflight provenance hardening — 2026-10-10
+
+The reusable preflight in `scripts/geonames-sample-validate.mjs` is now version **1.1.0** and writes manifest schema version **2**.
+
+- The staging workspace must be **outside the Git repository**. The preflight fails before creating the workspace when a repository path is supplied.
+- Successful retrieval records separate retrieval-start and retrieval-completion timestamps, the effective response URL, HTTP status, and the literal `Last-Modified` and `Date` headers received from the server. The HTTP `Last-Modified` field remains null unless a real response header is captured.
+- A legacy `retrieved_at` or `last_modified_utc` carried forward from older manifests is placed in explicitly unverified legacy fields; it is not promoted to verified server metadata.
+- The preflight now requires exactly **19 tab-separated fields** in each `countryInfo.txt` data row and records an invalid-column-count exception for both truncated and overlong rows.
+- Automated synthetic tests cover these behaviors. They do not download or validate the actual upstream GeoNames files.
+
+This updates the tool for future local retrievals. It does **not** retroactively establish official-source provenance or HTTP retrieval metadata for previously observed local files. The country catalog remains **BLOCKED** pending the approved ISO comparison, source-origin evidence and unresolved hierarchy/feature policy decisions.
