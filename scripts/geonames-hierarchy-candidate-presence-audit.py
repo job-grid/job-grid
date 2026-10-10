@@ -116,7 +116,10 @@ def main() -> int:
     duplicate_sample_ids = 0
     with sample_path.open("r", encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream, delimiter="\t")
-        if not REQUIRED_SAMPLE_FIELDS.issubset(set(reader.fieldnames or [])):
+        header_fields = reader.fieldnames or []
+        if len(header_fields) != len(set(header_fields)):
+            parser.error("Sample TSV has duplicate column headers.")
+        if not REQUIRED_SAMPLE_FIELDS.issubset(set(header_fields)):
             parser.error("Sample TSV is missing required column headers.")
         for row in reader:
             if None in row or any(row.get(name) is None for name in REQUIRED_SAMPLE_FIELDS):
