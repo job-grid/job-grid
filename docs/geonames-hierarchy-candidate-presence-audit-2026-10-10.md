@@ -106,6 +106,27 @@ The results are consistent with the level-specific feature codes in the official
 
 The aggregate counts and source/script fingerprints are recorded in `hierarchy_candidate_feature_level_profile` in the JSON report.
 
+## Crosswalk target-code consistency — 2026-10-11
+
+The next read-only check compared the code fields on each resolved candidate target record with the exact crosswalk key used to find it. Only target rows present in the sample as same-country administrative features are counted; the crosswalk lookup itself is not changed.
+
+| Level | Resolved target rows checked | Target code fields matching the lookup key | Mismatches |
+|---|---:|---:|---:|
+| Admin1 | 23,320 | 23,320 | 0 |
+| Admin2 | 20,445 | 20,445 complete composite keys | 0 |
+
+| Country | Admin1 target rows checked / matching code | Admin2 target rows checked / matching composite key |
+|---|---:|---:|
+| BR | 5,887 / 5,887 | 5,855 / 5,855 |
+| GB | 12,092 / 12,092 | 12,004 / 12,004 |
+| JP | 2,736 / 2,736 | 2,554 / 2,554 |
+| KE | 2,605 / 2,605 | 32 / 32 |
+| SG | 0 / 0 | 0 / 0 |
+
+For admin1, the target record's own `admin1_code` matched every resolved `country.admin1` key. For admin2, both the target record's `admin1_code` and `admin2_code` matched every resolved `country.admin1.admin2` key. Across this measured sample, that is **43,765 resolved references with matching key fields and zero code-field mismatches** (23,320 admin1 plus 20,445 admin2).
+
+This provides evidence that the crosswalk target IDs are internally consistent with the raw codes used to look them up. It still does **not** demonstrate each target is the correct parent for every child record, verify a full ancestor path, or authorize parent assignment. The machine-readable per-country counters, run time, and script hash are recorded in `candidate_key_code_consistency` and `candidate_key_code_consistency_by_level_and_country` in the JSON report.
+
 ## Acceptance decision
 
 - **PASS:** Audit integrity and candidate-presence check on the hashed sample/crosswalk inputs.
