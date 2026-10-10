@@ -1,5 +1,5 @@
 {
-  "report_version": "1.6",
+  "report_version": "1.7",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -464,6 +464,93 @@
       "rows_rejected_as_invalid": 0,
       "classification": "UNRESOLVED_REVIEW_REQUIRED",
       "reason": "Feature-code patterns help prioritize manual policy review but do not authorize changing raw administrative codes, deleting rows, or inventing parent relationships."
+    },
+    "feature_code_cross_tab": {
+      "source_exports": [
+        "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+        "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+      ],
+      "official_feature_code_reference": {
+        "title": "GeoNames Feature Codes",
+        "url": "https://www.geonames.org/export/codes.html",
+        "checked_on_utc_date": "2026-10-11",
+        "definitions_used": {
+          "ADM1H": "historical first-order administrative division",
+          "ADM2H": "historical second-order administrative division",
+          "ADM3H": "historical third-order administrative division",
+          "ADM4H": "historical fourth-order administrative division",
+          "ADMD": "administrative division undifferentiated as to administrative level",
+          "ADMDH": "historical administrative division undifferentiated as to administrative level",
+          "PPLH": "historical populated place"
+        }
+      },
+      "admin1": {
+        "unresolved_rows": 2333,
+        "by_review_classification_and_feature_code": {
+          "UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE": {
+            "ADM1H": 7,
+            "ADM2H": 6,
+            "ADM3": 2,
+            "ADMD": 10,
+            "PPL": 22,
+            "PPLX": 2
+          },
+          "UNRESOLVED_PLACEHOLDER_CODE": {
+            "ADM2H": 165,
+            "ADM3H": 89,
+            "ADM4": 126,
+            "ADM4H": 678,
+            "ADMD": 1094,
+            "ADMDH": 7,
+            "PCLI": 5,
+            "PPL": 32,
+            "PPLH": 2,
+            "PPLL": 4,
+            "PPLX": 79,
+            "ZN": 3
+          }
+        },
+        "historical_administrative_feature_rows_by_feature_code": {
+          "ADM1H": 7,
+          "ADM2H": 171,
+          "ADM3H": 89,
+          "ADM4H": 678,
+          "ADMDH": 7
+        },
+        "historical_administrative_feature_rows_total": 952,
+        "historical_populated_place_rows_total": 2,
+        "decision": "Historical feature codes are descriptive evidence for review priority only; the raw admin1 reference remains unresolved."
+      },
+      "admin2": {
+        "unresolved_rows": 240,
+        "by_review_classification_and_feature_code": {
+          "UNRESOLVED_MISSING_ADMIN1_CONTEXT": {
+            "ADM2H": 1
+          },
+          "UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE": {
+            "ADM2H": 219,
+            "ADM3H": 15,
+            "ADMD": 3
+          },
+          "UNRESOLVED_PLACEHOLDER_CODE": {
+            "ADMD": 2
+          }
+        },
+        "historical_administrative_feature_rows_by_feature_code": {
+          "ADM2H": 220,
+          "ADM3H": 15
+        },
+        "historical_administrative_feature_rows_total": 235,
+        "undifferentiated_administrative_feature_rows_total": 5,
+        "decision": "Historical and undifferentiated feature types help prioritize review; the raw admin2 key/context remains unresolved."
+      },
+      "governance": {
+        "source_ids_preserved": true,
+        "raw_codes_preserved": true,
+        "parent_ids_assigned": false,
+        "rows_rejected_as_invalid": 0,
+        "automatic_code_normalization": false
+      }
     }
   },
   "distinct_candidate_feature_codes_by_level_and_country": {
