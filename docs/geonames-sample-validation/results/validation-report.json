@@ -1,0 +1,30 @@
+{
+  "status": "BLOCKED_SOURCE_RETRIEVAL",
+  "generated_at_utc": "2026-10-10T11:21:52Z",
+  "parser_version": "job-grid-geonames-validator/1.0.0",
+  "source_records_read": null,
+  "accepted_by_candidate_rules": null,
+  "rejected_or_quarantined": null,
+  "duplicate_source_identifiers": null,
+  "unmatched_or_ambiguous_country_mappings": null,
+  "missing_or_invalid_parent_relationships": null,
+  "feature_types_included_or_excluded": null,
+  "iso_code_coverage": null,
+  "per_country_counts": null,
+  "sources_attempted": 9,
+  "sources_retrieved": 0,
+  "source_files_parsed": 0,
+  "exception_summary": [
+    {
+      "reason_code": "SOURCE_DNS_FAILURE",
+      "count": 9,
+      "detail": "All requested official GeoNames downloads failed in the isolated staging workspace with URLError: [Errno -3] Temporary failure in name resolution."
+    }
+  ],
+  "notes": [
+    "Null counts mean not measured; they must not be interpreted as zero records.",
+    "No checksum could be computed because no source bytes were retrieved.",
+    "No ZIP integrity checks, parsing, country hierarchy reconciliation, alternate-name validation, or ISO authority comparison was performed.",
+    "No database, migration, seed, import, production, Cloudflare, secrets, backup, or recovery operation was performed."
+  ]
+}
