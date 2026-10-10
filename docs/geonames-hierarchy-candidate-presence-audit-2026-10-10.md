@@ -76,3 +76,7 @@ The first audit checked only that crosswalk candidate IDs existed as administrat
 | **Total** | **125** | **6,977** |
 
 These are crosswalk-key lookup results, not relationships to adopt. Do not create self-parent links. The stricter report supersedes the earlier statement that there were no candidate-presence mismatches: the earlier check found no absent/wrong-country/non-admin candidates, but missed self-reference as its own failure category. All parent relationships remain unapproved and catalog acceptance remains **BLOCKED**.
+
+## Report-generation provenance note
+
+The aggregate numbers above were produced by the exact local script copy whose SHA-256 is recorded in the JSON report: `48ddbcf71f336992414c229dac06d7ff99f55f36de25bea6ebec458349af1277`. The repository script has since received report-status/schema hardening and synthetic regression coverage. The current repository version has **not yet been rerun against the actual local GeoNames files** after those later code-formatting changes; the figures above remain attributable to the recorded executed copy, not silently reattributed to the newest script version. Current-version synthetic tests verify that self-references produce an explicit blocking status and row-level exceptions.
