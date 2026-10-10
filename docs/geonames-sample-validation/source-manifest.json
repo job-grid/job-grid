@@ -1,0 +1,105 @@
+{
+  "manifest_version": 1,
+  "status": "BLOCKED_SOURCE_RETRIEVAL",
+  "source_owner": "GeoNames",
+  "license": "GeoNames data is published under CC BY 4.0; verify source-specific notice before redistribution.",
+  "attribution": "GeoNames (https://www.geonames.org/)",
+  "parser_version": "job-grid-geonames-validator/1.0.0",
+  "retrieval_attempted_at_utc": "2026-10-10T11:21:52Z",
+  "retrieval_method": "Python urllib in isolated staging workspace; no database connectivity",
+  "retrieval_result": "Every requested URL failed with URLError: <urlopen error [Errno -3] Temporary failure in name resolution>. Retries to download.geonames.org and www.geonames.org returned the same DNS resolution failure.",
+  "sources": [
+    {
+      "file": "KE.zip",
+      "url": "https://download.geonames.org/export/dump/KE.zip",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "GB.zip",
+      "url": "https://download.geonames.org/export/dump/GB.zip",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "JP.zip",
+      "url": "https://download.geonames.org/export/dump/JP.zip",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "BR.zip",
+      "url": "https://download.geonames.org/export/dump/BR.zip",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "SG.zip",
+      "url": "https://download.geonames.org/export/dump/SG.zip",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "countryInfo.txt",
+      "url": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "admin1CodesASCII.txt",
+      "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "admin2Codes.txt",
+      "url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    },
+    {
+      "file": "readme.txt",
+      "url": "https://download.geonames.org/export/dump/readme.txt",
+      "required": true,
+      "retrieval_status": "FAILED_DNS",
+      "bytes": null,
+      "sha256": null,
+      "retrieved_at_utc": null
+    }
+  ],
+  "integrity_checks": {
+    "archive_zip_test": "NOT_RUN_NO_ARCHIVES",
+    "sha256": "NOT_AVAILABLE_NO_DOWNLOADS",
+    "parser_execution_on_source_data": "NOT_RUN_NO_SOURCE_DATA"
+  },
+  "prohibited_inferences": [
+    "Do not treat retrieval attempts as source records",
+    "Do not treat prior browser-readable search pages as downloaded source files",
+    "Do not report measured counts for missing files",
+    "Do not authorize import or production activity from this report"
+  ]
+}
