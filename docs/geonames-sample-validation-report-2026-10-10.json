@@ -191,7 +191,8 @@
     "Current approved ISO authority snapshot was not independently obtained or compared.",
     "The sample is biased by feature inclusion, population/rservoir selection and priority-name matching; it does not establish worldwide completeness.",
     "Updated Stage C evidence: owner-computer KE.zip, GB.zip, JP.zip, BR.zip and SG.zip passed ZIP CRC checks; all 25,685 sample rows matched their country archive by ID and all 19 fields. This does not reproduce the worldwide scan or resolve all hierarchy references.",
-    "A second owner-computer run of the same sample-preparation script completed with 13,472,324 worldwide rows, zero malformed rows and 25,685 selected rows. This is a repeatability check, not independent-source reproduction; byte-for-byte sample-output comparison was not measured."
+    "A second owner-computer run of the same sample-preparation script completed with 13,472,324 worldwide rows, zero malformed rows and 25,685 selected rows. This is a repeatability check, not independent-source reproduction; byte-for-byte sample-output comparison was not measured.",
+    "Original-source SHA-256 values were recorded in the repeat-run manifest, but independent verification of those original-source SHA-256 values remains outstanding."
   ],
   "acceptance_blockers": [
     "Independently verify the owner-computer source byte sizes/SHA-256 values against the pinned source snapshot; a repeat-run source manifest now records them, but independent confirmation is still absent.",
