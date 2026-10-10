@@ -225,7 +225,7 @@ test("hierarchy candidate audit verifies crosswalk IDs without creating parent l
   assert.equal(audit.admin2.candidate_id_presence_mismatches, 0);
   assert.equal(audit.outcome.candidate_presence_mismatches, 0);
   assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
-  assert.equal(audit.governance.parent_links_written, false);
+  assert.equal(audit.scope.parent_links_written, false);
   const contextCase = admin2.find(row => row.proposed_review_classification === "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
   assert.ok(contextCase);
   assert.equal(contextCase.raw_admin1_code, "");
