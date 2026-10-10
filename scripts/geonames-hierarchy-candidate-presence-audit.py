@@ -265,7 +265,7 @@ def main() -> int:
         or admin2_malformed or admin1_duplicates or admin2_duplicates
     )
     report = {
-        "report_version": "1.1",
+        "report_version": "1.2",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "status": "BLOCKED_INVALID_INPUT" if fatal_input else (
             "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND"
@@ -273,7 +273,7 @@ def main() -> int:
             else ("BLOCKED_CANDIDATE_PRESENCE_MISMATCHES" if issues else "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED")
         ),
         "scope": {
-            "implementation": "Read-only Python crosswalk candidate-presence audit",
+            "implementation": "Read-only Python crosswalk candidate-presence audit with explicit ADM1/ADM2 identity-match classification",
             "parent_links_written": False,
             "source_files_modified": False,
             "database_operations": False,
@@ -371,6 +371,7 @@ def main() -> int:
             "raw_00": "Unresolved placeholder/nonstandard-code candidate; not automatically invalid.",
             "unmatched_nonzero_codes": "Unresolved source reference; not automatically legacy or invalid.",
             "blank_admin1_with_nonblank_admin2": "The composite key cannot be checked; classify as unresolved missing admin1 context.",
+            "administrative_feature_identity_match": "A feature_class A row with feature_code ADM1 or ADM2 whose corresponding code crosswalk resolves to its own GeoNames ID is an identity match, not a parent relationship.",
             "crosswalk_candidate_id_present": "Evidence of source candidate availability only; does not approve a parent link.",
             "catalog_acceptance": "BLOCKED",
             "worldwide_completeness": "UNVERIFIED",
