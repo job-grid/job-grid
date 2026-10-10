@@ -263,5 +263,101 @@
     "admin1_candidate_self_reference": 0,
     "admin2_candidate_identity_match": 6977,
     "admin2_candidate_self_reference": 0
+  },
+  "unresolved_reference_triage": {
+    "generated_on_utc_date": "2026-10-11",
+    "source_export_paths": [
+      "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+      "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+    ],
+    "interpretation_reference": {
+      "title": "GeoNames Feature Codes",
+      "url": "https://www.geonames.org/export/codes.html",
+      "retrieved_on_utc_date": "2026-10-11",
+      "confirmed_definitions": {
+        "ADM1H": "historical first-order administrative division",
+        "ADM2H": "historical second-order administrative division",
+        "ADM3H": "historical third-order administrative division",
+        "ADM4H": "historical fourth-order administrative division",
+        "ADMD": "administrative division with level undifferentiated",
+        "ADMDH": "historical administrative division with level undifferentiated"
+      },
+      "limitation": "Feature-code descriptions provide context; they do not establish whether a specific row is current, invalid, selectable, or eligible for parent assignment."
+    },
+    "admin1": {
+      "unresolved_rows": 2333,
+      "classifications": {
+        "unresolved_placeholder_raw_code_00": 2284,
+        "unresolved_missing_or_version_dependent_nonzero_code": 49
+      },
+      "nonzero_unresolved_rows_by_country": {
+        "KE": 25,
+        "SG": 24
+      },
+      "nonzero_unresolved_feature_codes_by_country": {
+        "KE": {
+          "ADMD": 10,
+          "ADM1H": 7,
+          "ADM2H": 6,
+          "ADM3": 2
+        },
+        "SG": {
+          "PPL": 22,
+          "PPLX": 2
+        }
+      },
+      "all_unresolved_rows_by_feature_code": {
+        "ADMD": 1104,
+        "ADM4H": 678,
+        "ADM2H": 171,
+        "ADM4": 126,
+        "ADM3H": 89,
+        "PPLX": 81,
+        "PPL": 54,
+        "ADMDH": 7,
+        "ADM1H": 7,
+        "PCLI": 5,
+        "PPLL": 4,
+        "ZN": 3,
+        "ADM3": 2,
+        "PPLH": 2
+      },
+      "review_rule": "Do not normalize raw 00 or infer active administrative parents from feature-code names. Review the raw code, country, feature code, source version, and approved country-specific hierarchy policy."
+    },
+    "admin2": {
+      "unresolved_rows": 240,
+      "classifications": {
+        "unresolved_placeholder_raw_code_00": 2,
+        "unresolved_missing_or_version_dependent_code": 237,
+        "unresolved_missing_admin1_context": 1
+      },
+      "rows_by_feature_code": {
+        "ADM2H": 220,
+        "ADM3H": 15,
+        "ADMD": 5
+      },
+      "rows_by_country_and_feature_code": {
+        "GB": {
+          "ADM2H": 27,
+          "ADMD": 2
+        },
+        "JP": {
+          "ADM2H": 188,
+          "ADM3H": 15,
+          "ADMD": 3
+        },
+        "KE": {
+          "ADM2H": 5
+        }
+      },
+      "review_rule": "Historical ADM2H/ADM3H features and undifferentiated ADMD features are not automatically invalid; preserve them as unresolved until inclusion, version, and parentage policies are approved."
+    },
+    "decision": {
+      "safe_automated_normalization": false,
+      "parent_ids_assigned": false,
+      "rows_rejected_as_invalid": 0,
+      "classification": "UNRESOLVED_REVIEW_REQUIRED",
+      "reason": "Feature-code patterns help prioritize manual policy review but do not authorize changing raw administrative codes, deleting rows, or inventing parent relationships."
+    }
   }
 }
