@@ -31,6 +31,14 @@ Therefore, for this validation:
 4. Review the aggregate JSON locally. Any nonzero code-conflict counts, invalid snapshot rows, or duplicate ISO identifiers block a clean result. GeoNames-only codes remain review candidates; they are not automatically invalid. A clean comparison of shared fields is not itself approval to change catalog values or hierarchy.
 5. Keep the source file and optional detail CSV outside Git. Never send the source rows or detail file to an AI assistant. After owner review, a privacy-safe aggregate report may be documented in PR #27 with the original snapshot hash and truthful provenance.
 
+## Latest acquisition check — 2026-10-11
+
+The official ISO 3166 page was checked for a permitted machine-readable source. It distinguishes the freely viewable Online Browsing Platform from the paid **Country Codes Collection**, which offers the current official lists in CSV, XML and XLS and is listed at **CHF 300 per year**. ISO also permits free-of-charge use of ISO country codes, but that is not evidence that the current downloadable collection itself is free. See the official [ISO 3166 page](https://committee.iso.org/iso-3166-country-codes.html) and [Country Codes Collection product page](https://committee.iso.org/cms/live/live/en/sites/isoorg/contents/data/publication/50/00/PUB500001.html).
+
+**Disposition: STOP AT THE ACCESS/COST GATE.** No subscription was purchased, no authenticated collection download was attempted, and no machine-readable ISO snapshot was acquired or compared. The owner previously approved the source choice, not a paid subscription. Do not scrape the OBP, bypass access controls, or substitute a third-party mirror as ISO authority. If the owner separately authorizes the listed subscription cost, or identifies an official machine-readable snapshot that is available under terms permitting this use, perform the deterministic comparison locally and retain only aggregate results in Git. Keep any source file and row-level details outside Git and out of AI tools.
+
+This acquisition check closes no code/hierarchy gate; ISO comparison remains **UNVERIFIED** and catalog acceptance remains **BLOCKED**.
+
 ## Result and current gate
 
 **Owner approval of source choice: RECORDED.**  
