@@ -57,3 +57,32 @@ Current overall gates remain: ISO comparison **UNVERIFIED** (source choice appro
 A follow-up read-only hierarchy audit distinguished **239** admin2 rows where a complete composite key was available but missing from the crosswalk, from **one** row where the raw admin1 code is blank and therefore a full admin2 lookup key cannot be formed. The one record is now classified in both the JSON and CSV export as `ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT` / `UNRESOLVED_MISSING_ADMIN1_CONTEXT`; its raw source values are retained and its `crosswalk_lookup_key` is null rather than recording a synthetic key. The total unresolved admin2 export remains **240** rows.
 
 The stricter reproducible audit found **125 admin1** and **6,977 admin2** resolved-key lookups where the candidate ID equals the record being checked. These **7,102 self-reference cases must not become parent links**. The remaining **23,195 admin1** and **13,468 admin2** candidates are distinct same-country administrative-feature IDs present in the sample, but they are candidates only—not approved semantic parents. The 2,333 admin1 misses and 240 admin2 unresolved reference/context cases remain. See the [updated hierarchy candidate-presence report](../../../geonames-hierarchy-candidate-presence-audit-2026-10-10.md).
+
+
+## Owner-approved exception dispositions — 2026-10-11
+
+The owner approved conservative, non-destructive feature/selectability defaults on 2026-10-11. A reproducible disposition audit applies those defaults to the unchanged row-level exception exports. It adds decision labels; it does **not** rewrite any raw code or declare a missing source crosswalk key resolved.
+
+- [Owner-approved disposition CSV](owner-approved-dispositions.csv) — every one of the 2,573 level-specific exception references, plus the original ID, name, country, feature code, raw codes, original review classification, and approved product treatment.
+- [Machine-readable disposition summary](owner-approved-disposition-summary.json) — reference and unique-record counts, per-country breakdown, and limitations.
+- Generator: `scripts/geonames-approved-exception-dispositions.mjs`. Rebuild these derived artifacts from the original exception JSON files with `node scripts/geonames-approved-exception-dispositions.mjs --write`. The original inputs remain unchanged.
+
+### What this review separates
+
+| Approved treatment | Reference rows | Unique GeoNames IDs | Meaning |
+|---|---:|---:|---|
+| Country-level `PCLI`; no administrative parent required | 5 | 5 | Preserve the country records and raw `00` values; a country entity itself does not need an administrative parent. |
+| Current administrative feature, parent path still unresolved | 128 | 128 | `ADM3`: 2; `ADM4`: 126. These require country-specific ancestor-path evidence before becoming current administrative selector options. |
+| Historical administrative features | 1,187 | 1,030 | Preserve history and identity; not current administrative selector options or current parents by default. |
+| Undifferentiated administrative level `ADMD` | 1,109 | 1,109 | Preserve raw fields; do not infer the administrative level; not current selector options by default. |
+| Populated places with unresolved administrative association | 139 | 139 | Preserve the place record; its administrative association remains independently unresolved. |
+| Historical populated places with unresolved association | 2 | 2 | Preserve historical place identity; do not turn it into a current administrative boundary. |
+| Other non-administrative entities (`ZN`) | 3 | 3 | Preserve entity; do not treat it as an administrative boundary. |
+
+Reference rows across admin1/admin2 still total **2,573**, with **157** IDs occurring in both sets and **2,416 unique IDs** in the union. The row-level exception counts are not silently reduced. Instead, the approved dispositions distinguish country entities that do not need an administrative parent from the cases that truly need hierarchy/association handling.
+
+**Practical result:** the current administrative-selector hierarchy work is now focused on the **128 unresolved current ADM3/ADM4 records**, concentrated in Japan (126) and Kenya (2). The 1,030 unique historical admin records and 1,109 unique undifferentiated admin records are preserved but excluded from current admin selectors by default. Place associations and the other unresolved references remain visible in the CSV for future case-level work.
+
+### Boundaries
+
+The dispositions do not establish any individual parent relationship, validate official ISO status, or prove source-origin/worldwide completeness. No source IDs or raw codes were normalized; no record was discarded; no parent ID/link, migration, seed, import, database, deployment, or production change was made. Current ISO comparison and full country-specific path review remain open gates.
