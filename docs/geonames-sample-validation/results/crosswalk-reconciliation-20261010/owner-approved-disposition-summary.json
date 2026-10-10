@@ -1,0 +1,108 @@
+{
+  "report_version": "1.0",
+  "generated_on_utc_date": "2026-10-11",
+  "decision_status": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
+  "owner_policy_approval_date": "2026-10-11",
+  "policy_document": "docs/geonames-feature-selectability-policy-proposal-2026-10-11.md",
+  "source_exception_exports_unchanged": true,
+  "source_raw_codes_preserved": true,
+  "parent_ids_or_links_assigned": 0,
+  "input_reference_counts": {
+    "admin1": 2333,
+    "admin2": 240,
+    "total": 2573
+  },
+  "reconciliation": {
+    "overlap_ids_between_levels": 157,
+    "unique_affected_ids": 2416,
+    "original_summary_matches": true
+  },
+  "reference_dispositions": {
+    "admin1": {
+      "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 5,
+      "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 128,
+      "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 952,
+      "PRESERVE_HISTORICAL_PLACE_ASSOCIATION_UNRESOLVED": 2,
+      "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 3,
+      "PRESERVE_PLACE_IDENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 139,
+      "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 1104
+    },
+    "admin2": {
+      "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 235,
+      "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 5
+    },
+    "combined": {
+      "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 5,
+      "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 128,
+      "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 1187,
+      "PRESERVE_HISTORICAL_PLACE_ASSOCIATION_UNRESOLVED": 2,
+      "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 3,
+      "PRESERVE_PLACE_IDENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 139,
+      "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 1109
+    }
+  },
+  "unique_record_dispositions": {
+    "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 5,
+    "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 128,
+    "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 1030,
+    "PRESERVE_HISTORICAL_PLACE_ASSOCIATION_UNRESOLVED": 2,
+    "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 3,
+    "PRESERVE_PLACE_IDENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 139,
+    "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 1109
+  },
+  "country_level_records_no_admin_parent_required": 5,
+  "current_admin_features_requiring_country_specific_parent_path": 128,
+  "non_country_references_still_needing_hierarchy_or_association_review": 2568,
+  "per_country": {
+    "BR": {
+      "references": 1,
+      "dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 1
+      }
+    },
+    "GB": {
+      "references": 32,
+      "dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 1,
+        "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 27,
+        "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 2,
+        "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 2
+      }
+    },
+    "JP": {
+      "references": 2367,
+      "dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 1,
+        "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 126,
+        "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 1142,
+        "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 1,
+        "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 1097
+      }
+    },
+    "KE": {
+      "references": 31,
+      "dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 1,
+        "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 2,
+        "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 18,
+        "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 10
+      }
+    },
+    "SG": {
+      "references": 142,
+      "dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 1,
+        "PRESERVE_HISTORICAL_PLACE_ASSOCIATION_UNRESOLVED": 2,
+        "PRESERVE_PLACE_IDENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 139
+      }
+    }
+  },
+  "limitations": [
+    "These dispositions apply approved conservative policy to existing feature codes; they do not claim a missing crosswalk key was found.",
+    "Current ADM1-ADM4 features with unresolved hierarchy remain excluded from current administrative selectors until a source-pinned country-specific ancestor path is verified.",
+    "Historical and undifferentiated entities are retained, not declared invalid, and are not current administrative selector options by default.",
+    "Country-level PCLI entities require no administrative parent; their raw source codes are still preserved unchanged.",
+    "Place/non-admin entities are preserved; their administrative association can remain unresolved.",
+    "No parent IDs, migrations, seeds, imports, database, deployment or production changes are performed."
+  ]
+}
