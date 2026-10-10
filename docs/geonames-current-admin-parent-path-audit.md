@@ -33,14 +33,14 @@ The script writes a row-level CSV plus a JSON summary. The JSON records the sour
 
 ## External evidence already checked manually
 
-Two official GeoNames record pages demonstrate why feature class alone is insufficient to create an ancestor chain:
+Three official GeoNames record pages demonstrate why feature class alone is insufficient to create an ancestor chain:
 
 - [Yao-chō, Japan — GeoNames ID 1848521](https://www.geonames.org/1848521/yao-cho.html) is marked ADM4, but its displayed administrative hierarchy lists Japan and Yao-chō without intermediate ADM1–ADM3 records.
-- [Imenti Central, Kenya — GeoNames ID 7800132](https://www.geonames.org/7800132/imenti-central.html) is marked ADM3, but its displayed administrative hierarchy lists Kenya and Imenti Central without intermediate ADM1 or ADM2 records.
+- [Kiambururu Sub-Location, Kenya — GeoNames ID 192705](https://www.geonames.org/192705/kiambururu-sub-location.html) is marked ADM3, but its displayed administrative hierarchy lists Kenya and Kiambururu without intermediate ADM1 or ADM2 records.\n- [Imenti Central, Kenya — GeoNames ID 7800132](https://www.geonames.org/7800132/imenti-central.html) is marked ADM3, but its displayed administrative hierarchy lists Kenya and Imenti Central without intermediate ADM1 or ADM2 records.
 
 The [official GeoNames feature-code reference](https://www.geonames.org/export/codes.html) defines the administrative feature levels. GeoNames' [place hierarchy service documentation](https://www.geonames.org/export/place-hierarchy.html) describes the separate hierarchy view. A missing intermediate record must be treated as a source-evidence gap, not filled from a feature-code definition.
 
-The existing exception export still reports 126 Japan records with raw admin1 00, plus two Kenya records with nonzero codes whose exact crosswalk keys were absent from the audited inputs. The two pages above are representative manual checks only; they are not evidence that every record in the 128-record set has been individually reviewed.
+The existing exception export still reports 126 Japan records with raw admin1 00, plus two Kenya records with nonzero codes whose exact crosswalk keys were absent from the audited inputs. These three pages are representative manual checks, covering both Kenyan targets and one Japanese target; they are not evidence that every record in the 128-record set has been individually reviewed.
 
 ## Current decision boundary
 
