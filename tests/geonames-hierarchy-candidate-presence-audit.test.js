@@ -126,8 +126,8 @@ test("hierarchy audit rejects duplicate sample column headers", async (t) => {
   assert.match(result.stderr, /Sample TSV has duplicate column headers/);
 });
 
-test("hierarchy audit blocks self-parent candidates and emits row-level exceptions", async (t) => {
-  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-self-reference-test-"));
+test("ADM1 and ADM2 code-to-ID self matches are identity matches, not parent links", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-identity-match-test-"));
   t.after(async () => rm(root, { recursive: true, force: true }));
 
   const sourceRoot = join(root, "sources");
@@ -138,8 +138,8 @@ test("hierarchy audit blocks self-parent candidates and emits row-level exceptio
   const sample = [
     header,
     row("100", "Fixture Place", "P", "PPL", "AA", "01", "001"),
-    row("10", "Fixture Admin1 Self", "A", "ADM1", "AA", "01", ""),
-    row("11", "Fixture Admin2 Self", "A", "ADM2", "AA", "01", "001")
+    row("10", "Fixture Admin1", "A", "ADM1", "AA", "01", ""),
+    row("11", "Fixture Admin2", "A", "ADM2", "AA", "01", "001")
   ].join("\n") + "\n";
   await writeFile(join(sampleDir, "geonames_places_sample.tsv"), sample, "utf8");
   await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\tFixture Admin1\tFixture Admin1\t10\n", "utf8");
@@ -151,19 +151,58 @@ test("hierarchy audit blocks self-parent candidates and emits row-level exceptio
     "--output-dir", outputDir
   ], { encoding: "utf8" });
   assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+
+  const report = JSON.parse(await readFile(join(outputDir, "hierarchy-audit-summary.json"), "utf8"));
+  assert.equal(report.status, "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED");
+  assert.equal(report.admin1.candidate_identity_matches, 1);
+  assert.equal(report.admin1.candidate_self_references, 0);
+  assert.equal(report.admin1.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 2);
+  assert.equal(report.admin1.candidate_presence_issues, 0);
+  assert.equal(report.admin2.candidate_identity_matches, 1);
+  assert.equal(report.admin2.candidate_self_references, 0);
+  assert.equal(report.admin2.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 1);
+  assert.equal(report.admin2.candidate_presence_issues, 0);
+  assert.equal(report.exceptions.rows, 0);
+  assert.equal(report.scope.parent_links_written, false);
+
+  const exceptionCsv = await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8");
+  assert.equal(exceptionCsv.trim().split("\n").length, 1, "identity matches must not be exported as hierarchy failures");
+});
+
+test("a self-referencing candidate on a non-ADM1 row is blocked and exported", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-hierarchy-invalid-self-reference-test-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+
+  const sourceRoot = join(root, "sources");
+  const outputDir = join(root, "audit-output");
+  const sampleDir = join(sourceRoot, "sample-output-20261010-163234");
+  await mkdir(sampleDir, { recursive: true });
+
+  const sample = [
+    header,
+    row("10", "Wrong-Level Fixture", "P", "PPL", "AA", "01", "")
+  ].join("\n") + "\n";
+  await writeFile(join(sampleDir, "geonames_places_sample.tsv"), sample, "utf8");
+  await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\tUnexpected Target\tUnexpected Target\t10\n", "utf8");
+  await writeFile(join(sourceRoot, "admin2Codes.txt"), "", "utf8");
+
+  const result = spawnSync(python, [
+    script,
+    "--source-root", sourceRoot,
+    "--output-dir", outputDir
+  ], { encoding: "utf8" });
+  assert.equal(result.error, undefined, result.error?.message);
   assert.equal(result.status, 1, result.stderr);
 
   const report = JSON.parse(await readFile(join(outputDir, "hierarchy-audit-summary.json"), "utf8"));
   assert.equal(report.status, "BLOCKED_SELF_REFERENCE_CANDIDATES_FOUND");
+  assert.equal(report.admin1.candidate_identity_matches, 0);
   assert.equal(report.admin1.candidate_self_references, 1);
-  assert.equal(report.admin1.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 2);
-  assert.equal(report.admin2.candidate_self_references, 1);
-  assert.equal(report.admin2.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 1);
-  assert.equal(report.exceptions.rows, 2);
+  assert.equal(report.admin1.candidate_presence_issues, 1);
+  assert.equal(report.exceptions.rows, 1);
   assert.equal(report.scope.parent_links_written, false);
 
   const exceptionCsv = await readFile(join(outputDir, "hierarchy-audit-exceptions.csv"), "utf8");
   assert.match(exceptionCsv, /ADMIN1_CROSSWALK_CANDIDATE_SELF_REFERENCE/);
-  assert.match(exceptionCsv, /ADMIN2_CROSSWALK_CANDIDATE_SELF_REFERENCE/);
 });
-
