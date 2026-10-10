@@ -82,6 +82,7 @@ test("crosswalk exports have deterministic schemas, sorting, and measured aggreg
  const a1 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json", import.meta.url), "utf8"));
  const a2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
  const summary = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.json", import.meta.url), "utf8")).crosswalk_exception_reconciliation;
+ const sourceSummary = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/summary.json", import.meta.url), "utf8"));
  const keys = ["geonames_id","name","country_code","feature_code","raw_admin1_code","raw_admin2_code","missing_reference_category","proposed_review_classification","crosswalk_lookup_key","raw_missing_code"];
  for (const rows of [a1,a2]) {
   for (const row of rows) assert.deepEqual(Object.keys(row), keys);
@@ -105,6 +106,15 @@ test("crosswalk exports have deterministic schemas, sorting, and measured aggreg
  assert.equal(summary.singapore.prior_only_count,0);
  assert.equal(summary.singapore.broader_only_count,118);
  assert.equal(summary.singapore.raw_admin1_code_counts["00"],118);
+ assert.equal(sourceSummary.prior_sg_exception_ids,24);
+ assert.equal(sourceSummary.broader_sg_admin1_misses,142);
+ assert.equal(sourceSummary.sg_prior_exception_ids_overlap,24);
+ assert.deepEqual(sourceSummary.sg_prior_only_ids,[]);
+ assert.equal(sourceSummary.sg_broader_only_ids.length,118);
+ const sgIds = a1.filter(r=>r.country_code==="SG").map(r=>r.geonames_id).sort();
+ assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_exact_overlap_ids.includes(id)), [...sourceSummary.sg_exact_overlap_ids].sort());
+ assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), [...sourceSummary.sg_broader_only_ids].sort());
+ assert.deepEqual([...sourceSummary.sg_exact_overlap_ids].sort().filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), []);
  assert.equal(summary.global_gates.full_worldwide_scan_reproduction,"UNVERIFIED");
  assert.equal(summary.global_gates.current_owner_approved_iso_comparison,"UNVERIFIED");
 });

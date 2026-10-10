@@ -166,29 +166,13 @@
     "05": 3,
     "04": 3
   },
-  "source_output_hashes": {
-    "unmatched_admin1_references.csv": {
-      "bytes": 257224,
-      "sha256": "0251f9ed31007f235064268cccb54548ad31e2bd568621dce0c8b9d5abbb4a0c"
-    },
-    "unmatched_admin1_references.json": {
-      "bytes": 935961,
-      "sha256": "07f1678b9ae230a3bb7dd1323f79d1c774f30be4b6f719ab20e7dbe457f5632c"
-    },
-    "unmatched_admin2_references.csv": {
-      "bytes": 33559,
-      "sha256": "7e3ea65a18faf660fe2c5ad7bfcf9a3d5166bae6cf8e904c186b0bdbbcfbb251"
-    },
-    "unmatched_admin2_references.json": {
-      "bytes": 103233,
-      "sha256": "ecdc708fc5506a327dbe17f3d424c8b0bd139396d20d513471b00a5a20cf61c0"
-    }
-  },
   "repository_exports": {
-    "admin1_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.csv",
-    "admin1_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
-    "admin2_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.csv",
-    "admin2_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+    "admin1_csv": "unmatched_admin1_references.csv (2,333 rows)",
+    "admin1_json": "unmatched_admin1_references.json (2,333 objects)",
+    "admin2_csv": "unmatched_admin2_references.csv (240 rows)",
+    "admin2_json": "unmatched_admin2_references.json (240 objects)",
+    "deterministic_sort": "country_code, geonames_id, raw_admin1_code, raw_admin2_code, feature_code, name",
+    "output_sha256": "NOT RECALCULATED AFTER JSON COMPACTION; do not use prior pretty-JSON hashes as current artifact hashes"
   },
   "owner_review": {
     "row_level_exports_persisted": true,

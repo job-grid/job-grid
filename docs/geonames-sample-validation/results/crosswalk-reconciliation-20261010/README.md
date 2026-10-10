@@ -8,7 +8,7 @@ These files are the row-level output of the owner-computer crosswalk reconciliat
 - `unmatched_admin1_references.json` — same 2,333 records as a JSON array.
 - `unmatched_admin2_references.csv` — 240 unmatched admin2 references.
 - `unmatched_admin2_references.json` — same 240 records as a JSON array.
-- `summary.json` — counts, code breakdowns, exact Singapore ID comparison, and source-output checksums.
+- `summary.json` — counts, code breakdowns, exact Singapore ID comparison, and export metadata. The earlier pretty-JSON output hashes were removed because JSON files were compacted; source archive hashes remain in the Stage C reports.
 
 Each record keeps GeoNames ID, name, country code, feature code, raw admin codes, missing-reference category, proposed review classification, lookup key, and raw missing value.
 
