@@ -456,3 +456,26 @@ This addendum supersedes earlier status statements in this document saying owner
 **Approval scope:** policy/design defaults only. This is not approval of any individual unresolved row or parent link, is not catalog acceptance, and does not authorize a schema change, migration, seed, import, database/production/deployment change or paid ISO subscription.
 
 The outstanding gates remain: 2,333 unresolved admin1 references and 240 unresolved admin2 key/context cases; full country-specific hierarchy-path validation; a current official ISO snapshot and deterministic comparison under permitted access terms; remote source-origin/retrieval metadata; and worldwide completeness. ISO comparison remains unverified. Phase 4C recovery readiness remains separately blocked. PR #27 remains open, draft and unmerged.
+
+
+## 5I. Owner-approved exception dispositions and bounded current-selector path review — 2026-10-11
+
+The owner-approved conservative defaults have been applied through the reproducible [exception-disposition generator](../scripts/geonames-approved-exception-dispositions.mjs). The derived [row-level CSV](geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv) and [machine-readable summary](geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-disposition-summary.json) preserve source IDs, names, feature codes, raw admin codes, and original exception classifications. The original raw exception files are unchanged.
+
+| Disposition | Reference rows | Unique GeoNames IDs |
+|---|---:|---:|
+| Country-level `PCLI`; no administrative parent required | 5 | 5 |
+| Current ADM3/ADM4 records needing country-specific parent-path evidence | 128 | 128 |
+| Historical administrative features | 1,187 | 1,030 |
+| Undifferentiated `ADMD` features | 1,109 | 1,109 |
+| Populated places; administrative association remains unresolved | 139 | 139 |
+| Historical populated places; association remains unresolved | 2 | 2 |
+| Other non-administrative `ZN` features | 3 | 3 |
+
+The counts reconcile to the original exports: **2,573 reference rows**, 157 IDs in both hierarchy-level exports, and 2,416 unique affected IDs. Five country-level records are now explicitly disposed as needing no administrative parent; the other 2,568 references affect 2,411 unique IDs and retain their review/disposition states.
+
+The official [GeoNames Feature Codes list](https://www.geonames.org/export/codes.html) defines `PCLI` as an independent political entity, `ADM3` and `ADM4` as current administrative levels, `ADM1H`–`ADM4H` as historical divisions, and `ADMD` as an administrative division with unspecified level. These definitions support conservative entity treatment; they do not invent parents.
+
+**The current administrative-selector path-review set is bounded at 128 records:** 2 `ADM3` and 126 `ADM4`, located in Japan (126) and Kenya (2). They remain excluded from current administrative selectors until the source-pinned ancestor path is verified. The historic, undifferentiated, populated-place and zone entities are preserved and treated according to the approved defaults.
+
+Still blocked: definitive individual parent links and complete country-specific paths; the current official ISO snapshot/comparison; remote source-origin/retrieval metadata; and worldwide completeness. No parent links, migrations, seeds, imports, database operations, or production/deployment changes were performed.
