@@ -111,7 +111,7 @@ test("hierarchy audit blocks self-parent candidates and emits row-level exceptio
     row("10", "Fixture Admin1 Self", "A", "ADM1", "AA", "01", ""),
     row("11", "Fixture Admin2 Self", "A", "ADM2", "AA", "01", "001")
   ].join("\n") + "\n";
-  await writeFile(join(sampleDir, "geoname_places_sample.tsv"), sample, "utf8");
+  await writeFile(join(sampleDir, "geonames_places_sample.tsv"), sample, "utf8");
   await writeFile(join(sourceRoot, "admin1CodesASCII.txt"), "AA.01\tFixture Admin1\tFixture Admin1\t10\n", "utf8");
   await writeFile(join(sourceRoot, "admin2Codes.txt"), "AA.01.001\tFixture Admin2\tFixture Admin2\t11\n", "utf8");
 
