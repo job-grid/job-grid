@@ -11,6 +11,7 @@ import {
   buildCurrentAdminTargets,
   parseCsv,
   parseGeoNamesLine,
+  parseHierarchyLine,
   renderAuditCsv,
   validateRemoteSourceMetadata,
 } from "../scripts/geonames-current-admin-parent-path-audit.mjs";
@@ -223,18 +224,75 @@ test("CLI reads a pinned source fixture, writes auditable artifacts, and records
   }
 });
 
-test("validates exact official JP and KE archive retrieval metadata without inventing Last-Modified", () => {
+test("parses GeoNames hierarchy edges in parentId/childId/type format", () => {
+  assert.deepEqual(parseHierarchyLine("10\\t20\\tADM"), { parent_id: "10", child_id: "20", relation_type: "ADM" });
+  assert.equal(parseHierarchyLine(""), null);
+  assert.throws(() => parseHierarchyLine("10\\t20"), /expected parentId, childId, type/);
+});
+
+test("checks a complete type=ADM path while still requiring owner approval and creating no link", () => {
+  const targetRow = target({ id: "300", feature: "ADM3", admin1: "01", admin2: "02" });
+  const sourceRows = [
+    geoRow({ id: "1", name: "Country XX", feature: "PCLI", country: "XX" }),
+    geoRow({ id: "10", name: "Level One", feature: "ADM1", country: "XX", admin1: "01" }),
+    geoRow({ id: "20", name: "Level Two", feature: "ADM2", country: "XX", admin1: "01", admin2: "02" }),
+    geoRow({ id: "300", name: "Target", feature: "ADM3", country: "XX", admin1: "01", admin2: "02", admin3: "03" }),
+  ];
+  const edges = [
+    { parent_id: "10", child_id: "20", relation_type: "ADM" },
+    { parent_id: "1", child_id: "10", relation_type: "ADM" },
+    { parent_id: "20", child_id: "300", relation_type: "ADM" },
+  ];
+  const [result] = auditCurrentAdminParents([targetRow], sourceRows, edges);
+  assert.equal(result.hierarchy_path_audit_status, "CANDIDATE_PATH_FOUND_FROM_EXPLICIT_HIERARCHY_REQUIRES_OWNER_APPROVAL");
+  assert.equal(result.hierarchy_path_candidate_geonames_ids, "1>10>20>300");
+  assert.equal(result.candidate_path_source, "COUNTRY_ADMIN_CODES");
+  assert.equal(result.parent_path_audit_status, "CANDIDATE_PATH_FOUND_REQUIRES_OWNER_APPROVAL");
+  assert.equal(result.operational_parent_link_created, false);
+  const summary = buildAuditSummary([result], {});
+  assert.equal(summary.explicit_hierarchy_paths_found_requiring_owner_approval, 1);
+  assert.equal(summary.targets_with_direct_adm_hierarchy_edges, 1);
+});
+
+test("rejects explicit hierarchy paths that conflict with raw 00 rather than normalizing the code", () => {
+  const targetRow = target({ id: "400", country: "JP", feature: "ADM4", admin1: "00", admin2: "" });
+  const sourceRows = [
+    geoRow({ id: "1861060", name: "Japan", feature: "PCLI", country: "JP" }),
+    geoRow({ id: "100", name: "Level One", feature: "ADM1", country: "JP", admin1: "01" }),
+    geoRow({ id: "200", name: "Level Two", feature: "ADM2", country: "JP", admin1: "01", admin2: "02" }),
+    geoRow({ id: "300", name: "Level Three", feature: "ADM3", country: "JP", admin1: "01", admin2: "02", admin3: "03" }),
+    geoRow({ id: "400", name: "Target", feature: "ADM4", country: "JP", admin1: "00", admin2: "", admin3: "", admin4: "" }),
+  ];
+  const edges = [
+    { parent_id: "100", child_id: "200", relation_type: "ADM" },
+    { parent_id: "200", child_id: "300", relation_type: "ADM" },
+    { parent_id: "300", child_id: "400", relation_type: "ADM" },
+    { parent_id: "1861060", child_id: "100", relation_type: "ADM" },
+  ];
+  const [result] = auditCurrentAdminParents([targetRow], sourceRows, edges);
+  assert.equal(result.hierarchy_path_audit_status, "BLOCKED_HIERARCHY_RAW_CODE_DISAGREEMENT");
+  assert.equal(result.parent_path_audit_status, "BLOCKED_PARENT_CODE_MISSING_OR_PLACEHOLDER");
+  assert.equal(result.candidate_path_geonames_ids, "");
+  assert.equal(result.hierarchy_path_candidate_geonames_ids, "1861060>100>200>300>400");
+  assert.equal(result.operational_parent_link_created, false);
+});
+
+test("validates official JP, KE, and hierarchy archive retrieval metadata without inventing Last-Modified", () => {
   const metadata = {
-    remote_sources: ["JP", "KE"].map((countryCode, index) => ({
-      country_code: countryCode,
-      archive_filename: countryCode + ".zip",
-      source_url: "https://download.geonames.org/export/dump/" + countryCode + ".zip",
-      retrieved_at_utc: "2026-10-11T01:00:00Z",
-      http_status: 200,
-      http_last_modified_utc: index === 0 ? "Sat, 10 Oct 2026 00:54:00 GMT" : null,
-      archive_sha256: "a".repeat(64),
-      archive_size_bytes: 12345 + index,
-    })),
+    remote_sources: ["JP", "KE", "HIERARCHY"].map((countryCode, index) => {
+      const archive = countryCode === "HIERARCHY" ? "hierarchy.zip" : countryCode + ".zip";
+      const sourceCode = countryCode === "HIERARCHY" ? "hierarchy" : countryCode;
+      return {
+        country_code: countryCode,
+        archive_filename: archive,
+        source_url: "https://download.geonames.org/export/dump/" + sourceCode + ".zip",
+        retrieved_at_utc: "2026-10-11T01:00:00Z",
+        http_status: 200,
+        http_last_modified_utc: index === 0 ? "2026-10-10T00:54:00Z" : null,
+        archive_sha256: "a".repeat(64),
+        archive_size_bytes: 12345 + index,
+      };
+    }),
   };
   assert.equal(validateRemoteSourceMetadata(metadata), true);
   const summary = buildAuditSummary([], {
