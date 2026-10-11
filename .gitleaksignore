@@ -1,3 +1,4 @@
 # Narrow, evidence-backed false positive only; never ignore the file or rule globally.
 # `JP.32.1859746` is the public country/admin-code/GeoNames-ID composite for the Kawachi-shi geography row (GeoNames ID 1859746), not a credential.
 77f91b461377952caf8ebe3afe4bda77442501ae:docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json:generic-api-key:1
+f7e11c2d23eaa22343623803163455887a9beeda:docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json:generic-api-key:1463
