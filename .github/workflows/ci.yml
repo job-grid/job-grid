@@ -143,7 +143,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Fetch and fingerprint official Japan and Kenya GeoNames country archives
+      - name: Fetch and fingerprint official Japan/Kenya country and hierarchy archives
         shell: bash
         env:
           RUNNER_TEMP_DIR: ${{ runner.temp }}
@@ -153,9 +153,14 @@ jobs:
           manifest="$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
           printf '{"manifest_version":1,"remote_sources":[]}\n' > "$manifest"
 
-          for country in JP KE; do
-            url="https://download.geonames.org/export/dump/${country}.zip"
-            archive="$RUNNER_TEMP_DIR/geonames-source/${country}.zip"
+          for country in JP KE HIERARCHY; do
+            if [[ "$country" == "HIERARCHY" ]]; then
+              url="https://download.geonames.org/export/dump/hierarchy.zip"
+              archive="$RUNNER_TEMP_DIR/geonames-source/hierarchy.zip"
+            else
+              url="https://download.geonames.org/export/dump/${country}.zip"
+              archive="$RUNNER_TEMP_DIR/geonames-source/${country}.zip"
+            fi
             headers="$RUNNER_TEMP_DIR/geonames-source/${country}.headers"
             status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
               --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
@@ -232,7 +237,11 @@ jobs:
             extract_dir="$RUNNER_TEMP_DIR/geonames-source/${country}"
             mkdir -p "$extract_dir"
             unzip -oq "$archive" -d "$extract_dir"
-            test -s "$extract_dir/${country}.txt"
+            if [[ "$country" == "HIERARCHY" ]]; then
+              test -s "$extract_dir/hierarchy.txt"
+            else
+              test -s "$extract_dir/${country}.txt"
+            fi
           done
 
           cat "$RUNNER_TEMP_DIR/geonames-source/JP/JP.txt" "$RUNNER_TEMP_DIR/geonames-source/KE/KE.txt" > "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt"
@@ -249,7 +258,8 @@ jobs:
             "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt" \
             docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
             "$RUNNER_TEMP_DIR/current-admin-parent-path-audit" \
-            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
+            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" \\
+            "$RUNNER_TEMP_DIR/geonames-source/HIERARCHY/hierarchy.txt"
           cat "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
           python - "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" <<'PY'
           import json
