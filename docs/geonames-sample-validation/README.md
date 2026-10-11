@@ -180,3 +180,16 @@ The independent selection report is in [machine-readable JSON](../geonames-sampl
 **Scope limits remain:** the separate selector uses the same seeded Python `random.Random` behavior for reservoir draws; no cross-language PRNG implementation was tested. The allCountries archive hash matches the separately retrieved official-source audit, but the local manifest's filesystem timestamps are not verified HTTP Last-Modified headers for all other input files. Neither selection run establishes worldwide geographic catalog completeness or resolves administrative parentage.
 
 **Still blocked:** current official ISO 3166-1 comparison; the 128 immediate parent paths (126 Japan raw admin1 `00`, two unresolved Kenya records); 2,568 non-country reference cases requiring hierarchy/association review; worldwide product completeness; and independent real backup/restore readiness. No database migration, seed, import, live database, production or deployment action occurred.
+
+## Stage H — current official source recheck for original local inputs — 2026-10-11
+
+The four small GeoNames reference files were fetched again from their official HTTPS URLs using Windows `curl.exe`, with real retrieval timestamps, HTTP Last-Modified headers, ETags, file sizes and SHA-256 hashes captured. Three files (`countryInfo.txt`, `admin1CodesASCII.txt`, `readme.txt`) are byte-identical to their current official downloads.
+
+The current `admin2Codes.txt` does not match the earlier local snapshot: its SHA-256 is `eb276b1e444d67f45a396217acc9473bd1685f82e575c34f13ba94e42701639f` versus original local hash `e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3`. Both versions have 47,642 rows; a set comparison found one removed and one added row, both under country code `IR`. For the five selected countries, all **6,977 admin2 crosswalk rows** match the original sample row text and order after line-ending normalization.
+
+The first direct raw-file hash check of the filtered five-country output was misleading because it compared files with different newline conventions: the new helper output was LF, the original Windows-generated sample was CRLF, and the byte-size difference was exactly one byte per line. A subsequent ordinal line-by-line comparison across all 6,977 lines found no text or order differences. Do not treat this newline-only helper mismatch as changed sample data.
+
+See the [current official input-source recheck report](../geonames-input-source-recheck-2026-10-11.md) and [machine-readable source fingerprint summary](../geonames-input-source-recheck-2026-10-11.json). This current fetch does **not** recover the historical HTTP Last-Modified headers from the original local downloads. The allCountries archive hash matches the separate official-source CI audit, and the five-country sample-selection reproduction remains PASS.
+
+Still blocked: current official ISO 3166-1 comparison; 128 immediate administrative parent paths; 2,568 non-country hierarchy/association reference cases; worldwide product completeness; and independent real backup/restore readiness. No input source contents were committed, and no database, migration, seed, import, production or deployment operation occurred.
+
