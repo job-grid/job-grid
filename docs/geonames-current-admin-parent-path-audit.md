@@ -45,3 +45,32 @@ The existing exception export still reports 126 Japan records with raw admin1 00
 ## Current decision boundary
 
 This tooling does not modify source files, exception exports, migrations, schemas, seeds, imports, databases, deployment or production. It does not certify ISO authority codes or worldwide completeness. Any candidate parent path remains subject to owner review and explicit approval before any operational relationship is written.
+
+## Live source-pinned audit result — 2026-10-11
+
+**Result: all 128 records remain blocked; no candidate administrative parent paths were found.**
+
+GitHub Actions run [38097159134](https://github.com/job-grid/job-grid/actions/runs/38097159134) fetched the official Japan, Kenya and GeoNames hierarchy archives over HTTPS. All three HTTP responses returned 200; ZIP CRC validation passed; HTTP Last-Modified values and SHA-256 hashes were captured.
+
+| Input | Retrieved (UTC) | HTTP Last-Modified (UTC) | Size | SHA-256 |
+|---|---|---|---:|---|
+| JP.zip | 2026-10-11 00:04:19 | 2026-10-10 01:54:47 | 4,959,247 bytes | `f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58` |
+| KE.zip | 2026-10-11 00:04:21 | 2026-10-10 01:54:48 | 859,668 bytes | `d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43` |
+| hierarchy.zip | 2026-10-11 00:04:23 | 2026-10-10 02:03:54 | 2,133,112 bytes | `a43d26e35691045be9fcbac87e51c2942cd08e5e63b4883a985e92b96cc19e8b` |
+
+The combined Japan/Kenya country text has 135,252 lines, SHA-256 `092a1832f995f1aa2e9de7071b6f1fcd4b5afb151d3ec18306e3a8e13fbe95e2`. The extracted hierarchy text has 519,230 lines, SHA-256 `f81fdc85602678e22135fde1084d12f31f087bfe53e30897f686a70f57bc6c5f`.
+
+### Actual row-level results
+
+- 128 current admin targets reviewed: 126 Japan ADM4 and 2 Kenya ADM3.
+- Exact admin-code path candidates requiring owner review: **0**.
+- Targets with a direct hierarchy.zip edge of type ADM: **0**; targets with any direct hierarchy edge: **0**.
+- All 126 Japanese records remain blocked because their raw admin1 code is `00`; do not normalize it or synthesize a parent.
+- Both Kenyan records remain blocked because no exact same-country ADM1 composite-key match was found: Kiambururu Sub-Location (GeoNames ID 192705, raw admin1 `01`) and Imenti Central (ID 7800132, raw admin1 `03`). Neither ID has a direct `ADM` hierarchy edge in the downloaded hierarchy snapshot.
+- Operational parent links written: **0**. No live database, migration, seed, import, production or deployment changes.
+
+The detailed 128-row CSV, JSON summary and source retrieval manifest are available in the [seven-day workflow artifact](https://github.com/job-grid/job-grid/actions/runs/38097159134/artifacts/11687045546) (expires 2026-10-18). The source archives themselves were not committed or included in the artifact.
+
+The official GeoNames README says hierarchy.zip stores parent ID, child ID and relationship type; `ADM` entries model the hierarchy represented by admin1–4 codes, while toponym-to-admin relationships are reconstructed from the source admin codes. For these 128 specific targets, the independent hierarchy dump did not supply a direct ADM edge, so it provides no override for the missing/placeholder codes. This is evidence against fabricating an ancestry chain, not a claim that GeoNames' full hierarchy dataset is globally complete.
+
+These archives are the bytes fetched during this CI run, with real retrieval timestamps, Last-Modified headers, ETags and hashes. The checksums pin those downloaded bytes; they do not assert an immutable GeoNames release ID. Current ISO authority comparison and worldwide completeness remain unverified.
