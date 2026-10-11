@@ -744,7 +744,7 @@ jobs:
           print(f"Validated MLIT evidence JSON and CSV: {len(data['candidate_counts']['candidate_area_codes'])} area-code candidates; {len(rows)} row-level code/source records; zero parent links.")
           PY
 
-      - name: Audit Japan collision targets against official historical boundary polygons
+      - name: Audit all positive Japan candidates against official historical boundary polygons
         shell: bash
         env:
           RUNNER_TEMP_DIR: ${{ runner.temp }}
@@ -756,45 +756,79 @@ jobs:
           python tests/test_geonames_japan_mlit_polygon_evidence_audit.py
           python scripts/geonames-japan-mlit-polygon-evidence-audit.py \
             "$work/japan-estat-evidence-audit.json" \
-            "$work/japan-mlit-polygon-audit"
+            "$work/japan-mlit-polygon-audit" \
+            --all-positive-candidates
           python -m json.tool "$work/japan-mlit-polygon-audit.json" >/dev/null
           python -m json.tool "$work/japan-mlit-polygon-audit.manifest.json" >/dev/null
-          python - "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" <<'PY'
+          python - "$work/japan-estat-evidence-audit.json" "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" <<'PY'
           import csv
           import json
           import sys
           from pathlib import Path
 
-          report_path, observations_path, candidate_path = map(Path, sys.argv[1:])
+          estat_path, report_path, observations_path, candidate_path = map(Path, sys.argv[1:])
+          estat = json.loads(estat_path.read_text(encoding="utf-8"))
           report = json.loads(report_path.read_text(encoding="utf-8"))
           with observations_path.open(encoding="utf-8", newline="") as stream:
               observations = list(csv.DictReader(stream))
           with candidate_path.open(encoding="utf-8", newline="") as stream:
               candidates = list(csv.DictReader(stream))
-          if report.get("target_count") != 6 or len(report.get("target_observations", [])) != 6:
-              raise SystemExit("Expected all six Japan identity-collision targets in point-in-polygon evidence.")
-          if report.get("source_snapshot_archive_count") != 65 or len(report.get("source_snapshots", [])) != 65:
-              raise SystemExit("Expected 65 verified historical prefecture boundary archives.")
-          if len(candidates) != 19:
-              raise SystemExit(f"Expected 19 target-to-candidate-code rows, got {len(candidates)}.")
+
+          positive_targets = [target for target in estat.get("target_results", []) if target.get("candidates")]
+          expected_ids = {str(target["geonames_id"]) for target in positive_targets}
+          expected_associations = sum(len(target["candidates"]) for target in positive_targets)
+          expected_codes = {
+              str(candidate["area_code"]).zfill(5)
+              for target in positive_targets
+              for candidate in target["candidates"]
+          }
+          expected_prefectures = {code[:2] for code in expected_codes}
+          expected_archives = 3 * len(expected_prefectures) + 47
+
+          if report.get("selection_mode") != "ALL_POSITIVE_ESTAT_LABEL_CANDIDATE_TARGETS":
+              raise SystemExit(f"Unexpected polygon audit selection mode: {report.get('selection_mode')}")
+          actual_ids = {str(target["geonames_id"]) for target in report.get("target_observations", [])}
+          if report.get("target_count") != len(positive_targets) or actual_ids != expected_ids:
+              raise SystemExit(
+                  f"Expected all {len(expected_ids)} positive-label candidate targets; got {len(actual_ids)}"
+              )
+          if report.get("target_code_associations_tested") != expected_associations:
+              raise SystemExit("Polygon audit target-to-code association count does not match the e-Stat candidate data.")
+          if report.get("distinct_candidate_area_codes_tested") != len(expected_codes):
+              raise SystemExit("Polygon audit distinct-area-code count does not match the e-Stat candidate data.")
+          if report.get("source_snapshot_archive_count") != expected_archives or len(report.get("source_snapshots", [])) != expected_archives:
+              raise SystemExit(f"Expected {expected_archives} verified boundary archives for all candidate prefectures and 1995 context.")
+          if len(candidates) != expected_associations:
+              raise SystemExit(f"Expected {expected_associations} target-to-candidate-code rows, got {len(candidates)}.")
           if not observations:
-              raise SystemExit("Point-in-polygon CSV is empty.")
+              raise SystemExit("Point-in-polygon observations CSV is empty.")
           if any(row.get("operational_parent_link_created", "").lower() != "false" for row in observations):
               raise SystemExit("Point-in-polygon observations violate the no-parent-write boundary.")
           if any(row.get("operational_parent_link_created", "").lower() != "false" for row in candidates):
               raise SystemExit("Point-in-polygon candidate dispositions violate the no-parent-write boundary.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Polygon audit violated the no-parent-write boundary.")
           if any(len(item.get("archive_sha256", "")) != 64 for item in report["source_snapshots"]):
               raise SystemExit("At least one historical polygon archive lacks a SHA-256 fingerprint.")
           for target in report["target_observations"]:
               if not target.get("polygon_observations"):
                   raise SystemExit(f"No polygon context recorded for GeoNames ID {target['geonames_id']}; fail closed.")
-          print(f"Validated official polygon audit: {report['target_count']} targets; {report['source_snapshot_archive_count']} source archives; {len(observations)} containing-polygon rows; {len(candidates)} candidate rows; zero parent links.")
-          print("## Japan point-in-polygon collision evidence")
-          print(f"- Collision targets with official boundary context: {report['target_count']}/6")
-          print(f"- Historical MLIT boundary archives retrieved and CRC-checked: {report['source_snapshot_archive_count']}")
-          print(f"- Candidate area-code records inspected: {len(candidates)}")
-          print(f"- Candidate codes containing at least one target point: {sum(bool(row['point_inside_candidate_polygon_snapshots']) for row in candidates)}")
-          print("- Point containment is candidate evidence only; no GeoNames crosswalk or parent link approved.")
+
+          candidate_codes_with_point_hit = sum(
+              bool(row["point_inside_candidate_polygon_snapshots"]) for row in candidates
+          )
+          print(
+              f"Validated official polygon audit: {report['target_count']} positive-candidate targets; "
+              f"{report['source_snapshot_archive_count']} archives; {len(observations)} containing-polygon rows; "
+              f"{len(candidates)} target-code rows; zero parent links."
+          )
+          print("## Japan positive-candidate point-in-polygon evidence")
+          print(f"- Positive e-Stat candidate targets with official boundary context: {report['target_count']}/{len(positive_targets)}")
+          print(f"- Historical/current MLIT boundary archives retrieved and CRC-checked: {report['source_snapshot_archive_count']}")
+          print(f"- Distinct e-Stat candidate area codes inspected: {len(expected_codes)}")
+          print(f"- Target-to-candidate-code associations inspected: {len(candidates)}")
+          print(f"- Candidate associations with a point inside the candidate polygon: {candidate_codes_with_point_hit}")
+          print("- Spatial containment is candidate evidence only; no GeoNames crosswalk or parent link approved.")
           PY
 
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
