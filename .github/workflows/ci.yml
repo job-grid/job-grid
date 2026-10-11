@@ -744,6 +744,59 @@ jobs:
           print(f"Validated MLIT evidence JSON and CSV: {len(data['candidate_counts']['candidate_area_codes'])} area-code candidates; {len(rows)} row-level code/source records; zero parent links.")
           PY
 
+      - name: Audit Japan collision targets against official historical boundary polygons
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: \${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          python -m pip install --disable-pip-version-check pyshp
+          python -m py_compile scripts/geonames-japan-mlit-polygon-evidence-audit.py
+          python tests/test_geonames_japan_mlit_polygon_evidence_audit.py
+          python scripts/geonames-japan-mlit-polygon-evidence-audit.py \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-polygon-audit"
+          python -m json.tool "$work/japan-mlit-polygon-audit.json" >/dev/null
+          python -m json.tool "$work/japan-mlit-polygon-audit.manifest.json" >/dev/null
+          python - "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, observations_path, candidate_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          with observations_path.open(encoding="utf-8", newline="") as stream:
+              observations = list(csv.DictReader(stream))
+          with candidate_path.open(encoding="utf-8", newline="") as stream:
+              candidates = list(csv.DictReader(stream))
+          if report.get("target_count") != 6 or len(report.get("target_observations", [])) != 6:
+              raise SystemExit("Expected all six Japan identity-collision targets in point-in-polygon evidence.")
+          if report.get("source_snapshot_archive_count") != 65 or len(report.get("source_snapshots", [])) != 65:
+              raise SystemExit("Expected 65 verified historical prefecture boundary archives.")
+          if len(candidates) != 19:
+              raise SystemExit(f"Expected 19 target-to-candidate-code rows, got {len(candidates)}.")
+          if not observations:
+              raise SystemExit("Point-in-polygon CSV is empty.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in observations):
+              raise SystemExit("Point-in-polygon observations violate the no-parent-write boundary.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in candidates):
+              raise SystemExit("Point-in-polygon candidate dispositions violate the no-parent-write boundary.")
+          if any(len(item.get("archive_sha256", "")) != 64 for item in report["source_snapshots"]):
+              raise SystemExit("At least one historical polygon archive lacks a SHA-256 fingerprint.")
+          for target in report["target_observations"]:
+              if not target.get("polygon_observations"):
+                  raise SystemExit(f"No polygon context recorded for GeoNames ID {target['geonames_id']}; fail closed.")
+          print(f"Validated official polygon audit: {report['target_count']} targets; {report['source_snapshot_archive_count']} source archives; {len(observations)} containing-polygon rows; {len(candidates)} candidate rows; zero parent links.")
+          print("## Japan point-in-polygon collision evidence")
+          print(f"- Collision targets with official boundary context: {report['target_count']}/6")
+          print(f"- Historical MLIT boundary archives retrieved and CRC-checked: {report['source_snapshot_archive_count']}")
+          print(f"- Candidate area-code records inspected: {len(candidates)}")
+          print(f"- Candidate codes containing at least one target point: {sum(bool(row['point_inside_candidate_polygon_snapshots']) for row in candidates)}")
+          print("- Point containment is candidate evidence only; no GeoNames crosswalk or parent link approved.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -760,7 +813,13 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1990-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1975-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1970-10-01.html
-            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
+            \${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
+            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
+            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
+            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
+            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
+            \${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
+            \${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
           if-no-files-found: error
           retention-days: 7
 
