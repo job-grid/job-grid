@@ -550,3 +550,42 @@ Official Kenyan administrative materials now provide stronger county-level ances
 Evidence citations and unresolved points are in the [external-ancestor dossier](geonames-kenya-external-ancestor-evidence-2026-10-11.md) and [machine-readable review](geonames-kenya-external-ancestor-evidence-2026-10-11.json). The official GeoNames target pages for both IDs still display no parent relationship; current crosswalk keys `KE.01` and `KE.03` remain absent. These county ancestor leads do not change the 128-record overall blocked status and do not authorize writing any parent link.
 
 No raw code was changed; no parent link, seed, import, migration, database or production change was performed. ISO source comparison, independent sample-selection reproduction and worldwide product completeness remain unverified.
+
+## 5O. Independent sample-selection reproduction and current source recheck — 2026-10-11
+
+This addendum **supersedes the sample-selection status in §5G and earlier sections** that said the original selection or a second implementation remained unverified.
+
+### Sample selection — reproduced by two implementations
+
+The recovered original `prepare_sample.py` was run again against the owner's local inputs in a separate output directory. The five input hashes matched the original local manifest. The full `allCountries.zip` hash is `3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15`, which also matches the separate official-source GitHub Actions retrieval.
+
+- Original-script rerun: 13,472,324 worldwide rows scanned, zero malformed rows, 25,685 sample rows, 25,685 distinct IDs, zero duplicate IDs, zero invalid coordinates.
+- All seven deterministic generated output files matched the prior output folder byte-for-byte. The ten members of the owner-supplied ZIP also match the prior extracted output folder.
+- A separately authored selection checker, `scripts/geonames-sample-selection-independent-check.py`, then recreated the sample without importing or executing `prepare_sample.py`. It used a sorted bounded list for top-population ranking rather than the original script's heap.
+- The separately authored output has exactly the same SHA-256 as the original selected TSV: `1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad`. It scanned 13,472,324 rows; malformed rows, duplicate IDs, and invalid coordinates were all zero. The new [synthetic regression tests](../tests/geonames-sample-selection-independent-check.test.js) cover inclusion/ranking rules, malformed rows, duplicate IDs, invalid coordinates, output fields and overwrite protection.
+
+The complete measured result is in the [sample-selection reproduction report](geonames-sample-reproduction-2026-10-11.md) and [aggregate JSON](geonames-sample-selection-independent-reproduction-2026-10-11.json).
+
+**Limit:** the separately authored checker deliberately preserves the same seeded Python `random.Random` behavior for deterministic reservoir draws. It is a second implementation of selection logic, but not a cross-language/independent-PRNG test. This evidence demonstrates reproducible selection for the five-country sample; it does not establish worldwide geographic catalog completeness.
+
+### Current-source recheck of four small reference files
+
+The owner computer fetched current `countryInfo.txt`, `admin1CodesASCII.txt`, `admin2Codes.txt`, and `readme.txt` directly from the official GeoNames HTTPS URLs and captured actual retrieval timestamps, HTTP Last-Modified values, ETags, sizes and SHA-256 values.
+
+- `countryInfo`, `admin1CodesASCII`, and `readme` exactly match the currently served official bytes.
+- Current `admin2Codes.txt` contains 47,642 rows, as does the original local snapshot, but its bytes differ: one record was replaced under country code `IR` (Iran), and the total file is two bytes larger.
+- A normalized line-by-line comparison confirms all **6,977** admin2 rows relevant to the five-country sample are identical in text and order. The first helper file's raw SHA differed only because it used LF line endings while the original Windows output uses CRLF; no sample row-content or order differences were found.
+
+See the [current-source recheck report](geonames-input-source-recheck-2026-10-11.md) and [machine-readable source/response manifest](geonames-input-source-recheck-2026-10-11.json). This current recheck does not reconstruct historic HTTP headers for the original local downloads; the local manifest's `last_modified_utc` is a filesystem mtime, not a server header.
+
+### Current gates
+
+Sample selection is now **PASS for same-script reproduction and separately authored selection-logic reproduction**. The following remain blocked or unverified:
+
+- 128 current administrative parent paths (126 Japan ADM4 raw admin1 `00`, plus two Kenya ADM3 records with absent current `KE.01`/`KE.03` keys);
+- current official ISO 3166-1 snapshot acquisition and deterministic comparison under permitted access terms;
+- 2,568 non-country reference cases that still need hierarchy/administrative-association review;
+- worldwide geographic catalog completeness; and
+- independent evidence that the actual Phase 4C backup/restore path is operational.
+
+No source archives were committed. The original source files and sample output were not modified. No operational parent links, migrations, seeds, imports, database writes, production or deployment actions occurred. PR #27 remains open, draft and unmerged.
