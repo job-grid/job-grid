@@ -290,7 +290,7 @@ test("paginates when catalogue page reaches its size and fails closed for an emp
   assert.equal(snapshot.manifest.catalog_result_row_count, CATALOG_PAGE_SIZE);
   assert.equal(snapshot.manifest.candidate_detail_result_rows, 0);
   assert.equal(snapshot.sourceRows.length, CATALOG_PAGE_SIZE);
-  assert.equal(snapshot.manifest.candidate_detail_response_sha256, null);
+  assert.equal(snapshot.manifest.candidate_detail_batch_count, 0);
 
   await assert.rejects(
     () => fetchEstatSnapshot(["Yao-chō"], async () => sparqlResponse([])),
