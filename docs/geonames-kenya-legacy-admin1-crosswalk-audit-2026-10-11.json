@@ -71,31 +71,49 @@
     "The 126 Japan ADM4 records with raw admin1 00 remain a separate open gate."
   ],
   "external_evidence_review": {
-    "status": "IDENTITY_CORROBORATION_LEAD_ONLY_PARENT_LINEAGE_NOT_VERIFIED",
-    "sources": [
+    "status": "COUNTY_LEVEL_ANCESTOR_CANDIDATES_FOUND__IMMEDIATE_PARENT_PATHS_UNRESOLVED",
+    "candidate_only": true,
+    "owner_approval_required": true,
+    "operational_links_created": 0,
+    "records": [
       {
-        "owner": "Kenya National Bureau of Statistics",
-        "title": "2019 Kenya Population and Housing Census, Volume II: Distribution of Population by Administrative Units",
-        "url": "https://www.knbs.or.ke/wp-content/uploads/2023/09/2019-Kenya-population-and-Housing-Census-Volume-2-Distribution-of-Population-by-Administrative-Units.pdf",
-        "indexed_exact_name_found": "KIAMBURURU",
-        "relevance": "Exact sub-location name appears in indexed Table 2.4 excerpt; the excerpt available in this review does not establish an auditable parent-ID lineage."
+        "geonames_id": "192705",
+        "name": "Kiambururu Sub-Location",
+        "raw_admin1_code_preserved": "01",
+        "candidate_county_ancestor": {
+          "geonames_id": "8693007",
+          "name": "Kiambu County",
+          "feature_code": "ADM2"
+        },
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__ADMIN_LEVEL_CONFLICT",
+        "evidence_urls": [
+          "https://www.kenyalaw.org/kl/fileadmin/pdfdownloads/Acts/IndependentElectoralandBoundariesCommissionNo9of2011.pdf",
+          "https://www.interior.go.ke/sites/default/files/2024-05/gazette-vol.-17-14-2-24-special-admin-units.pdf",
+          "https://www.geonames.org/192705/kiambururu-sub-location.html",
+          "https://www.geonames.org/8693007/kiambu-county.html"
+        ],
+        "unresolved": "2011 IEBC schedule places Kiambururu among Kiambu County sub-locations; 2024 Ministry of Interior gazette lists Kiambururu as a Location under Githunguri Sub-County. No direct GeoNames ID crosswalk is present."
       },
       {
-        "owner": "Kenya National Bureau of Statistics",
-        "title": "1999 Kenya Population and Housing Census, Volume I",
-        "url": "https://www.knbs.or.ke/wp-content/uploads/2023/09/1999-Kenya-population-and-Housing-Census-Counting-Our-People-For-Development-Volume-1.pdf",
-        "indexed_exact_name_found": "KIAMBURURU",
-        "relevance": "Historical sub-location-name corroboration; no current GeoNames parent ID or replacement admin-code mapping established."
-      },
-      {
-        "owner": "Kenya National Bureau of Statistics",
-        "title": "2019 Kenya Population and Housing Census reports",
-        "url": "https://www.knbs.or.ke/2019-kenya-population-and-housing-census-reports/",
-        "indexed_exact_name_found": "No exact ID-backed match for Imenti Central",
-        "relevance": "Indexed current administrative lists include Meru Central, Imenti North/South and Central Imenti; similar names were not treated as proof that GeoNames ID 7800132 is the same unit."
+        "geonames_id": "7800132",
+        "name": "Imenti Central",
+        "raw_admin1_code_preserved": "03",
+        "candidate_county_ancestor": {
+          "geonames_id": "8693009",
+          "name": "Meru County",
+          "feature_code": "ADM2"
+        },
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__NAME_VARIANT_AND_IMMEDIATE_PATH_UNVERIFIED",
+        "evidence_urls": [
+          "https://meru.go.ke/sub-counties/",
+          "https://meru.go.ke/1164/sub-county-administrators/",
+          "https://new.kenyalaw.org/akn/ke/officialGazette/gazette/2022-08-24/170/eng%402022-08-24/source",
+          "https://www.geonames.org/7800132/imenti-central.html",
+          "https://www.geonames.org/8693009/meru-county.html"
+        ],
+        "unresolved": "Meru County Government and Gazette list Central Imenti / Imenti Central under Meru County. No direct GeoNames ID crosswalk or complete immediate parent path is established."
       }
     ],
-    "disposition": "Both exact GeoNames crosswalk keys remain absent; no parent path authorized or created.",
-    "caveat": "Source query excerpts are identity leads only. Replacement administrative IDs require a directly auditable authoritative lineage/crosswalk or suitable boundary evidence."
+    "note": "GeoNames ADM1 records Kiambu (192709) and Meru (186824) are distinct from county-level ADM2 entities Kiambu County (8693007) and Meru County (8693009)."
   }
 }
