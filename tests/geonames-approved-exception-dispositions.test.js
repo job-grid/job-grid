@@ -59,12 +59,19 @@ test("approved dispositions separate current hierarchy blockers from other entit
   assert.equal(summary.initial_operational_admin_catalog.current_admin_records_eligible_from_this_exception_set, 0);
   const currentAdminRows = rows.filter((row) => /^ADM[1-4]$/.test(row.feature_code));
   assert.equal(new Set(currentAdminRows.map((row) => row.geonames_id)).size, 128);
-  assert.ok(currentAdminRows.every((row) =>
-    row.initial_operational_admin_catalog_disposition ===
-    "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH"));
+  const exclusionCsv = toInitialAdminCatalogExclusionCsv(rows);
+  assert.equal(exclusionCsv.trim().split("\n").length - 1, 128);
   assert.equal(
-    toInitialAdminCatalogExclusionCsv(rows).trim().split("\\n").length - 1,
+    (exclusionCsv.match(/EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH/g) || []).length,
     128,
+  );
+  assert.equal(
+    (exclusionCsv.match(/RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED/g) || []).length,
+    126,
+  );
+  assert.equal(
+    (exclusionCsv.match(/EXACT_COUNTRY_ADMIN_PARENT_KEY_NOT_FOUND/g) || []).length,
+    2,
   );
   assert.equal(summary.unique_record_dispositions.PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR, 1030);
   assert.equal(summary.unique_record_dispositions.PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR, 1109);
