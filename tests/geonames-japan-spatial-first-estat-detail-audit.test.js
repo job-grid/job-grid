@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildCatalogCodeIndex,
   buildSpatialTargetCodeCandidates,
+  codeResultToCsvRow,
   mergeCatalogAndDetailRows,
   periodIncludesDate,
 } from "../scripts/geonames-japan-spatial-first-estat-detail-audit.mjs";
@@ -85,6 +86,32 @@ test("period details are merged by URI and preserve parent history", () => {
   assert.equal(merged[0].parent_references.length, 2);
   assert.deepEqual(merged[0].parent_references.map((row) => row.area_code), ["00000", "00001"]);
   assert.throws(() => mergeCatalogAndDetailRows(catalog, []), /Missing official e-Stat detail response/);
+});
+
+test("code CSV projection uses the canonical periods_covering_1995_snapshot array", () => {
+  const projected = codeResultToCsvRow({
+    area_code: "01000",
+    target_count: 1,
+    geonames_ids: ["1000001"],
+    geonames_names: ["Example"],
+    containing_area_names_1995: ["Hokkaido"],
+    exact_english_name_candidate_codes_for_associated_targets: ["01000"],
+    associated_targets_whose_code_matches_exact_name_candidate: ["1000001"],
+    catalog_labels_en: ["Hokkaido"],
+    catalog_labels_ja: ["北海道"],
+    periods_covering_1995_snapshot: ["http://data.e-stat.go.jp/lod/sac/C01000-19900401"],
+    periods_covering_1995_count: 1,
+    parent_area_codes_across_history: ["00000"],
+    parent_labels_en_across_history: ["Japan"],
+    parent_labels_ja_across_history: ["日本"],
+    parent_area_codes_at_1995: ["00000"],
+    parent_labels_en_at_1995: ["Japan"],
+    parent_labels_ja_at_1995: ["日本"],
+    administrative_class_uris_at_1995: ["class"],
+    review_status: "CANDIDATE_ONLY",
+  });
+  assert.equal(projected.periods_covering_1995_snapshot, "http://data.e-stat.go.jp/lod/sac/C01000-19900401");
+  assert.equal(projected.operational_parent_link_created, "false");
 });
 
 test("period-to-snapshot comparison uses published issued/valid dates and fails closed on missing start", () => {
