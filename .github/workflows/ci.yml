@@ -1665,6 +1665,40 @@ jobs:
           print("Kenya legacy-key audit complete; replacement parentage remains unresolved unless separately evidenced and approved.")
           PY
 
+      - name: Build source-pinned Kenya crosswalk rebuild ledger (candidate-only)
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: \${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR"
+          node --test tests/geonames-kenya-crosswalk-rebuild-ledger.test.mjs
+          node scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs \
+            "$work/kenya-legacy-admin1-crosswalk-audit.json" \
+            docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json \
+            "$work/kenya-crosswalk-rebuild-ledger"
+          python - "$work/kenya-crosswalk-rebuild-ledger.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("status") != "REBUILD_LEDGER_CREATED__DIRECT_PARENT_PATHS_UNRESOLVED":
+              raise SystemExit("Kenya rebuild ledger status is unexpected.")
+          totals = report.get("totals", {})
+          if totals.get("target_rows") != 2 or totals.get("immediate_parent_paths_verified") != 0:
+              raise SystemExit("Kenya rebuild ledger target/path totals do not reconcile.")
+          if totals.get("operational_parent_links_created") != 0 or totals.get("raw_admin1_codes_changed") != 0:
+              raise SystemExit("Safety boundary violated: raw codes/parent links must not change.")
+          records = report.get("records", [])
+          if {row.get("geonames_id") for row in records} != {"192705", "7800132"}:
+              raise SystemExit("Ledger does not preserve the exact two source-verified Kenya targets.")
+          if any(row.get("immediate_parent_geonames_id") is not None for row in records):
+              raise SystemExit("Candidate ancestor was incorrectly promoted to an immediate parent.")
+          if any(row.get("operational_parent_link_created") is not False for row in records):
+              raise SystemExit("Operational parent-link boundary violated.")
+          print("Kenya rebuild ledger validated: two rows, county ancestors candidate-only, zero parent links.")
+          PY
       - name: Upload Kenya legacy-code audit and retrieval manifest
         uses: actions/upload-artifact@v4
         with:
@@ -1673,5 +1707,7 @@ jobs:
             ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.csv
             ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.json
             ${{ runner.temp }}/geonames-kenya-admin1/source-manifest.json
+            ${{ runner.temp }}/kenya-crosswalk-rebuild-ledger.csv
+            ${{ runner.temp }}/kenya-crosswalk-rebuild-ledger.json
           if-no-files-found: error
           retention-days: 7

@@ -644,3 +644,10 @@ The aggregate report records source byte lengths and SHA-256 fingerprints while 
 **This does not perform or clear ISO 3166-1 authority comparison.** The report explicitly records that ISO was not compared. Follow the existing ISO local-comparison protocol and its permitted-use boundary; do not send ISO non-Open-Data source rows or code tuples to AI tools, put them into Git, bypass access controls, or purchase paid access without owner authorization. No ISO values were used by the new audit.
 
 Worldwide product completeness is still not established. The 128 unresolved administrative parent paths remain excluded from the initial operational administrative catalog. The remaining 2,568 non-country hierarchy/association cases, ISO comparison, global product-coverage proof, and Phase 4C backup/restore readiness remain separate acceptance gates. No parent links, migrations, seeds, imports, database changes, or deployment actions were performed.
+
+
+## 5R. Kenya legacy crosswalk rebuild ledger — 2026-10-11
+
+PR #27 now defines a source-pinned, deterministic Kenya crosswalk rebuild ledger. The Kenya Phase 0 CI job validates the current GeoNames admin1 source, checks both affected records, generates JSON/CSV dispositions and uploads them with the source manifest. See [the rebuild report](geonames-kenya-crosswalk-rebuild-2026-10-11.md), [ledger generator](../scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs), and [regression tests](../tests/geonames-kenya-crosswalk-rebuild-ledger.test.mjs).
+
+The records remain blocked for different reasons: GeoNames 192705 (Kiambururu, raw admin1 01 / KE.01) has a Location versus Sub-Location identity-level conflict; GeoNames 7800132 (Imenti Central, raw admin1 03 / KE.03) needs an authoritative unit identifier that disambiguates the administrative unit from constituency usage. Candidate county entities 8693007 (Kiambu ADM2) and 8693009 (Meru ADM2) remain ancestor-only evidence. The generator explicitly leaves immediate_parent_geonames_id null and creates zero parent links until the identity crosswalk and immediate path are source-verified.
