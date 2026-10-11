@@ -1098,6 +1098,71 @@ jobs:
           print("- Official parent references are retained as source evidence only; no GeoNames parent ID was selected.")
           PY
 
+      - name: Audit official e-Stat parents against exact GeoNames Japan administrative labels
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-estat-parent-geonames-candidate-audit.test.js
+          node scripts/geonames-japan-estat-parent-geonames-candidate-audit.mjs \
+            "$work/extracted/JP.txt" \
+            "$work/japan-mlit-1995-all-126-estat-details.json" \
+            "$work/geonames-source-manifest.json" \
+            "$work/japan-estat-parent-geonames-candidates"
+          python - "$work/japan-estat-parent-geonames-candidates.json" "$work/japan-estat-parent-geonames-candidates.parent-references.csv" "$work/japan-estat-parent-geonames-candidates.candidate-matches.csv" "$work/geonames-source-manifest.json" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, parents_path, candidates_path, manifest_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          source = json.loads(manifest_path.read_text(encoding="utf-8"))
+          with parents_path.open(encoding="utf-8", newline="") as stream:
+              parent_rows = list(csv.DictReader(stream))
+          with candidates_path.open(encoding="utf-8", newline="") as stream:
+              candidate_rows = list(csv.DictReader(stream))
+
+          if report.get("status") != "PASS_EXACT_JAPANESE_LABEL_PARENT_ID_CANDIDATE_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED":
+              raise SystemExit("Unexpected Japanese parent identity-candidate audit status.")
+          if report.get("spatial_first_input", {}).get("target_count") != 126:
+              raise SystemExit("Parent identity audit did not use the full 126-target spatial-first report.")
+          if report.get("spatial_first_input", {}).get("distinct_spatial_area_codes") != 105:
+              raise SystemExit("Parent identity audit does not reconcile with the 105-code spatial-first report.")
+          if report.get("spatial_first_input", {}).get("detail_periods_reconciled") != 557:
+              raise SystemExit("Parent identity audit does not use the fully reconciled 557-period e-Stat history.")
+          if report.get("parent_reference_count") != len(report.get("parent_references", [])) or len(parent_rows) != report.get("parent_reference_count"):
+              raise SystemExit("Parent-reference JSON and CSV row counts do not reconcile.")
+          if len(candidate_rows) != report.get("candidate_match_rows"):
+              raise SystemExit("Candidate match CSV row count does not reconcile with JSON.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Parent identity audit must not create operational parent links.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in parent_rows + candidate_rows):
+              raise SystemExit("Parent identity audit output violated the no-parent-write boundary.")
+          if any(row.get("parent_identity_crosswalk_status") != "NOT_VERIFIED_TO_GEONAMES_ID" for row in candidate_rows):
+              raise SystemExit("A GeoNames parent candidate was incorrectly marked as an accepted identity crosswalk.")
+          if source.get("archive_sha256") != report.get("geonames_source", {}).get("archive_sha256"):
+              raise SystemExit("The parent audit's GeoNames archive fingerprint does not match the current source manifest.")
+          if len(report.get("geonames_source", {}).get("text_member_sha256", "")) != 64:
+              raise SystemExit("Parent audit omitted the extracted JP.txt SHA-256.")
+          if report.get("geonames_source", {}).get("malformed_or_wrong_shape_rows") != 0:
+              raise SystemExit("The extracted GeoNames Japan source contained malformed rows.")
+          if report.get("geonames_source", {}).get("duplicate_japan_administrative_ids") != 0:
+              raise SystemExit("The extracted GeoNames Japan source contained duplicate eligible administrative IDs.")
+          if report.get("parent_references_with_one_candidate", 0) + report.get("parent_references_with_multiple_candidates", 0) > report.get("parent_reference_count", 0):
+              raise SystemExit("Candidate reference counts exceed the official parent-reference universe.")
+
+          print(
+              f"Validated exact-label e-Stat/GeoNames Japan parent candidates: "
+              f"{report['parent_reference_count']} official parent references; "
+              f"{report['parent_references_with_one_candidate']} one-candidate references; "
+              f"{report['parent_references_with_multiple_candidates']} ambiguous references; "
+              f"{report['parent_references_with_no_exact_candidate']} no-match references; "
+              f"{report['candidate_match_rows']} candidate rows; zero parent links."
+          )
+          print("Exact Japanese-label matches are candidate evidence only; no GeoNames parent IDs are approved.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -1130,6 +1195,9 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.area-code-period-history.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.parent-references.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.candidate-matches.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
