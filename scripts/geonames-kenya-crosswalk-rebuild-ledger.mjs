@@ -5,14 +5,15 @@ import { fileURLToPath } from "node:url";
 
 function need(condition, message) { if (!condition) throw new Error(message); }
 function meta(audit) {
-  const source = audit.source ?? {};
+  const wrapper = audit.source ?? {};
+  const source = wrapper.manifest?.remote_source ?? wrapper.remote_source ?? wrapper;
   const url = source.url ?? source.source_url;
-  const hash = source.sha256 ?? audit.source?.crosswalk_sha256;
+  const hash = source.sha256 ?? wrapper.crosswalk_sha256;
   const status = Number(source.http_status ?? 0);
-  const retrieved = source.retrieved_at_utc;
-  const rows = Number(source.rows ?? audit.crosswalk_row_count ?? 0);
-  const malformed = Number(source.malformed_rows ?? audit.malformed_rows ?? 0);
-  const duplicateValue = source.duplicate_composite_keys ?? audit.duplicate_crosswalk_keys ?? 0;
+  const retrieved = source.retrieved_at_utc ?? wrapper.retrieved_at_utc;
+  const rows = Number(audit.crosswalk_row_count ?? source.rows ?? 0);
+  const malformed = Number(audit.malformed_rows ?? source.malformed_rows ?? 0);
+  const duplicateValue = audit.duplicate_crosswalk_keys ?? source.duplicate_composite_keys ?? 0;
   const duplicates = Array.isArray(duplicateValue) ? duplicateValue.length : Number(duplicateValue ?? 0);
   need(url === "https://download.geonames.org/export/dump/admin1CodesASCII.txt", "Unexpected current source URL.");
   need(status === 200 && Number.isFinite(Date.parse(retrieved ?? "")), "Current crosswalk retrieval metadata is invalid.");
