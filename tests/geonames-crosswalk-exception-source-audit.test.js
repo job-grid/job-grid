@@ -146,13 +146,15 @@ test("CLI writes row-level mismatch report and source hash using a small fixture
     const prefix = join(temp, "audit");
     const script = fileURLToPath(new URL("../scripts/geonames-crosswalk-exception-source-audit.mjs", import.meta.url));
     const source = geoRow({ id: "300", name: "Target", feature: "ADM3", country: "XX", admin1: "01", admin2: "02", admin3: "03" });
-    const sourceLine = [
-      source.geonames_id, source.name, source.ascii_name, "", "1", "2",
-      source.feature_class, source.feature_code, source.country_code, "",
-      source.admin1_code, source.admin2_code, source.admin3_code, source.admin4_code,
-      "0", "", "", "UTC", source.modification_date,
+    const blankCountry = geoRow({ id: "302", name: "Uncoded feature", feature: "PPL", country: "", featureClass: "P" });
+    const nonstandardCountry = geoRow({ id: "303", name: "Nonstandard country field", feature: "PPL", country: "??", featureClass: "P" });
+    const sourceLine = (row) => [
+      row.geonames_id, row.name, row.ascii_name, "", "1", "2",
+      row.feature_class, row.feature_code, row.country_code, "",
+      row.admin1_code, row.admin2_code, row.admin3_code, row.admin4_code,
+      "0", "", "", "UTC", row.modification_date,
     ].join("\t");
-    await writeFile(sourcePath, sourceLine + "\n", "utf8");
+    await writeFile(sourcePath, [source, blankCountry, nonstandardCountry].map(sourceLine).join("\n") + "\n", "utf8");
     await writeFile(exceptionPath, [
       "reference_level,geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code",
       "admin1,300,Target,XX,ADM3,01,02",
@@ -186,6 +188,15 @@ test("CLI writes row-level mismatch report and source hash using a small fixture
     assert.equal(summary.status_counts.SOURCE_IDENTITY_AND_RAW_CODES_MATCH, 1);
     assert.equal(summary.status_counts.BLOCKED_SOURCE_ID_NOT_FOUND, 1);
     assert.equal(summary.input.remote_retrieval_metadata_verified, true);
+    const coverage = summary.input.source_country_code_coverage;
+    assert.equal(coverage.scope, "GeoNames allCountries source snapshot only; not an ISO 3166 comparison or proof of Job Grid product coverage");
+    assert.equal(coverage.rows_with_19_fields_and_nonempty_id, 3);
+    assert.equal(coverage.malformed_or_wrong_shape_source_lines, 0);
+    assert.equal(coverage.distinct_raw_country_code_buckets, 3);
+    assert.deepEqual(coverage.country_code_record_counts, { "(blank)": 1, "??": 1, "XX": 1 });
+    assert.deepEqual(coverage.feature_class_record_counts, { A: 1, P: 2 });
+    assert.equal(coverage.rows_with_blank_country_code, 1);
+    assert.equal(coverage.rows_with_nonstandard_country_code_format, 1);
     assert.match(csv, /BLOCKED_SOURCE_ID_NOT_FOUND/);
     assert.equal(summary.parent_ids_or_links_assigned, 0);
   } finally {
