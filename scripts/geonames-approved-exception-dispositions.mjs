@@ -205,6 +205,45 @@ export function toCsv(rows) {
   ].join("\n") + "\n";
 }
 
+const INITIAL_ADMIN_EXCLUSION_FIELDS = [
+  "geonames_id",
+  "name",
+  "country_code",
+  "feature_code",
+  "raw_admin1_code",
+  "raw_admin2_code",
+  "initial_operational_admin_catalog_disposition",
+  "exclusion_reason",
+  "parent_link_created",
+];
+
+export function toInitialAdminCatalogExclusionCsv(rows) {
+  const excluded = rows
+    .filter((row) =>
+      row.initial_operational_admin_catalog_disposition ===
+      "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH")
+    .filter((row, index, all) =>
+      all.findIndex((candidate) => candidate.geonames_id === row.geonames_id) === index)
+    .sort((a, b) =>
+      a.country_code.localeCompare(b.country_code) ||
+      Number(a.geonames_id) - Number(b.geonames_id));
+
+  return [
+    INITIAL_ADMIN_EXCLUSION_FIELDS.join(","),
+    ...excluded.map((row) => {
+      const exclusionReason = row.country_code === "JP" && row.raw_admin1_code === "00"
+        ? "RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED"
+        : "EXACT_COUNTRY_ADMIN_PARENT_KEY_NOT_FOUND";
+      const result = {
+        ...row,
+        exclusion_reason: exclusionReason,
+        parent_link_created: false,
+      };
+      return INITIAL_ADMIN_EXCLUSION_FIELDS.map((field) => escapeCsv(result[field])).join(",");
+    }),
+  ].join("\n") + "\n";
+}
+
 export async function generateDispositionAudit() {
   const [admin1Text, admin2Text, summaryText] = await Promise.all([
     readFile(new URL("unmatched_admin1_references.json", DATA_DIR), "utf8"),
@@ -213,13 +252,23 @@ export async function generateDispositionAudit() {
   ]);
   const rows = buildDispositionRows(JSON.parse(admin1Text), JSON.parse(admin2Text));
   const summary = buildDispositionSummary(rows, JSON.parse(summaryText));
-  return { rows, summary, csv: toCsv(rows) };
+  return {
+    rows,
+    summary,
+    csv: toCsv(rows),
+    initialAdminCatalogExclusionCsv: toInitialAdminCatalogExclusionCsv(rows),
+  };
 }
 
 async function main() {
-  const { summary, csv } = await generateDispositionAudit();
+  const { summary, csv, initialAdminCatalogExclusionCsv } = await generateDispositionAudit();
   await Promise.all([
     writeFile(new URL("owner-approved-dispositions.csv", DATA_DIR), csv, "utf8"),
+    writeFile(
+      new URL("initial-operational-admin-catalog-exclusions.csv", DATA_DIR),
+      initialAdminCatalogExclusionCsv,
+      "utf8",
+    ),
     writeFile(
       new URL("owner-approved-disposition-summary.json", DATA_DIR),
       JSON.stringify(summary, null, 2) + "\n",
