@@ -282,6 +282,36 @@ jobs:
           print("Source-pinned audit preconditions verified; paths are candidates only, not approved parent links.")
           PY
 
+      - name: Inventory exact GeoNames Kenya name candidates for Kiambururu parent resolution (read-only)
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: \${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          node --test tests/geonames-kenya-unit-node-candidate-audit.test.js
+          node scripts/geonames-kenya-unit-node-candidate-audit.mjs \\
+            "$RUNNER_TEMP_DIR/geonames-source/KE/KE.txt" \\
+            "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit" \\
+            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
+          cat "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          node - "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit.json" "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const manifest = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+          const source = manifest.remote_sources.find((item) => item.country_code === "KE");
+          if (!source || report.source.archive_sha256 !== source.archive_sha256) {
+            throw new Error("Candidate audit is not pinned to this run's official KE.zip archive.");
+          }
+          if (report.summary.target_192705_present_once !== true) {
+            throw new Error("Kiambururu target ID was not verified in the source snapshot.");
+          }
+          if (report.decision_boundary.approved_parent_ids.length !== 0 ||
+              report.decision_boundary.operational_parent_links_created !== 0) {
+            throw new Error("Safety violation: candidate-name discovery must not approve parent links.");
+          }
+          console.log("Read-only GeoNames name-candidate audit is pinned to the current KE.zip; no parent links approved.");
+          NODE
+
       - name: Upload row-level audit and retrieval manifest (no source archives)
         uses: actions/upload-artifact@v4
         with:
@@ -290,6 +320,8 @@ jobs:
             ${{ runner.temp }}/current-admin-parent-path-audit.csv
             ${{ runner.temp }}/current-admin-parent-path-audit.json
             ${{ runner.temp }}/geonames-source/remote-source-manifest.json
+            ${{ runner.temp }}/kenya-unit-node-candidate-audit.csv
+            ${{ runner.temp }}/kenya-unit-node-candidate-audit.json
           if-no-files-found: error
           retention-days: 7
 
