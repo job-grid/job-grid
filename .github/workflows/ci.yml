@@ -525,12 +525,12 @@ jobs:
               def handle_endtag(self, tag):
                   tag = tag.lower()
                   if tag in ("td", "th") and self.in_cell:
-                      value = re.sub(r"\\s+", " ", html.unescape("".join(self.cell_parts))).strip()
+                      value = re.sub(r"\s+", " ", html.unescape("".join(self.cell_parts))).strip()
                       self.cells.append(value)
                       self.cell_parts = []
                       self.in_cell = False
                   elif tag == "tr" and self.in_row:
-                      if len(self.cells) >= 2 and re.fullmatch(r"\\d{5}", self.cells[0]):
+                      if len(self.cells) >= 2 and re.fullmatch(r"\d{5}", self.cells[0]):
                           self.records[self.cells[0]] = self.cells[1]
                       self.in_row = False
                       self.cells = []
@@ -541,7 +541,7 @@ jobs:
           for source in sources:
               raw = source["html_path"].read_bytes()
               header_text = source["headers_path"].read_text(encoding="iso-8859-1", errors="replace")
-              header_blocks = re.split(r"(?m)^HTTP/[^\\r\\n]+\\r?\\n", header_text)
+              header_blocks = re.split(r"(?m)^HTTP/[^\r\n]+\r?\n", header_text)
               headers = {}
               for block in header_blocks:
                   for line in block.splitlines():
