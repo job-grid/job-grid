@@ -1,173 +1,92 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import {
+  buildEffectiveExclusionOverlayCsv,
   buildKenyaCrosswalkRebuildLedger,
+  parseCsvRecords,
   renderKenyaCrosswalkRebuildLedgerCsv
 } from "../scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs";
 
-const auditPath = fileURLToPath(new URL(
-  "../docs/geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json",
-  import.meta.url
-));
-const evidencePath = fileURLToPath(new URL(
-  "../docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json",
-  import.meta.url
-));
-const currentUnitEvidencePath = fileURLToPath(new URL(
-  "../docs/geonames-kenya-current-unit-evidence-2026-10-12.json",
-  import.meta.url
-));
-
+const docs=new URL("../docs/",import.meta.url);
+const exclusionsDir=new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/",import.meta.url);
 async function fixtures() {
-  const [auditText, evidenceText, currentUnitEvidenceText] = await Promise.all([
-    readFile(auditPath, "utf8"),
-    readFile(evidencePath, "utf8"),
-    readFile(currentUnitEvidencePath, "utf8")
-  ]);
-  return [JSON.parse(auditText), JSON.parse(evidenceText), JSON.parse(currentUnitEvidenceText)];
+  const urls=[
+    new URL("geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json",docs),
+    new URL("geonames-kenya-external-ancestor-evidence-2026-10-11.json",docs),
+    new URL("geonames-kenya-current-unit-evidence-2026-10-12.json",docs),
+    new URL("geonames-kenya-admin1-parent-override-2026-10-12.json",docs),
+    new URL("initial-operational-admin-catalog-exclusions.csv",exclusionsDir)
+  ];
+  const [a,b,c,d,e]=await Promise.all(urls.map(url=>readFile(url,"utf8")));
+  return [JSON.parse(a),JSON.parse(b),JSON.parse(c),JSON.parse(d),e];
 }
-
-test("rebuild ledger preserves both source identities and reports exact legacy-key gaps", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  assert.equal(ledger.status, "OFFICIAL_ADMIN_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING");
-  assert.equal(ledger.totals.target_rows, 2);
-  assert.equal(ledger.totals.exact_current_legacy_keys_absent, 2);
-  assert.equal(ledger.totals.county_ancestor_candidates_recorded, 2);
-  assert.equal(ledger.totals.official_native_parent_paths_documented, 2);
-  assert.equal(ledger.totals.geonames_entity_crosswalks_verified, 0);
-  assert.equal(ledger.totals.immediate_parent_paths_verified, 0);
-  assert.equal(ledger.totals.raw_admin1_codes_changed, 0);
-  assert.equal(ledger.totals.operational_parent_links_created, 0);
-  assert.equal(ledger.source.current_admin1_crosswalk.retrieval_metadata_verified, true);
-  assert.equal(ledger.source.current_unit_evidence_status, "OFFICIAL_NATIVE_UNIT_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING");
-});
-
-test("county-level candidate IDs remain separate from immediate parents", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const kiambururu = ledger.records.find((row) => row.geonames_id === "192705");
-  const imenti = ledger.records.find((row) => row.geonames_id === "7800132");
-  assert.ok(kiambururu);
-  assert.ok(imenti);
-  assert.equal(kiambururu.raw_admin1_code_preserved, "01");
-  assert.equal(kiambururu.legacy_composite_key, "KE.01");
-  assert.equal(kiambururu.candidate_county_ancestor.geonames_id, "8693007");
-  assert.equal(kiambururu.candidate_county_ancestor.feature_code, "ADM2");
-  assert.equal(kiambururu.immediate_parent_geonames_id, null);
-  assert.equal(imenti.raw_admin1_code_preserved, "03");
-  assert.equal(imenti.legacy_composite_key, "KE.03");
-  assert.equal(imenti.candidate_county_ancestor.geonames_id, "8693009");
-  assert.equal(imenti.candidate_county_ancestor.feature_code, "ADM2");
-  assert.equal(imenti.immediate_parent_geonames_id, null);
-  for (const row of ledger.records) {
-    assert.equal(row.complete_parent_path_verified, false);
-    assert.equal(row.raw_admin1_code_changed, false);
-    assert.equal(row.operational_parent_link_created, false);
-    assert.match(row.active_selector_disposition, /^EXCLUDE_/);
-  }
-});
-
-test("ledger retains the specific blockers for the two different Kenya records", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const kiambururu = ledger.records.find((row) => row.geonames_id === "192705");
-  const imenti = ledger.records.find((row) => row.geonames_id === "7800132");
-  assert.equal(kiambururu.identity_and_path_review_status, "BLOCKED_LOCATION_VS_SUB_LOCATION_LEVEL_CONFLICT");
-  assert.ok(kiambururu.missing_evidence.some((item) => /official unit class/.test(item)));
-  assert.ok(kiambururu.missing_evidence.some((item) => /GeoNames ID 192705/.test(item)));
-  assert.equal(imenti.identity_and_path_review_status, "BLOCKED_NAME_VARIANT_AND_UNIT_TYPE_CROSSWALK");
-  assert.ok(imenti.missing_evidence.some((item) => /administrative unit from an electoral constituency/.test(item)));
-  assert.ok(imenti.missing_evidence.some((item) => /GeoNames ID 7800132/.test(item)));
-});
-
-test("even a newly present legacy key cannot auto-create parentage", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  audit.targets[0].crosswalk_rows_found = 1;
-  audit.targets[0].disposition = "KEY_PRESENT_REQUIRES_INDEPENDENT_PARENT_SOURCE_REVIEW";
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const row = ledger.records.find((record) => record.geonames_id === "192705");
-  assert.equal(row.current_crosswalk_key_row_count, 1);
-  assert.equal(row.current_crosswalk_key_status, "KEY_PRESENT__INDEPENDENT_IDENTITY_AND_PARENT_REVIEW_REQUIRED");
-  assert.equal(row.immediate_parent_geonames_id, null);
-  assert.equal(row.operational_parent_link_created, false);
-  assert.equal(ledger.totals.operational_parent_links_created, 0);
-});
-
-test("ledger rejects source identity drift or a different county entity", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const changedCode = structuredClone(audit);
-  changedCode.targets[0].raw_admin1_code_preserved = "22";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(changedCode, evidence, currentUnitEvidence), /Raw admin1 code drift/);
-  const changedCounty = structuredClone(evidence);
-  changedCounty.records.find((row) => row.geonames_id === "192705").candidate_county_ancestor.geonames_id = "192709";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, changedCounty, currentUnitEvidence), /County candidate identity mismatch/);
-});
-
-test("CSV renders exactly one summary header and two records without approving ancestry", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const csv = renderKenyaCrosswalkRebuildLedgerCsv(ledger);
-  assert.equal(csv.trimEnd().split("\n").length, 3);
-  assert.match(csv, /192705/);
-  assert.match(csv, /7800132/);
-  assert.match(csv, /EXCLUDE_UNTIL_IDENTITY_AND_IMMEDIATE_PARENT_PATH_ARE_VERIFIED/);
-  assert.match(csv, /OFFICIAL_CURRENT_NATIVE_PATH_DOCUMENTED/);
-});
-
-
-test("current official native paths are recorded without claiming GeoNames IDs are crosswalked", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const kiambururu = ledger.records.find((row) => row.geonames_id === "192705");
-  const imenti = ledger.records.find((row) => row.geonames_id === "7800132");
-  assert.deepEqual(kiambururu.native_official_unit_path.verified_path, [
-    "Kenya", "Kiambu County", "Githunguri Sub-County", "Kiambururu (Location)"
-  ]);
-  assert.equal(kiambururu.native_official_unit_path.unit_level, "Location");
-  assert.equal(kiambururu.native_official_unit_path.immediate_parent_official_name, "Githunguri Sub-County");
-  assert.deepEqual(imenti.native_official_unit_path.verified_path, [
-    "Kenya", "Meru County", "Imenti Central (Sub-County)"
-  ]);
-  assert.equal(imenti.native_official_unit_path.unit_level, "Sub-County");
-  assert.deepEqual(imenti.native_official_unit_path.official_subcounty_statistics, {
-    divisions: 4, locations: 22, sub_locations: 57, area_km2: 333.10
+test("ledger verifies one parent override and retains one unresolved target",async()=>{
+  const [a,b,c,d]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
+  assert.equal(ledger.status,"ONE_PARENT_PATH_VERIFIED__ONE_PARENT_PATH_BLOCKED");
+  assert.deepEqual(ledger.totals,{
+    target_rows:2,exact_current_legacy_keys_absent:2,official_native_parent_paths_documented:2,
+    source_backed_parent_overrides_approved:1,immediate_parent_paths_verified:1,
+    eligible_from_kenya_exception_set:1,excluded_pending_parent_crosswalk:1,
+    raw_admin1_codes_changed:0,operational_parent_links_created:0
   });
-  for (const row of ledger.records) {
-    assert.equal(row.geonames_entity_crosswalk_status, "CURRENT_NATIVE_UNIT_PATH_KNOWN__GEONAMES_ID_CROSSWALK_PENDING");
-    assert.equal(row.immediate_parent_geonames_id, null);
-    assert.equal(row.operational_parent_link_created, false);
-  }
 });
-
-test("same-name GeoNames nodes with different feature codes remain distinct review candidates", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const ledger = buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence);
-  const kiambururu = ledger.records.find((row) => row.geonames_id === "192705");
-  const imenti = ledger.records.find((row) => row.geonames_id === "7800132");
-  assert.ok(kiambururu.candidate_geonames_parent_nodes_for_review.some((node) =>
-    node.geonames_id === "197219" && node.role === "NOT_AN_APPROVED_PARENT"));
-  assert.ok(kiambururu.candidate_geonames_parent_nodes_for_review.some((node) =>
-    node.geonames_id === "192709" && node.feature_code === "ADM1"));
-  assert.ok(kiambururu.candidate_geonames_parent_nodes_for_review.some((node) =>
-    node.geonames_id === "8693007" && node.feature_code === "ADM2"));
-  assert.ok(imenti.candidate_geonames_parent_nodes_for_review.some((node) =>
-    node.geonames_id === "186824" && node.feature_code === "ADM1"));
-  assert.ok(imenti.candidate_geonames_parent_nodes_for_review.some((node) =>
-    node.geonames_id === "8693009" && node.feature_code === "ADM2"));
-  for (const row of ledger.records) {
-    assert.equal(row.immediate_parent_geonames_id, null);
-  }
+test("Imenti crosswalk uses current parent ID 186824 based on exact 03-to-35 history",async()=>{
+  const [a,b,c,d]=await fixtures(), row=buildKenyaCrosswalkRebuildLedger(a,b,c,d).records.find(r=>r.geonames_id==="7800132");
+  assert.equal(row.raw_admin1_code_preserved,"03");
+  assert.equal(row.legacy_composite_key,"KE.03");
+  assert.equal(row.current_crosswalk_key_row_count,0);
+  assert.equal(row.immediate_parent_geonames_id,"186824");
+  assert.equal(row.immediate_parent_current_composite_key,"KE.35");
+  assert.equal(row.complete_parent_path_verified,true);
+  assert.equal(row.geonames_entity_crosswalk_status,"VERIFIED_SOURCE_BACKED_ADMIN1_PARENT_OVERRIDE");
+  assert.equal(row.raw_admin1_code_changed,false);
+  assert.equal(row.source_record_modified,false);
+  assert.equal(row.operational_parent_link_created,false);
+  assert.equal(row.parent_mapping_evidence.history_observation,"name:Meru Central District>Meru,adm1:03>35,featureCode:ADM2>ADM1");
+  assert.notEqual(row.immediate_parent_geonames_id,"8693009");
 });
-
-test("generator fails closed if official native path evidence has a different raw code or prematurely approves a GeoNames parent", async () => {
-  const [audit, evidence, currentUnitEvidence] = await fixtures();
-  const changedCode = structuredClone(currentUnitEvidence);
-  changedCode.records.find((row) => row.geonames_id === "192705").raw_admin1_code_preserved = "22";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, evidence, changedCode), /Current official-unit evidence raw code mismatch/);
-  const approvedTooEarly = structuredClone(currentUnitEvidence);
-  approvedTooEarly.records.find((row) => row.geonames_id === "7800132").geonames_crosswalk.immediate_parent_geonames_id = "186824";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, evidence, approvedTooEarly), /must not approve GeoNames parent IDs/);
+test("parent override fails closed if current KE.35 no longer resolves to ID 186824",async()=>{
+  const [a,b,c,d]=await fixtures(), changed=structuredClone(a);
+  const keys=changed.current_ke_admin1_keys??changed.present_current_keys_used_only_as_examples_not_assignments;
+  keys.find(row=>row.composite_key==="KE.35").geonames_id="8693009";
+  assert.throws(()=>buildKenyaCrosswalkRebuildLedger(changed,b,c,d),/Current KE\.35 no longer maps to parent ID 186824/);
+});
+test("Kiambururu stays excluded because Githunguri Sub-County lacks a verified GeoNames node",async()=>{
+  const [a,b,c,d]=await fixtures(), row=buildKenyaCrosswalkRebuildLedger(a,b,c,d).records.find(r=>r.geonames_id==="192705");
+  assert.equal(row.raw_admin1_code_preserved,"01");
+  assert.equal(row.legacy_composite_key,"KE.01");
+  assert.equal(row.immediate_parent_geonames_id,null);
+  assert.equal(row.complete_parent_path_verified,false);
+  assert.equal(row.active_selector_disposition,"EXCLUDE_UNTIL_DIRECT_PARENT_CROSSWALK_VERIFIED");
+  assert.ok(row.missing_evidence.some(item=>item.includes("Githunguri Sub-County")));
+  assert.ok(row.candidate_geonames_parent_nodes_for_review.some(node=>node.geonames_id==="197219"&&node.role==="NOT_AN_APPROVED_PARENT"));
+});
+test("source code drift, wrong parent ID, or wrong historic lineage fail closed",async()=>{
+  const [a,b,c,d]=await fixtures();
+  const code=structuredClone(a); code.targets.find(row=>row.geonames_id==="7800132").source_raw_admin1_code="35";
+  assert.throws(()=>buildKenyaCrosswalkRebuildLedger(code,b,c,d),/Raw admin1 code drift/);
+  const parent=structuredClone(d); parent.approved_records[0].parent_geonames_id="8693009";
+  assert.throws(()=>buildKenyaCrosswalkRebuildLedger(a,b,c,parent),/Override parent is not canonical/);
+  const history=structuredClone(d); history.approved_records[0].history_observation="no transition";
+  assert.throws(()=>buildKenyaCrosswalkRebuildLedger(a,b,c,history),/Exact parent record history transition is missing/);
+});
+test("effective overlay removes only Imenti from the immutable 128-row historic snapshot",async()=>{
+  const [a,b,c,d,original]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
+  const overlay=buildEffectiveExclusionOverlayCsv(ledger,original);
+  const before=parseCsvRecords(original), after=parseCsvRecords(overlay);
+  const oldIds=before.map(row=>row.geonames_id), newIds=after.map(row=>row.geonames_id);
+  assert.equal(before.length,128); assert.equal(after.length,127);
+  assert.deepEqual(oldIds.filter(id=>!newIds.includes(id)),["7800132"]);
+  assert.ok(newIds.includes("192705")); assert.ok(!newIds.includes("7800132"));
+  assert.equal(after.filter(row=>row.country_code==="JP").length,126);
+  assert.equal(after.filter(row=>row.country_code==="KE").length,1);
+});
+test("ledger CSV lists exact source-backed parent for Imenti and unresolved status for Kiambururu",async()=>{
+  const [a,b,c,d]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
+  const csv=renderKenyaCrosswalkRebuildLedgerCsv(ledger);
+  assert.equal(csv.trimEnd().split("\n").length,3);
+  assert.match(csv,/7800132/); assert.match(csv,/186824/);
+  assert.match(csv,/INCLUDE_IN_EFFECTIVE_INITIAL_ADMIN_CATALOG_VIA_SOURCE_BACKED_PARENT_OVERRIDE/);
+  assert.match(csv,/EXCLUDE_UNTIL_DIRECT_PARENT_CROSSWALK_VERIFIED/);
 });

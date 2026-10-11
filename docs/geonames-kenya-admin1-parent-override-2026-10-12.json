@@ -1,0 +1,97 @@
+{
+  "report_version": "1.0",
+  "decision_date_utc": "2026-10-12",
+  "status": "ONE_SOURCE_BACKED_ADMIN1_PARENT_OVERRIDE__ONE_DIRECT_PARENT_UNRESOLVED",
+  "approved_records": [
+    {
+      "geonames_id": "7800132",
+      "name": "Imenti Central",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "03",
+      "legacy_composite_key": "KE.03",
+      "legacy_key_present_in_current_crosswalk": false,
+      "parent_geonames_id": "186824",
+      "parent_display_name": "Meru County",
+      "parent_current_composite_key": "KE.35",
+      "parent_feature_code": "ADM1",
+      "history_record_id": "186824",
+      "parent_record_url": "https://www.geonames.org/186824/meru.html",
+      "history_observation": "name:Meru Central District>Meru,adm1:03>35,featureCode:ADM2>ADM1",
+      "history_record_event_date": "2013-05-05",
+      "official_unit_url": "https://meru.go.ke/assets/file/05b8937c-county-annual-development-plan-cadp-.pdf",
+      "official_unit_finding": "The County Government of Meru FY 2026/2027 plan lists Imenti Central as an administrative sub-county with 4 divisions, 22 locations, and 57 sub-locations, separately from the same-named parliamentary constituency.",
+      "mapping_rationale": "The target is the current GeoNames Imenti Central ADM3 record with raw admin1 03. The same parent GeoNames record ID 186824 documents the transition admin1 03 to 35 and ADM2 to ADM1. The current official crosswalk resolves KE.35 to this same ID. Meru County's official plan independently confirms Imenti Central as an administrative sub-county within Meru. This record-specific override preserves the target's raw code and does not establish a generic KE.03 alias.",
+      "native_path": [
+        "Kenya",
+        "Meru County (GeoNames parent ID 186824, current key KE.35)",
+        "Imenti Central (Sub-County; GeoNames target ID 7800132)"
+      ],
+      "raw_admin1_code_changed": false,
+      "source_record_modified": false,
+      "live_database_or_production_changed": false,
+      "operational_parent_link_created": false
+    }
+  ],
+  "unresolved_target_ids": [
+    {
+      "geonames_id": "192705",
+      "name": "Kiambururu Sub-Location",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "01",
+      "legacy_composite_key": "KE.01",
+      "native_official_path": [
+        "Kenya",
+        "Kiambu County",
+        "Githunguri Sub-County",
+        "Kiambururu (Location)"
+      ],
+      "verified_county_ancestor_geonames_id": "192709",
+      "verified_county_ancestor_feature_code": "ADM1",
+      "unresolved_parent": "Githunguri Sub-County",
+      "reason": "The 2024 Kenya Gazette documents the native path, but no GeoNames/catalog identity for Githunguri Sub-County is verified. GeoNames ID 197219 is Githunguri Location (ADMD), not the sub-county, and must not be substituted. The older 2011 IEBC schedule calls Kiambururu a Sub-Location while the 2024 Gazette lists it as a Location; no reclassification date is inferred.",
+      "operational_parent_link_created": false
+    }
+  ],
+  "sources": [
+    {
+      "authority": "GeoNames",
+      "url": "https://www.geonames.org/186824/meru.html",
+      "finding": "Parent record ID 186824 logs the historical transition name:Meru Central District>Meru, admin1 03>35, featureCode ADM2>ADM1."
+    },
+    {
+      "authority": "GeoNames",
+      "url": "https://www.geonames.org/7800132/imenti-central.html",
+      "finding": "Target ID 7800132 is Imenti Central (ADM3) and has raw admin1 code 03."
+    },
+    {
+      "authority": "GeoNames current admin1 crosswalk",
+      "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "finding": "The current KE.35 row resolves to parent ID 186824; current KE.03 is absent."
+    },
+    {
+      "authority": "County Government of Meru",
+      "url": "https://meru.go.ke/assets/file/05b8937c-county-annual-development-plan-cadp-.pdf",
+      "finding": "The official FY 2026/2027 plan lists Imenti Central as an administrative Sub-County separately from the same-named parliamentary constituency."
+    },
+    {
+      "authority": "Kenya Ministry of Interior / Gazette",
+      "url": "https://www.interior.go.ke/sites/default/files/2024-05/gazette-vol.-17-14-2-24-special-admin-units.pdf",
+      "finding": "Kiambururu is a Location under Githunguri Sub-County, Kiambu County; a direct GeoNames node for Githunguri Sub-County remains unverified."
+    }
+  ],
+  "decision_boundary": {
+    "targets_reviewed": 2,
+    "record_specific_parent_overrides_approved": 1,
+    "exact_legacy_crosswalk_keys_still_absent": 2,
+    "immediate_parent_paths_verified": 1,
+    "immediate_parent_paths_still_unresolved": 1,
+    "raw_admin1_codes_changed": 0,
+    "source_records_rewritten": 0,
+    "operational_parent_links_created": 0,
+    "database_or_production_changes": false,
+    "historical_exclusion_manifest_mutated": false,
+    "effective_exclusion_overlay_generated_separately": true
+  }
+}

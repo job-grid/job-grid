@@ -1665,7 +1665,7 @@ jobs:
           print("Kenya legacy-key audit complete; replacement parentage remains unresolved unless separately evidenced and approved.")
           PY
 
-      - name: Build source-pinned Kenya crosswalk rebuild ledger (candidate-only)
+      - name: Build source-pinned Kenya crosswalk rebuild ledger (one verified override)
         shell: bash
         env:
           RUNNER_TEMP_DIR: ${{ runner.temp }}
@@ -1677,28 +1677,50 @@ jobs:
             "$work/kenya-legacy-admin1-crosswalk-audit.json" \
             docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json \
             docs/geonames-kenya-current-unit-evidence-2026-10-12.json \
+            docs/geonames-kenya-admin1-parent-override-2026-10-12.json \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/initial-operational-admin-catalog-exclusions.csv \
             "$work/kenya-crosswalk-rebuild-ledger"
-          python - "$work/kenya-crosswalk-rebuild-ledger.json" <<'PY'
+          python - "$work/kenya-crosswalk-rebuild-ledger.json" "$work/kenya-crosswalk-rebuild-ledger.effective-initial-admin-catalog-exclusions.csv" <<'PY'
+          import csv
           import json
           import sys
           from pathlib import Path
 
           report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          if report.get("status") != "OFFICIAL_ADMIN_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING":
-              raise SystemExit("Kenya rebuild ledger status is unexpected.")
           totals = report.get("totals", {})
-          if totals.get("target_rows") != 2 or totals.get("official_native_parent_paths_documented") != 2 or totals.get("geonames_entity_crosswalks_verified") != 0 or totals.get("immediate_parent_paths_verified") != 0:
-              raise SystemExit("Kenya rebuild ledger native paths / GeoNames crosswalk totals do not reconcile.")
-          if totals.get("operational_parent_links_created") != 0 or totals.get("raw_admin1_codes_changed") != 0:
-              raise SystemExit("Safety boundary violated: raw codes/parent links must not change.")
-          records = report.get("records", [])
-          if {row.get("geonames_id") for row in records} != {"192705", "7800132"}:
-              raise SystemExit("Ledger does not preserve the exact two source-verified Kenya targets.")
-          if any(row.get("immediate_parent_geonames_id") is not None for row in records):
-              raise SystemExit("Candidate ancestor was incorrectly promoted to an immediate parent.")
-          if any(row.get("operational_parent_link_created") is not False for row in records):
-              raise SystemExit("Operational parent-link boundary violated.")
-          print("Kenya rebuild ledger validated: two rows, county ancestors candidate-only, zero parent links.")
+          if report.get("status") != "ONE_PARENT_PATH_VERIFIED__ONE_PARENT_PATH_BLOCKED":
+              raise SystemExit("Unexpected Kenya ledger status.")
+          expected = {
+              "target_rows": 2,
+              "official_native_parent_paths_documented": 2,
+              "source_backed_parent_overrides_approved": 1,
+              "immediate_parent_paths_verified": 1,
+              "eligible_from_kenya_exception_set": 1,
+              "excluded_pending_parent_crosswalk": 1,
+              "raw_admin1_codes_changed": 0,
+              "operational_parent_links_created": 0,
+          }
+          for key, value in expected.items():
+              if totals.get(key) != value:
+                  raise SystemExit(f"Kenya ledger total {key} expected {value}, got {totals.get(key)}.")
+          records = {str(row.get("geonames_id")): row for row in report.get("records", [])}
+          if set(records) != {"192705", "7800132"}:
+              raise SystemExit("The ledger does not preserve the two exact Kenya targets.")
+          if records["7800132"].get("immediate_parent_geonames_id") != "186824" or records["7800132"].get("complete_parent_path_verified") is not True:
+              raise SystemExit("The Imenti source-backed parent override is missing.")
+          if records["192705"].get("immediate_parent_geonames_id") is not None or records["192705"].get("complete_parent_path_verified") is not False:
+              raise SystemExit("Kiambururu must remain blocked pending the Githunguri Sub-County mapping.")
+          if any(row.get("operational_parent_link_created") is not False for row in records.values()):
+              raise SystemExit("Evidence CI must not create live parent links.")
+          with Path(sys.argv[2]).open(encoding="utf-8", newline="") as stream:
+              effective = list(csv.DictReader(stream))
+          if len(effective) != 127:
+              raise SystemExit("Effective exclusion overlay must contain 127 rows.")
+          if any(row["geonames_id"] == "7800132" for row in effective) or not any(row["geonames_id"] == "192705" for row in effective):
+              raise SystemExit("Effective overlay failed to re-admit only Imenti Central.")
+          if sum(row["country_code"] == "JP" for row in effective) != 126 or sum(row["country_code"] == "KE" for row in effective) != 1:
+              raise SystemExit("Effective overlay geographic counts do not reconcile.")
+          print("Kenya rebuild validated: Imenti parent ID 186824 approved through source-backed override; Kiambururu remains blocked; raw codes and live data unchanged.")
           PY
       - name: Upload Kenya legacy-code audit and retrieval manifest
         uses: actions/upload-artifact@v4
@@ -1710,5 +1732,9 @@ jobs:
             ${{ runner.temp }}/geonames-kenya-admin1/source-manifest.json
             ${{ runner.temp }}/kenya-crosswalk-rebuild-ledger.csv
             ${{ runner.temp }}/kenya-crosswalk-rebuild-ledger.json
+            ${{ runner.temp }}/kenya-crosswalk-rebuild-ledger.effective-initial-admin-catalog-exclusions.csv
+            docs/geonames-kenya-admin1-parent-override-2026-10-12.json
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/kenya-admin1-parent-overrides-2026-10-12.csv
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/effective-initial-operational-admin-catalog-exclusions-2026-10-12.csv
           if-no-files-found: error
           retention-days: 7

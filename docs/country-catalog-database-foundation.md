@@ -656,3 +656,10 @@ The records remain blocked for different reasons: GeoNames 192705 (Kiambururu, r
 ## 5S. Kenya current-unit path evidence — 2026-10-12
 
 The official native hierarchy is now documented for both Kenyan exceptions, separately from GeoNames identifier mapping. The [source dossier](geonames-kenya-current-unit-path-evidence-2026-10-12.md) and [machine-readable evidence](geonames-kenya-current-unit-evidence-2026-10-12.json) identify Kiambururu as a current Location under Githunguri Sub-County, Kiambu County, and Imenti Central as a current Sub-County under Meru County. The rebuild ledger validates these native paths while leaving `immediate_parent_geonames_id` null because the source-backed GeoNames ID crosswalk is not established. Do not interchange similarly named GeoNames entities of different feature codes.
+
+
+## 5S. Kenya source-backed parent override — 2026-10-12
+
+A versioned, record-specific override resolves the current first-order parent for GeoNames ID 7800132 (Imenti Central). The target raw admin1 code 03 is preserved; the same parent record at GeoNames ID 186824 records the history transition admin1 03 to 35 and feature level ADM2 to ADM1; the current official crosswalk maps KE.35 to ID 186824; and Meru County's FY 2026/2027 plan lists Imenti Central as an administrative sub-county separately from the political constituency. The [override evidence](geonames-kenya-admin1-parent-override-2026-10-12.json), [ledger generator](../scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs), and [tests](../tests/geonames-kenya-crosswalk-rebuild-ledger.test.mjs) require these exact relationships. The distinct ADM2 node 8693009 is not substituted for parent ID 186824.
+
+GeoNames ID 192705 (Kiambururu) remains unresolved: the official native path names Githunguri Sub-County, but no matching GeoNames/catalog parent node is verified. ID 197219 is Githunguri Location and cannot be substituted. The historic 128-row exclusion snapshot is unchanged; CI generates a separate effective overlay of 127 unresolved exceptions (126 Japan plus Kiambururu) and removes only Imenti Central from that exclusion list. No operational database parent link is written.
