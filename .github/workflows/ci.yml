@@ -293,6 +293,155 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  geonames-japan-estat-evidence-audit:
+    name: Phase 0 CI / Japan e-Stat administrative evidence audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint official GeoNames Japan archive
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/JP.zip"
+          archive="$work/JP.zip"
+          headers="$work/JP.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$archive"
+          unzip -tq "$archive"
+          python - "$headers" "$archive" "$url" "$retrieved_at" "$status" "$work/geonames-source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, archive_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block, current, current_status = {}, {}, None
+          for line in raw.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  parts = line.split()
+                  current_status = parts[1] if len(parts) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+          archive = Path(archive_path)
+          modified = last_block.get("last-modified")
+          modified_utc = None
+          if modified:
+              try:
+                  dt = parsedate_to_datetime(modified)
+                  if dt.tzinfo is not None:
+                      modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+          record = {
+              "source_owner": "GeoNames",
+              "country_code": "JP",
+              "archive_filename": archive.name,
+              "source_url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": modified,
+              "http_last_modified_utc": modified_utc,
+              "etag": last_block.get("etag"),
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+              "archive_size_bytes": archive.stat().st_size,
+              "zip_crc_validation": "PASS",
+              "source_authority_note": "Pinned bytes fetched during this CI run; no immutable upstream release ID is claimed."
+          }
+          Path(manifest_path).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(record))
+          PY
+          mkdir -p "$work/extracted"
+          unzip -oq "$archive" -d "$work/extracted"
+          test -s "$work/extracted/JP.txt"
+
+      - name: Query official Japan Statistical LOD and audit exact-label candidates
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          node scripts/geonames-japan-estat-evidence-audit.mjs \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
+            "$work/extracted/JP.txt" \
+            "$work/japan-estat-evidence-audit" \
+            "$work/geonames-source-manifest.json"
+          python - "$work/japan-estat-evidence-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 126:
+              raise SystemExit(f"Expected 126 Japan targets, got {report.get('target_count')}")
+          if report.get("target_source_identity_and_raw_code_matches") != 126:
+              raise SystemExit("All 126 targets must match the current GeoNames source exactly.")
+          if report.get("input", {}).get("geonames_country_malformed_or_wrong_shape_lines") != 0:
+              raise SystemExit("Official JP.txt contains malformed/wrong-shape rows.")
+          if report.get("source", {}).get("geoNames", {}).get("http_status") != 200:
+              raise SystemExit("GeoNames JP source retrieval was not verified.")
+          estat = report.get("source", {}).get("eStat", {})
+          if estat.get("http_status") != 200 or not estat.get("response_sha256"):
+              raise SystemExit("Official e-Stat machine-readable response was not pinned.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: parent links must remain zero.")
+          if len(report.get("target_results", [])) != 126:
+              raise SystemExit("Row-level evidence must include all 126 Japan targets.")
+          print("Japan candidate audit complete: every target is source-verified; e-Stat matches are candidates only; no parent links were written.")
+          PY
+          python - "$work/japan-estat-evidence-audit.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print("## Japan e-Stat administrative evidence audit")
+          print(f"- Target source identity/raw-code matches: {r['target_source_identity_and_raw_code_matches']}/{r['target_count']}")
+          print(f"- Exact-label candidates: {r['total_exact_label_candidate_rows']}")
+          print(f"- Targets with one candidate: {r['targets_with_one_exact_label_candidate']}")
+          print(f"- Targets with multiple candidates: {r['targets_with_multiple_exact_label_candidates']}")
+          print(f"- Targets with no exact label candidate: {r['targets_without_exact_label_candidates']}")
+          print("- Operational parent links created: 0")
+          print("- All candidates require separate entity, effective-date, and hierarchy review.")
+          PY
+
+      - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-japan-estat-evidence-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
+            ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
   geonames-crosswalk-exception-source-audit:
     name: Phase 0 CI / Global source audit of crosswalk exceptions
     if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
