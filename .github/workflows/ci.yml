@@ -1250,6 +1250,91 @@ jobs:
           print("- Parent label candidates remain unverified identities; no parent ID or operational edge was approved.")
           PY
 
+      - name: Audit e-Stat grandparent context against GeoNames admin1 candidate codes
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-estat-parent-hierarchy-consistency-audit.test.js
+          node scripts/geonames-japan-estat-parent-hierarchy-consistency-audit.mjs \
+            "$work/extracted/JP.txt" \
+            "$work/geonames-source-manifest.json" \
+            "$work/japan-estat-parent-geonames-candidate-expansion.json" \
+            "$work/japan-estat-parent-hierarchy-consistency"
+          python - "$work/japan-estat-parent-hierarchy-consistency.json" \
+            "$work/japan-estat-parent-hierarchy-consistency.parent-reference-context.csv" \
+            "$work/japan-estat-parent-hierarchy-consistency.candidate-results.csv" \
+            "$work/japan-estat-parent-hierarchy-consistency.parent-reference-dispositions.csv" \
+            "$work/geonames-source-manifest.json" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, context_path, candidates_path, dispositions_path, source_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          source = json.loads(source_path.read_text(encoding="utf-8"))
+
+          def rows(path):
+              with path.open(encoding="utf-8", newline="") as stream:
+                  return list(csv.DictReader(stream))
+
+          contexts = rows(context_path)
+          candidates = rows(candidates_path)
+          dispositions = rows(dispositions_path)
+          query = report.get("official_e_stat_parent_period_query", {})
+
+          if report.get("status") != "PASS_ESTAT_PARENT_HIERARCHY_CONTEXT_AUDIT; GEO_NAMES_ADMIN1_CODE_CONSISTENCY_ONLY; NO_PARENT_LINKS_APPROVED":
+              raise SystemExit("Unexpected e-Stat parent hierarchy consistency audit status.")
+          if report.get("input", {}).get("parent_reference_count") != 117 or report.get("parent_reference_context_count") != 117:
+              raise SystemExit("Hierarchy consistency audit must preserve all 117 exact e-Stat parent references.")
+          if report.get("input", {}).get("parent_candidate_match_rows") != 91 or len(candidates) != 91:
+              raise SystemExit("Hierarchy consistency candidate rows do not reconcile to 91 exact-label parent candidates.")
+          if len(contexts) != 117 or len(dispositions) != 117:
+              raise SystemExit("Hierarchy consistency parent-context/disposition rows do not preserve 117 references.")
+          if query.get("requested_parent_period_uri_count") != 117 or not query.get("query_batches"):
+              raise SystemExit("The audit did not retrieve all exact e-Stat parent period URIs.")
+          if any(item.get("http_status") != 200 or len(item.get("response_sha256", "")) != 64 for item in query["query_batches"]):
+              raise SystemExit("An e-Stat parent-period query lacks a successful response or SHA-256 fingerprint.")
+          if source.get("archive_sha256") != report.get("input", {}).get("geonames_archive_sha256"):
+              raise SystemExit("Hierarchy audit GeoNames archive fingerprint does not match the pinned source manifest.")
+          if report.get("input", {}).get("geonames_text_member_sha256") == "" or len(report["input"]["geonames_text_member_sha256"]) != 64:
+              raise SystemExit("Hierarchy audit did not fingerprint the extracted JP.txt source.")
+          if report.get("input", {}).get("malformed_or_wrong_shape_rows") != 0:
+              raise SystemExit("Hierarchy audit encountered malformed GeoNames source rows.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Hierarchy audit violated the no-parent-write boundary.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in contexts + candidates + dispositions):
+              raise SystemExit("Hierarchy audit CSV outputs violate the no-parent-write boundary.")
+          if any(row.get("parent_identity_crosswalk_status") != "NOT_VERIFIED_TO_GEONAMES_ID" for row in candidates):
+              raise SystemExit("Hierarchy consistency must not mark any candidate as an accepted GeoNames identity crosswalk.")
+
+          ambiguity_rows = {
+              row["parent_area_code"]: row
+              for row in dispositions
+              if row["parent_area_code"] in {"25420", "34300", "39300"}
+          }
+          if set(ambiguity_rows) != {"25420", "34300", "39300"}:
+              raise SystemExit("Expected the three historically ambiguous parent area-code references.")
+          for code, row in ambiguity_rows.items():
+              if row.get("candidate_count") != "2" or row.get("coherent_candidate_count") != "1" or row.get("conflicting_candidate_count") != "1":
+                  raise SystemExit(
+                      f"Ambiguous parent {code} did not yield one code-coherent and one conflicting label candidate; "
+                      "do not auto-select either identity."
+                  )
+              if row.get("review_status") != "ONE_ADMIN1_CODE_COHERENT_CANDIDATE_FOR_REVIEW; NOT_APPROVED":
+                  raise SystemExit(f"Ambiguous parent {code} did not remain candidate-only.")
+
+          print(
+              f"Validated parent-hierarchy context: {len(contexts)} official e-Stat parent periods; "
+              f"{len(query['query_batches'])} source-fingerprinted query batches; "
+              f"{len(candidates)} GeoNames candidate rows; "
+              f"{report['parent_references_with_one_coherent_candidate_and_other_conflicts']} ambiguous references with one code-coherent and other conflicting candidates; "
+              "zero parent links."
+          )
+          print("Internal GeoNames admin1-code consistency is review evidence only; no parent identity was approved.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -1263,6 +1348,11 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.parent-references.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.candidate-matches.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.target-candidate-parent-queue.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.parent-reference-context.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.candidate-results.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.parent-reference-dispositions.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-code-evidence.json
