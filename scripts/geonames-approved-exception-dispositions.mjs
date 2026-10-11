@@ -138,7 +138,7 @@ export function buildDispositionSummary(rows, sourceSummary) {
   ).length;
 
   return {
-    report_version: "1.0",
+    report_version: "1.1",
     generated_on_utc_date: OWNER_POLICY_APPROVAL_DATE,
     decision_status: "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
     owner_policy_approval_date: OWNER_POLICY_APPROVAL_DATE,
