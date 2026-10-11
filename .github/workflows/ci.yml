@@ -651,7 +651,7 @@ jobs:
                   "No database, migration, seed, import, production, deployment, or PR merge occurs.",
               ],
           }
-          json_out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+          json_out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           with csv_out.open("w", newline="", encoding="utf-8") as handle:
               fields = [
                   "candidate_area_code", "geonames_id", "geonames_name", "geonames_latitude", "geonames_longitude",
@@ -692,6 +692,38 @@ jobs:
               "official_source_snapshots": source_manifest,
               "operational_parent_links_created": 0,
           }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Validate captured MLIT evidence JSON and CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          python -m json.tool "$work/mlit-code-evidence.json" >/dev/null
+          python -m json.tool "$work/japan-estat-evidence-audit.json" >/dev/null
+          python - "$work/mlit-code-evidence.json" "$work/mlit-code-evidence.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          json_path, csv_path = map(Path, sys.argv[1:])
+          data = json.loads(json_path.read_text(encoding="utf-8"))
+          with csv_path.open(encoding="utf-8", newline="") as stream:
+              rows = list(csv.DictReader(stream))
+          if data.get("status") != "PASS_OFFICIAL_MLIT_CODE_SNAPSHOTS_PARSED; KEY_CODE_DESCRIPTIONS_VERIFIED; NO_PARENT_LINKS_APPROVED":
+              raise SystemExit("MLIT evidence report does not have the approved candidate-only status.")
+          if len(data.get("candidate_counts", {}).get("candidate_area_codes", [])) != 35:
+              raise SystemExit("Expected all 35 distinct e-Stat area-code candidates in MLIT evidence.")
+          if not rows:
+              raise SystemExit("MLIT code-evidence CSV is empty.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in rows):
+              raise SystemExit("MLIT evidence CSV violates the no-parent-write boundary.")
+          if len(data.get("mlit_sources", [])) != 3:
+              raise SystemExit("Expected three captured MLIT source manifests.")
+          if any(len(source.get("response_sha256", "")) != 64 for source in data["mlit_sources"]):
+              raise SystemExit("An MLIT source lacks a SHA-256 response fingerprint.")
+          print(f"Validated MLIT evidence JSON and CSV: {len(data['candidate_counts']['candidate_area_codes'])} area-code candidates; {len(rows)} row-level code/source records; zero parent links.")
           PY
 
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
