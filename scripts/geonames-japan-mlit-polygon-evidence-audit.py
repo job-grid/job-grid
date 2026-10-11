@@ -324,6 +324,42 @@ def feature_record(feature, snapshot) -> dict | None:
     }
 
 
+def normalize_xml_bytes_for_expat(xml_bytes: bytes) -> bytes:
+    """Convert declared legacy multibyte XML encodings to UTF-8 before Expat parsing.
+
+    Python's bundled Expat may reject some multi-byte XML encoding labels (for
+    example Shift_JIS / CP932) even though Python can decode them. The archive
+    remains source-pinned and hashed as raw bytes; only a parser input copy is
+    transcoded. A declared encoding is required for any non-UTF-8 conversion.
+    """
+    declaration = re.search(
+        br"<\\?xml[^>]*\\bencoding\\s*=\\s*['\"]([^'\"]+)['\"]",
+        xml_bytes[:2048],
+        re.IGNORECASE,
+    )
+    if not declaration:
+        # No declaration: leave the bytes untouched so malformed/ambiguous XML
+        # fails closed in ElementTree instead of guessing an encoding.
+        return xml_bytes
+    try:
+        encoding = declaration.group(1).decode("ascii").strip()
+    except UnicodeDecodeError as error:
+        raise ValueError("XML declaration uses a non-ASCII encoding label.") from error
+    normalized = encoding.lower().replace("_", "-")
+    if normalized in {"utf-8", "utf8", "us-ascii", "ascii"}:
+        return xml_bytes
+    decoded = xml_bytes.decode(encoding, errors="strict")
+    updated, count = re.subn(
+        r"(?i)(<\\?xml[^>]*\\bencoding\\s*=\\s*['\"])[^'\"]+(['\"])",
+        r"\\1UTF-8\\2",
+        decoded,
+        count=1,
+    )
+    if count != 1:
+        raise ValueError(f"Could not safely rewrite declared XML encoding {encoding!r}.")
+    return updated.encode("utf-8")
+
+
 def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], list[str]]:
     records = []
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
@@ -339,7 +375,10 @@ def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], lis
         if gml_files:
             for member_name in gml_files:
                 with archive.open(member_name) as stream:
-                    for _event, node in ET.iterparse(stream, events=("end",)):
+                    raw_xml = stream.read()
+                try:
+                    parser_bytes = normalize_xml_bytes_for_expat(raw_xml)
+                    for _event, node in ET.iterparse(io.BytesIO(parser_bytes), events=("end",)):
                         if local_name(node.tag).lower() not in {"featuremember", "featuremembers"}:
                             continue
                         if local_name(node.tag).lower() == "featuremembers":
@@ -351,6 +390,10 @@ def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], lis
                             if record:
                                 records.append(record)
                         node.clear()
+                except (LookupError, UnicodeError, ValueError, ET.ParseError) as error:
+                    raise RuntimeError(
+                        f"Could not parse official MLIT XML {snapshot['archive_filename']}/{member_name}: {error}"
+                    ) from error
             return records, names
         # Some publisher packages may contain a Shape archive; support that format too.
         shp_files = [name for name in names if name.lower().endswith(".shp")]
