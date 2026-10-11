@@ -25,7 +25,7 @@ Per-country unique exception IDs all matched: Brazil 1; Great Britain 32; Japan 
 
 ## GeoNames country-code and feature-class footprint — follow-up run
 
-The audit utility now computes aggregate coverage metrics while streaming the same official source. In Phase 0 CI #365, the source was fetched at `2026-10-11T00:51:58Z`. Its archive and extracted-text hashes match the fingerprints below. The earlier #357 retrieval is retained as historical evidence and produced the same hashes.
+The audit utility now computes aggregate coverage metrics while streaming the same official source. In Phase 0 CI #365, the source was fetched at `2026-10-11T01:03:45Z`. Its archive and extracted-text hashes match the fingerprints below. The earlier #357 retrieval is retained as historical evidence and produced the same hashes.
 
 | Aggregate source measure | Result |
 |---|---:|
@@ -61,7 +61,7 @@ These counts characterize only the contents of this GeoNames snapshot. They do n
 ## Source fingerprint
 
 - URL: `https://download.geonames.org/export/dump/allCountries.zip`
-- Actual retrieval time in the latest verified run: `2026-10-11T00:51:58Z`
+- Actual retrieval time in the latest verified run: `2026-10-11T01:03:45Z`
 - HTTP status: 200
 - HTTP Last-Modified: `Sat, 10 Oct 2026 01:58:39 GMT` (`2026-10-10T01:58:39Z`)
 - ETag: `"19275ced-65d72cdb3f7da"`
