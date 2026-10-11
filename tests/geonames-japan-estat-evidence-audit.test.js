@@ -55,8 +55,8 @@ function makeTargets() {
 
 function sourceGeoRow(target) {
   const fields = [
-    target.geonames_id, target.name, target.name, "", "35.0000", "139.0000",
-    "A", target.feature_code, target.country_code, "",
+    target.geonames_id, target.name, target.name, "", target.latitude ?? "35.0000", target.longitude ?? "139.0000",
+    target.feature_class ?? "A", target.feature_code, target.country_code, "",
     target.raw_admin1_code, target.raw_admin2_code, "", "", "0", "", "", "Asia/Tokyo", "2020-06-11",
   ];
   return parseGeoNamesSourceRow(fields.join("\t"));
@@ -144,6 +144,10 @@ test("parses a GeoNames row and preserves raw administrative codes exactly", () 
   assert.equal(parsed.country_code, "JP");
   assert.equal(parsed.raw_admin1_code, "00");
   assert.equal(parsed.raw_admin2_code, "");
+  assert.equal(parsed.feature_class, "A");
+  assert.equal(parsed.latitude, "35.0000");
+  assert.equal(parsed.longitude, "139.0000");
+  assert.equal(parsed.timezone, "Asia/Tokyo");
   assert.equal(parsed.modification_date, "2020-06-11");
   assert.throws(() => parseGeoNamesSourceRow("1\ttoo few"), /exactly 19/);
 });
@@ -210,6 +214,85 @@ test("groups historical code periods under distinct area-code candidates without
   assert.match(csv, /MULTIPLE_AREA_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION/);
   assert.match(csv, /candidate_history_period_count/);
   assert.match(csv, /false/);
+});
+
+test("surfaces repeated target names and shared area-code candidates without inferring identity", () => {
+  const targets = makeTargets();
+  targets[0] = {
+    ...targets[0], name: "Takaoka-chō", latitude: "36.7500", longitude: "137.0200",
+  };
+  targets[1] = {
+    ...targets[1], name: "Takaoka-cho", latitude: "36.7600", longitude: "137.0300",
+  };
+  const verifiedTargets = targets.map((row) => ({
+    ...row,
+    source_modification_date: "2020-06-11",
+    source_ascii_name: row.name,
+    source_latitude: row.latitude ?? "35.0000",
+    source_longitude: row.longitude ?? "139.0000",
+    source_feature_class: "A",
+    source_identity_and_raw_codes_verified: true,
+  }));
+  const report = buildCandidateAudit(
+    verifiedTargets,
+    [estatRow(1, {
+      area_code: "45381",
+      label_en: "Takaoka-cho",
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C45381-19700401",
+      parent_area_code: "45380",
+    })],
+    "c".repeat(64),
+  );
+  const targetOne = report.target_results.find((row) => row.geonames_id === verifiedTargets[0].geonames_id);
+  assert.equal(targetOne.source_latitude, "36.7500");
+  assert.equal(targetOne.source_longitude, "137.0200");
+  assert.equal(targetOne.source_feature_class, "A");
+
+  const nameCollision = report.cross_target_identity_review.repeated_normalized_name_groups
+    .find((group) => group.normalized_name_key === "takaoka cho");
+  assert.ok(nameCollision);
+  assert.equal(nameCollision.target_count, 2);
+  assert.deepEqual(nameCollision.shared_candidate_area_codes, ["45381"]);
+  assert.equal(nameCollision.coordinate_collision, "DISTINCT_COORDINATES_REQUIRE_ENTITY_REVIEW");
+  assert.equal(nameCollision.approval, "NO_ENTITY_CROSSWALK_APPROVED");
+
+  const sharedCode = report.cross_target_identity_review.shared_candidate_area_code_groups
+    .find((group) => group.area_code === "45381");
+  assert.ok(sharedCode);
+  assert.equal(sharedCode.distinct_geonames_ids.length, 2);
+  assert.equal(sharedCode.approval, "NO_ENTITY_CROSSWALK_APPROVED");
+  assert.equal(report.operational_parent_links_created, 0);
+  const csv = renderCandidateCsv(report);
+  assert.match(csv, /source_latitude/);
+  assert.match(csv, /36.7500/);
+});
+
+test("identical GeoNames coordinates are flagged for manual review, not silently deduplicated", () => {
+  const targets = makeTargets();
+  targets[0] = {
+    ...targets[0], name: "Shared Name", latitude: "35.1234", longitude: "139.1234",
+  };
+  targets[1] = {
+    ...targets[1], name: "Shared Name", latitude: "35.1234", longitude: "139.1234",
+  };
+  const verifiedTargets = targets.map((row) => ({
+    ...row,
+    source_modification_date: "2020-06-11",
+    source_latitude: row.latitude ?? "35.0000",
+    source_longitude: row.longitude ?? "139.0000",
+    source_feature_class: "A",
+    source_identity_and_raw_codes_verified: true,
+  }));
+  const report = buildCandidateAudit(
+    verifiedTargets,
+    [estatRow(1, { area_code: "12345", label_en: "Shared Name" })],
+    "d".repeat(64),
+  );
+  const group = report.cross_target_identity_review.repeated_normalized_name_groups
+    .find((item) => item.normalized_name_key === "shared name");
+  assert.ok(group);
+  assert.equal(group.coordinate_collision, "EXACT_COORDINATE_COLLISION_REQUIRES_SOURCE_REVIEW");
+  assert.equal(report.operational_parent_links_created, 0);
 });
 
 test("does not use fuzzy name matching, parent reference, or approximate labels", () => {
