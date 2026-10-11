@@ -117,6 +117,11 @@ export function normalizeJapaneseLabel(value) {
   return String(value ?? "").normalize("NFC").trim();
 }
 
+/** Script-only coverage heuristic; Han characters can be shared with Chinese, so this is not a language label. */
+export function containsJapaneseOrHanScript(value) {
+  return /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(String(value ?? ""));
+}
+
 export function parseGeoNamesAlternateNames(value) {
   return String(value ?? "").split(",").filter((name) => name.length > 0);
 }
@@ -571,6 +576,8 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
       source_identity_and_raw_codes_verified: true,
       source_alternate_names: alternateNames,
       alternate_name_count: alternateNames.length,
+      alternate_name_tokens_with_japanese_or_han_script: alternateNames.filter(containsJapaneseOrHanScript).length,
+      has_japanese_or_han_script_alternate_name: alternateNames.some(containsJapaneseOrHanScript),
       candidate_area_code_count: candidates.length,
       review_status: status,
       candidates,
@@ -582,6 +589,13 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
     status: "PASS_EXACT_JAPANESE_ALTERNATE_LABEL_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
     matching_rule: "Only complete GeoNames alternate-name entries that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidates. No substring, transliteration, reading, fuzzy or proximity matching is used.",
     target_count: targetResults.length,
+    targets_with_any_alternate_names: targetResults.filter((target) => target.alternate_name_count > 0).length,
+    targets_with_japanese_or_han_script_alternate_names: targetResults.filter((target) => target.has_japanese_or_han_script_alternate_name).length,
+    targets_with_script_alternate_names_but_no_exact_candidate: targetResults.filter((target) =>
+      target.has_japanese_or_han_script_alternate_name && target.candidates.length === 0).length,
+    alternate_name_tokens_total: targetResults.reduce((sum, target) => sum + target.alternate_name_count, 0),
+    alternate_name_tokens_with_japanese_or_han_script: targetResults.reduce(
+      (sum, target) => sum + target.alternate_name_tokens_with_japanese_or_han_script, 0),
     targets_with_japanese_alternate_label_candidates: targetResults.filter((target) => target.candidates.length > 0).length,
     targets_without_japanese_alternate_label_candidates: targetResults.filter((target) => target.candidates.length === 0).length,
     targets_with_one_distinct_area_code_candidate: targetResults.filter((target) => target.candidates.length === 1).length,
@@ -597,8 +611,10 @@ export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSh
   const headers = [
     "geonames_id", "geonames_name", "source_country_code", "source_feature_code",
     "raw_admin1_code", "raw_admin2_code", "source_identity_and_raw_codes_verified",
-    "source_alternate_names", "alternate_name_count", "candidate_area_code_count",
-    "review_status", "candidate_area_code", "exact_matching_japanese_label_period_count",
+    "source_alternate_names", "alternate_name_count",
+    "alternate_name_tokens_with_japanese_or_han_script", "has_japanese_or_han_script_alternate_name",
+    "candidate_area_code_count", "review_status", "candidate_area_code",
+    "exact_matching_japanese_label_period_count",
     "candidate_history_period_count", "matched_official_japanese_labels",
     "matching_period_uris", "matching_period_date_ranges", "history_parent_area_codes",
     "history_parent_labels_en", "history_parent_labels_ja", "source_snapshot_sha256",
