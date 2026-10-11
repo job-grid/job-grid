@@ -104,7 +104,7 @@ test('does not normalize raw "00" or use it to synthesize an ADM1 parent', () =>
   ];
 
   const [result] = auditCurrentAdminParents([targetRow], sourceRows);
-  assert.equal(result.parent_path_audit_status, "BLOCKED_PARENT_CODE_MISSING_OR_PLACEHOLDER");
+  assert.equal(result.parent_path_audit_status, "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED");
   assert.match(result.blocking_reason, /raw.*"00"/i);
   assert.match(result.blocking_reason, /official GeoNames README defines "00" as a general feature with no specific admin1 code/i);
   assert.equal(result.candidate_adm1_geonames_id, "");
