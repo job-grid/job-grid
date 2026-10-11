@@ -421,12 +421,14 @@ jobs:
           r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("## Japan e-Stat administrative evidence audit")
           print(f"- Target source identity/raw-code matches: {r['target_source_identity_and_raw_code_matches']}/{r['target_count']}")
-          print(f"- Exact-label candidates: {r['total_exact_label_candidate_rows']}")
-          print(f"- Targets with one candidate: {r['targets_with_one_exact_label_candidate']}")
-          print(f"- Targets with multiple candidates: {r['targets_with_multiple_exact_label_candidates']}")
+          print(f"- Distinct area-code candidates from exact labels: {r['total_exact_name_matched_area_code_candidates']}")
+          print(f"- Exact-label-matched historical periods across target rows: {r['total_exact_name_matched_period_rows']}")
+          print(f"- Targets with one distinct area-code candidate: {r['targets_with_one_exact_area_code_candidate']}")
+          print(f"- Targets with multiple distinct area-code candidates: {r['targets_with_multiple_exact_area_code_candidates']}")
           print(f"- Targets with no exact label candidate: {r['targets_without_exact_label_candidates']}")
+          print("- Complete historical period and parent-reference evidence is retained per candidate area code.")
           print("- Operational parent links created: 0")
-          print("- All candidates require separate entity, effective-date, and hierarchy review.")
+          print("- Every match requires separate GeoNames entity identity and administrative-chain review.")
           PY
 
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
