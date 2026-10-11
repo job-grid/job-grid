@@ -773,9 +773,6 @@ export async function fetchEstatSnapshot(
   targetJapaneseAlternateNameRecords = [],
 ) {
   const targetKeys = new Set(targetNames.map(normalizeExactLabel).filter(Boolean));
-  const alternateJapaneseKeys = new Set(
-    targetJapaneseAlternateNames.map(normalizeJapaneseLabel).filter(Boolean),
-  );
   const catalogPages = [];
   const catalogRows = [];
   for (let pageNumber = 0; pageNumber < MAX_CATALOG_PAGES; pageNumber += 1) {
