@@ -2,8 +2,8 @@
 
 **Result: PASS for full current-source scan and source identity/raw-code reconciliation. Catalog acceptance remains BLOCKED.**
 
-**Latest verified run:** [Phase 0 CI #357](https://github.com/job-grid/job-grid/actions/runs/38099570891)  
-**Latest detailed artifact:** [Row-level CSV, JSON summary and source manifest](https://github.com/job-grid/job-grid/actions/runs/38099570891/artifacts/11687251080) (retention follows GitHub Actions artifact policy)  
+**Latest completed verification at the time of this evidence update:** [Phase 0 CI #360](https://github.com/job-grid/job-grid/actions/runs/38099824612)  
+**Detailed artifact:** [Row-level CSV, JSON summary and source manifest](https://github.com/job-grid/job-grid/actions/runs/38099824612/artifacts/11687570013)  
 **Machine-readable aggregate:** [Global audit summary JSON](geonames-global-exception-source-audit-2026-10-11.json)
 
 ## What was checked
@@ -37,6 +37,8 @@ The audit utility now computes aggregate coverage metrics while streaming the sa
 | Nonblank country-code fields with a format other than two uppercase ASCII letters | 0 |
 
 The raw country-code buckets describe values in GeoNames. They are **not** an ISO 3166-1 current country list: a two-letter uppercase format does not show that a code is currently assigned by ISO, and some source identifiers can be reserved, temporary, or source-specific.
+
+The full frequency map for the **254 distinct raw country-code buckets** (253 nonblank buckets plus the blank bucket) is stored in the machine-readable JSON report. Its values sum to **13,472,324 rows**. The feature-class counts below also sum to **13,472,324 rows**. The two independently accumulated category totals therefore reconcile with the source scan count.
 
 The 19-field source scan's feature-class counts are:
 
@@ -76,4 +78,4 @@ This run independently reproduces the previously reported 13,472,324-line full s
 
 The parent-path check was independently run against the official Japan/Kenya country archives and the official hierarchy archive: **126 Japan ADM4 records still contain raw admin1 `00`, and two Kenyan ADM3 records still lack a matching ADM1 composite key and direct `ADM` hierarchy edge**. Current ISO authority comparison and product/worldwide completeness remain unverified.
 
-CI at tested code commit `3043d2e14747c0637b9533cf8005067f033d9667`: Phase 0 passed with 83 tests / 0 failures; Phase 4C tooling validation and backup-executor validation passed. No raw codes were normalized, no parent links were written, and no schema, migration, seed, import, live database, production or deployment changes occurred.
+At the completed verification commit `166963a7596ec0376292ec6b061fbcfcff5b8708`, Phase 0 CI passed with 83 tests / 0 failures; Phase 4C tooling validation and backup-executor validation passed. Follow-up code now exposes both aggregate totals and a boolean reconciliation check; the regression test asserts the consistency fields. The CI run triggered by these newest edits is tracked separately and must pass before this newest code is called verified. No raw codes were normalized, no parent links were written, and no schema, migration, seed, import, live database, production or deployment changes occurred.
