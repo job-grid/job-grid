@@ -8,6 +8,7 @@ containment evidence only; it does not infer or create operational parent links.
 from __future__ import annotations
 
 import concurrent.futures
+import codecs
 import hashlib
 from collections import Counter
 import html
@@ -415,6 +416,73 @@ def archive_structure_diagnostic(zip_bytes: bytes) -> dict:
         }
 
 
+def resolve_dbf_encoding(archive: zipfile.ZipFile, member_names: list[str], shp_name: str) -> tuple[str, str]:
+    """Resolve the DBF text encoding from an explicit sidecar or archive metadata.
+
+    Prefer the SHP's same-stem .cpg declaration. Otherwise use the declared
+    encoding in the publisher's KS-META XML. Fail closed if neither exists;
+    do not guess a locale based only on decoded text.
+    """
+    shp_stem = Path(shp_name).stem.lower()
+    cpg_members = [
+        name for name in member_names
+        if Path(name).suffix.lower() == ".cpg" and Path(name).stem.lower() == shp_stem
+    ]
+    if len(cpg_members) > 1:
+        raise RuntimeError(f"Multiple DBF code-page sidecars exist for {shp_name}: {cpg_members}")
+    if cpg_members:
+        raw_label = archive.read(cpg_members[0]).decode("ascii", errors="strict").strip().strip("\ufeff")
+        aliases = {
+            "932": "cp932",
+            "ms932": "cp932",
+            "windows-31j": "cp932",
+            "65001": "utf-8",
+        }
+        encoding = aliases.get(raw_label.lower(), raw_label)
+        try:
+            codecs.lookup(encoding)
+        except LookupError as error:
+            raise RuntimeError(
+                f"Unsupported encoding {raw_label!r} from explicit sidecar {cpg_members[0]}"
+            ) from error
+        return encoding, cpg_members[0]
+
+    metadata_members = [
+        name for name in member_names
+        if Path(name).suffix.lower() in {".xml", ".gml"}
+        and "meta" in Path(name).name.lower()
+    ]
+    declarations = []
+    for member in metadata_members:
+        raw = archive.read(member)
+        match = re.search(
+            br"<\?xml[^>]*\bencoding\s*=\s*['\"]([^'\"]+)['\"]",
+            raw[:2048],
+            re.IGNORECASE,
+        )
+        if not match:
+            continue
+        label = match.group(1).decode("ascii", errors="strict").strip()
+        try:
+            codecs.lookup(label)
+        except LookupError as error:
+            raise RuntimeError(
+                f"Unsupported declared DBF encoding {label!r} in official metadata {member}"
+            ) from error
+        declarations.append((label, member))
+
+    distinct_encodings = {label.lower() for label, _member in declarations}
+    if len(distinct_encodings) > 1:
+        raise RuntimeError(f"Conflicting official archive metadata encodings: {declarations}")
+    if declarations:
+        encoding, member = declarations[0]
+        return encoding, member
+    raise RuntimeError(
+        f"No explicit .cpg or publisher metadata encoding could be resolved for {shp_name}; "
+        "refusing to guess DBF text encoding."
+    )
+
+
 def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], list[str]]:
     records = []
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
@@ -471,10 +539,12 @@ def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], lis
             by_ext = {Path(name).suffix.lower(): name for name in names if name.startswith(stem)}
             if not {".shp", ".shx", ".dbf"}.issubset(by_ext):
                 raise RuntimeError(f"Incomplete SHP component set in {snapshot['archive_filename']}/{stem}")
+            dbf_encoding, encoding_source = resolve_dbf_encoding(archive, names, shp_name)
             reader = shapefile.Reader(
                 shp=io.BytesIO(archive.read(by_ext[".shp"])),
                 shx=io.BytesIO(archive.read(by_ext[".shx"])),
                 dbf=io.BytesIO(archive.read(by_ext[".dbf"])),
+                encoding=dbf_encoding,
             )
             fields = [item[0] for item in reader.fields[1:]]
             for item in reader.iterShapeRecords():
@@ -499,6 +569,8 @@ def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], lis
                     "snapshot_date": snapshot["snapshot_date"],
                     "prefecture_code": snapshot["prefecture_code"],
                     "archive_filename": snapshot["archive_filename"],
+                    "dbf_text_encoding": dbf_encoding,
+                    "dbf_encoding_source_member": encoding_source,
                     "polygons": polygons,
                 })
     return records, names
