@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
  * Read-only candidate audit of Japanese GeoNames ADM4 records against Japan's
- * Statistical LOD standard-area-code history. This discovers exact normalized
- * English-label candidates only; it never approves entity identity or creates
- * administrative parent links.
+ * Statistical LOD standard-area-code history. Exact normalized English labels
+ * discover candidates only; this tool never approves parentage or writes links.
  *
  * Usage:
- *   node scripts/geonames-japan-estat-evidence-audit.mjs <owner-approved-dispositions.csv> <output-prefix>
+ *   node scripts/geonames-japan-estat-evidence-audit.mjs <dispositions.csv> <JP.txt> <output-prefix> <geonames-source-manifest.json>
  */
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -84,12 +83,80 @@ export function selectJapanTargets(dispositionRows) {
     const prior = byId.get(row.geonames_id);
     if (prior && (prior.name !== row.name ||
         prior.raw_admin1_code !== row.raw_admin1_code ||
+        prior.raw_admin2_code !== row.raw_admin2_code ||
         prior.feature_code !== row.feature_code)) {
       throw new Error(`Conflicting rows for Japan GeoNames ID ${row.geonames_id}.`);
     }
     byId.set(row.geonames_id, row);
   }
   return [...byId.values()].sort((a, b) => Number(a.geonames_id) - Number(b.geonames_id));
+}
+
+export function parseGeoNamesSourceRow(line) {
+  const fields = line.split("\t");
+  if (fields.length !== 19 || !/^\d+$/.test(fields[0])) {
+    throw new Error("Invalid Japan GeoNames row: expected exactly 19 tab-separated fields and a numeric ID.");
+  }
+  return {
+    geonames_id: fields[0],
+    name: fields[1],
+    ascii_name: fields[2],
+    latitude: fields[4],
+    longitude: fields[5],
+    feature_code: fields[7],
+    country_code: fields[8],
+    raw_admin1_code: fields[10],
+    raw_admin2_code: fields[11],
+    modification_date: fields[18],
+  };
+}
+
+export function verifyTargetSourceRows(targets, sourceRows) {
+  const wanted = new Set(targets.map((row) => row.geonames_id));
+  const byId = new Map();
+  for (const row of sourceRows) {
+    if (!wanted.has(row.geonames_id)) continue;
+    const list = byId.get(row.geonames_id) ?? [];
+    list.push(row);
+    byId.set(row.geonames_id, list);
+  }
+
+  const verified = [];
+  const failures = [];
+  for (const target of targets) {
+    const matches = byId.get(target.geonames_id) ?? [];
+    if (matches.length !== 1) {
+      failures.push({ geonames_id: target.geonames_id, reason: matches.length === 0 ? "SOURCE_ID_MISSING" : "SOURCE_ID_DUPLICATE" });
+      continue;
+    }
+    const source = matches[0];
+    const fields = [
+      ["name", target.name, source.name],
+      ["country_code", target.country_code, source.country_code],
+      ["feature_code", target.feature_code, source.feature_code],
+      ["raw_admin1_code", target.raw_admin1_code, source.raw_admin1_code],
+      ["raw_admin2_code", target.raw_admin2_code, source.raw_admin2_code],
+    ];
+    const mismatches = fields.filter(([, expected, actual]) => String(expected ?? "") !== String(actual ?? ""));
+    if (mismatches.length) {
+      failures.push({
+        geonames_id: target.geonames_id,
+        reason: "SOURCE_IDENTITY_OR_RAW_CODE_MISMATCH",
+        mismatch_fields: mismatches.map(([field]) => field),
+      });
+      continue;
+    }
+    verified.push({ ...target, source_modification_date: source.modification_date });
+  }
+  if (failures.length) {
+    const error = new Error(`GeoNames target source verification failed for ${failures.length} of ${targets.length} targets.`);
+    error.failures = failures;
+    throw error;
+  }
+  if (verified.length !== targets.length) {
+    throw new Error(`Expected ${targets.length} exact source matches; got ${verified.length}.`);
+  }
+  return verified;
 }
 
 export function parseEstatBindings(bindings) {
@@ -150,6 +217,8 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
       feature_code: target.feature_code,
       source_modification_date: target.source_modification_date ?? "",
       raw_admin1_code: target.raw_admin1_code,
+      raw_admin2_code: target.raw_admin2_code,
+      source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified === true,
       normalized_name_key: key,
       exact_name_candidate_count: candidates.length,
       review_status: reviewStatus,
@@ -163,6 +232,7 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
     report_version: 1,
     status: "PASS_SOURCE_RETRIEVED_TARGET_COVERAGE_COMPLETE; CANDIDATES_REQUIRE_REVIEW; NO_PARENT_LINKS_APPROVED",
     target_count: targetResults.length,
+    target_source_identity_and_raw_code_matches: targetResults.filter((row) => row.source_identity_and_raw_codes_verified).length,
     source_code_history_rows: sourceRows.length,
     targets_with_one_exact_label_candidate: countBy((row) => row.exact_name_candidate_count === 1),
     targets_with_multiple_exact_label_candidates: countBy((row) => row.exact_name_candidate_count > 1),
@@ -187,8 +257,8 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
 
 export function renderCandidateCsv(report) {
   const headers = [
-    "geonames_id", "geonames_name", "raw_admin1_code", "source_modification_date",
-    "normalized_name_key", "exact_name_candidate_count", "review_status",
+    "geonames_id", "geonames_name", "raw_admin1_code", "raw_admin2_code", "source_modification_date",
+    "source_identity_and_raw_codes_verified", "normalized_name_key", "exact_name_candidate_count", "review_status",
     "candidate_area_code", "candidate_period_uri", "candidate_label_en", "candidate_label_ja",
     "candidate_effective_from", "candidate_effective_until", "candidate_parent_area_code",
     "candidate_parent_uri", "candidate_parent_label_en", "candidate_parent_label_ja",
@@ -207,7 +277,9 @@ export function renderCandidateCsv(report) {
         geonames_id: target.geonames_id,
         geonames_name: target.geonames_name,
         raw_admin1_code: target.raw_admin1_code,
+        raw_admin2_code: target.raw_admin2_code,
         source_modification_date: target.source_modification_date,
+        source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified,
         normalized_name_key: target.normalized_name_key,
         exact_name_candidate_count: target.exact_name_candidate_count,
         review_status: target.review_status,
@@ -233,7 +305,7 @@ export function renderCandidateCsv(report) {
   return lines.join("\n") + "\n";
 }
 
-export async function fetchEstatSnapshot(fetchImpl = fetch) {
+export async function fetchEstatSnapshot(fetchImpl = fetch, now = () => new Date()) {
   const form = new URLSearchParams({ query: SPARQL_QUERY });
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -251,9 +323,6 @@ export async function fetchEstatSnapshot(fetchImpl = fetch) {
       const bytes = Buffer.from(await response.arrayBuffer());
       const text = bytes.toString("utf8");
       if (!response.ok) {
-        if (response.status >= 500 || response.status === 429) {
-          throw new Error(`e-Stat SPARQL HTTP ${response.status}: ${text.slice(0, 200)}`);
-        }
         throw new Error(`e-Stat SPARQL HTTP ${response.status}: ${text.slice(0, 200)}`);
       }
       const parsed = JSON.parse(text);
@@ -264,7 +333,6 @@ export async function fetchEstatSnapshot(fetchImpl = fetch) {
       if (bindings.length >= QUERY_LIMIT) {
         throw new Error(`e-Stat source result reached the ${QUERY_LIMIT}-row safety limit; paginate before using this snapshot.`);
       }
-      const capturedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
       return {
         bindings,
         responseText: text,
@@ -273,7 +341,7 @@ export async function fetchEstatSnapshot(fetchImpl = fetch) {
           catalog_url: ESTAT_CATALOG_URL,
           endpoint_url: ESTAT_SPARQL_ENDPOINT,
           query_sha256: sha256(SPARQL_QUERY),
-          captured_at_utc: capturedAt,
+          captured_at_utc: now().toISOString().replace(/\.\d{3}Z$/, "Z"),
           http_status: response.status,
           http_date_header: response.headers.get("date"),
           http_last_modified_header: response.headers.get("last-modified"),
@@ -283,29 +351,51 @@ export async function fetchEstatSnapshot(fetchImpl = fetch) {
           response_sha256: sha256(bytes),
           result_row_count: bindings.length,
           result_cap: QUERY_LIMIT,
-          license_note: "The official Statistical LOD SPARQL API page states that the site content is licensed CC BY 4.0 except where otherwise noted; confirm the relevant dataset terms before redistribution.",
-          source_scope_note: "Statistical standard area codes include related municipality abolishment, absorption, name changes and hierarchy data from April 1970 onward according to e-Stat documentation. This is a candidate evidence source, not a GeoNames crosswalk.",
+          license_note: "The official Statistical LOD SPARQL API page states that site content is licensed CC BY 4.0 except where otherwise noted; confirm applicable dataset terms before redistribution.",
+          source_scope_note: "e-Stat documents standard-area-code and related municipality abolishment, absorption, name-change and hierarchy data from April 1970 onward. This is a candidate evidence source, not a GeoNames crosswalk.",
         },
       };
     } catch (error) {
       lastError = error;
-      if (attempt === 3) break;
       const message = String(error?.message ?? error);
-      if (!/HTTP 429|HTTP 5\d\d|fetch failed|timed out|timeout/i.test(message)) break;
+      const retryable = /HTTP 429|HTTP 5\d\d|fetch failed|timed out|timeout/i.test(message);
+      if (attempt === 3 || !retryable) break;
       await new Promise((resolveDelay) => setTimeout(resolveDelay, attempt * 1000));
     }
   }
   throw lastError ?? new Error("e-Stat source retrieval failed.");
 }
 
-export async function runAudit({ targetsPath, outputPrefix, fetchImpl = fetch, now = () => new Date() }) {
+export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, fetchImpl = fetch, now = () => new Date() }) {
   const targetBytes = await readFile(targetsPath);
-  const targetText = targetBytes.toString("utf8");
-  const targets = selectJapanTargets(parseCsv(targetText));
-  if (targets.length !== EXPECTED_JAPAN_TARGETS) {
-    throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} unique Japan ADM4 raw-admin1-00 targets; got ${targets.length}.`);
+  const targetsRaw = selectJapanTargets(parseCsv(targetBytes.toString("utf8")));
+  if (targetsRaw.length !== EXPECTED_JAPAN_TARGETS) {
+    throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} unique Japan ADM4 raw-admin1-00 targets; got ${targetsRaw.length}.`);
   }
-  const snapshot = await fetchEstatSnapshot(fetchImpl);
+
+  const geoBytes = await readFile(geoNamesPath);
+  const geoText = geoBytes.toString("utf8");
+  const geoLines = geoText.split(/\r?\n/).filter((line) => line.length > 0);
+  const targetIds = new Set(targetsRaw.map((row) => row.geonames_id));
+  const geoTargets = [];
+  let malformedRows = 0;
+  for (const line of geoLines) {
+    const fields = line.split("\t");
+    if (fields.length !== 19 || !/^\d+$/.test(fields[0] ?? "")) {
+      malformedRows += 1;
+      continue;
+    }
+    if (targetIds.has(fields[0])) {
+      geoTargets.push(parseGeoNamesSourceRow(line));
+    }
+  }
+  if (malformedRows !== 0) throw new Error(`Official JP.txt contains ${malformedRows} malformed/wrong-shape rows; source audit stopped.`);
+  const targets = verifyTargetSourceRows(targetsRaw, geoTargets).map((row) => ({
+    ...row,
+    source_identity_and_raw_codes_verified: true,
+  }));
+  const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
+  const snapshot = await fetchEstatSnapshot(fetchImpl, now);
   const sourceRows = parseEstatBindings(snapshot.bindings);
   const report = buildCandidateAudit(targets, sourceRows, snapshot.manifest.response_sha256);
   report.generated_at_utc = now().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -313,27 +403,34 @@ export async function runAudit({ targetsPath, outputPrefix, fetchImpl = fetch, n
     target_export_path: targetsPath,
     target_export_sha256: sha256(targetBytes),
     unique_japan_targets: targets.length,
+    geonames_country_text_sha256: sha256(geoBytes),
+    geonames_country_text_size_bytes: geoBytes.byteLength,
+    geonames_country_source_line_count: geoLines.length,
+    geonames_country_malformed_or_wrong_shape_lines: malformedRows,
+    source_identity_and_raw_code_matches: targets.length,
   };
-  report.source = { ...snapshot.manifest };
+  report.source = {
+    geoNames: geoNamesManifest,
+    eStat: snapshot.manifest,
+  };
   const prefix = resolve(outputPrefix);
   await mkdir(dirname(prefix), { recursive: true });
   await Promise.all([
     writeFile(`${prefix}.json`, JSON.stringify(report, null, 2) + "\n", "utf8"),
     writeFile(`${prefix}.csv`, renderCandidateCsv(report), "utf8"),
-    writeFile(`${prefix}.manifest.json`, JSON.stringify(snapshot.manifest, null, 2) + "\n", "utf8"),
+    writeFile(`${prefix}.manifest.json`, JSON.stringify(report.source, null, 2) + "\n", "utf8"),
     writeFile(`${prefix}.source-response.json`, snapshot.responseText, "utf8"),
   ]);
   return report;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const targetsPath = process.argv[2];
-  const outputPrefix = process.argv[3];
-  if (!targetsPath || !outputPrefix) {
-    process.stderr.write("Usage: node scripts/geonames-japan-estat-evidence-audit.mjs <dispositions.csv> <output-prefix>\n");
+  const [targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath] = process.argv.slice(2);
+  if (!targetsPath || !geoNamesPath || !outputPrefix || !geoNamesManifestPath) {
+    process.stderr.write("Usage: node scripts/geonames-japan-estat-evidence-audit.mjs <dispositions.csv> <JP.txt> <output-prefix> <geonames-source-manifest.json>\n");
     process.exitCode = 2;
   } else {
-    runAudit({ targetsPath, outputPrefix })
+    runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath })
       .then((report) => {
         const summary = { ...report };
         delete summary.target_results;
@@ -344,6 +441,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       })
       .catch((error) => {
         process.stderr.write(`Japan e-Stat candidate audit failed closed: ${error.stack ?? error}\n`);
+        if (error.failures) process.stderr.write(JSON.stringify(error.failures, null, 2) + "\n");
         process.exitCode = 1;
       });
   }
