@@ -1,6 +1,6 @@
 # GeoNames country archive sample validation
 
-**Current status (2026-10-11 update): same-script and separately authored sample-selection checks PASS; current-source global scan and exception identity reconciliation PASS; ISO comparison and catalog acceptance remain BLOCKED.** This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification. This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification.
+**Current status (2026-10-11 update): same-script and separately authored sample-selection checks PASS; current-source global scan and exception identity reconciliation PASS; ISO comparison and catalog acceptance remain BLOCKED.** This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification.
 
 ## Stage A — Owner-laptop sample generation and artifact inspection
 
