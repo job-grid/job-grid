@@ -449,7 +449,13 @@ def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], lis
                     raise RuntimeError(
                         f"Could not parse official MLIT XML {snapshot['archive_filename']}/{member_name}: {error}"
                     ) from error
-            return records, names
+            # Some official N03 archives bundle both descriptive GML/XML and
+            # a complete Shapefile. If the XML uses a GML geometry model we do
+            # not support yet (for example CurveMember/Surface rather than
+            # featureMember/Polygon), do not claim success with zero features:
+            # fall through to the archive's verified .shp/.shx/.dbf components.
+            if records:
+                return records, names
         # Some publisher packages may contain a Shape archive; support that format too.
         shp_files = [name for name in names if name.lower().endswith(".shp")]
         if not shp_files:
