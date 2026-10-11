@@ -279,6 +279,28 @@ function renderCsv(headers, rows) {
   return [headers.join(","), ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(","))].join("\n") + "\n";
 }
 
+export function codeResultToCsvRow(row) {
+  return {
+    ...row,
+    geonames_ids: row.geonames_ids.join(";"),
+    geonames_names: row.geonames_names.join(";"),
+    containing_area_names_1995: row.containing_area_names_1995.join("; "),
+    exact_english_name_candidate_codes_for_associated_targets: row.exact_english_name_candidate_codes_for_associated_targets.join(";"),
+    associated_targets_whose_code_matches_exact_name_candidate: row.associated_targets_whose_code_matches_exact_name_candidate.join(";"),
+    catalog_labels_en: row.catalog_labels_en.join(";"),
+    catalog_labels_ja: row.catalog_labels_ja.join(";"),
+    periods_covering_1995_snapshot: row.periods_covering_1995_snapshot.join(";"),
+    parent_area_codes_across_history: row.parent_area_codes_across_history.join(";"),
+    parent_labels_en_across_history: row.parent_labels_en_across_history.join(";"),
+    parent_labels_ja_across_history: row.parent_labels_ja_across_history.join(";"),
+    parent_area_codes_at_1995: row.parent_area_codes_at_1995.join(";"),
+    parent_labels_en_at_1995: row.parent_labels_en_at_1995.join(";"),
+    parent_labels_ja_at_1995: row.parent_labels_ja_at_1995.join(";"),
+    administrative_class_uris_at_1995: row.administrative_class_uris_at_1995.join(";"),
+    operational_parent_link_created: "false",
+  };
+}
+
 export async function runSpatialFirstDetailAudit({
   spatialReportPath,
   estatResponsePath,
@@ -604,26 +626,7 @@ export async function runSpatialFirstDetailAudit({
   ];
   await Promise.all([
     writeFile(jsonPath, JSON.stringify(result, null, 2) + "\n", "utf8"),
-    writeFile(codePath, renderCsv(codeFields, codeResults.map((row) => ({
-      ...row,
-      geonames_ids: row.geonames_ids.join(";"),
-      geonames_names: row.geonames_names.join(";"),
-      containing_area_names_1995: row.containing_area_names_1995.join("; "),
-      exact_english_name_candidate_codes_for_associated_targets: row.exact_english_name_candidate_codes_for_associated_targets.join(";"),
-      associated_targets_whose_code_matches_exact_name_candidate: row.associated_targets_whose_code_matches_exact_name_candidate.join(";"),
-      catalog_labels_en: row.catalog_labels_en.join(";"),
-      catalog_labels_ja: row.catalog_labels_ja.join(";"),
-      periods_covering_1995_snapshot: row.periods_covering_1995.join(";"),
-      parent_area_codes_across_history: row.parent_area_codes_across_history.join(";"),
-      parent_labels_en_across_history: row.parent_labels_en_across_history.join(";"),
-      parent_labels_ja_across_history: row.parent_labels_ja_across_history.join(";"),
-      parent_area_codes_at_1995: row.parent_area_codes_at_1995.join(";"),
-      parent_labels_en_at_1995: row.parent_labels_en_at_1995.join(";"),
-      parent_labels_ja_at_1995: row.parent_labels_ja_at_1995.join(";"),
-      administrative_class_uris_at_1995: row.administrative_class_uris_at_1995.join(";"),
-      review_status: row.review_status,
-      operational_parent_link_created: "false",
-    }))), "utf8"),
+    writeFile(codePath, renderCsv(codeFields, codeResults.map(codeResultToCsvRow)), "utf8"),
     writeFile(targetCodePath, renderCsv(targetCodeFields, targetCodeResults), "utf8"),
     writeFile(targetSummaryPath, renderCsv(targetSummaryFields, targetSummary), "utf8"),
     writeFile(historyPath, renderCsv(historyFields, historyCsvRows), "utf8"),
