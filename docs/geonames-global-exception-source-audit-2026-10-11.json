@@ -57,14 +57,13 @@
   ],
   "latest_verified_workflow": {
     "name": "Phase 0 CI",
-    "run_number": 360,
-    "run_id": 38099824612,
-    "tested_commit": "166963a7596ec0376292ec6b061fbcfcff5b8708",
+    "run_number": 365,
+    "run_id": 38100525125,
+    "tested_commit": "0fd7a9ea10472d95bf9f961c6072f40e536b4497",
     "phase_0_ci": "PASS",
-    "phase_4c_tooling_validation": "PASS",
-    "phase_4c_backup_executor_validation": "PASS",
     "test_count": 83,
-    "test_failures": 0
+    "test_failures": 0,
+    "workflow_scope_note": "Phase 0 CI run #365 is separate from the Phase 4C tooling and backup-executor workflows; those separate validations also passed on the current PR head."
   },
   "source_country_code_coverage": {
     "scope": "GeoNames allCountries source snapshot only; not an ISO 3166 comparison or proof of Job Grid product coverage",
