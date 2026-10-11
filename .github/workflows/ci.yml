@@ -852,6 +852,18 @@ jobs:
           print(f"- Distinct e-Stat candidate area codes inspected: {len(expected_codes)}")
           print(f"- Target-to-candidate-code associations inspected: {len(candidates)}")
           print(f"- Candidate associations with a point inside the candidate polygon: {candidate_codes_with_point_hit}")
+          print("## Positive containment associations (candidate review only)")
+          for row in sorted(candidates, key=lambda item: (int(item["geonames_id"]), item["candidate_code"])):
+              snapshots = row.get("point_inside_candidate_polygon_snapshots", "")
+              if snapshots:
+                  print(
+                      f"- GeoNames ID {row['geonames_id']} ({row['geonames_name']}) -> "
+                      f"candidate area code {row['candidate_code']}; contained snapshot(s): {snapshots}"
+                  )
+          print("## Targets without containing-polygon context (remain unresolved)")
+          for row in sorted(target_summaries, key=lambda item: int(item["geonames_id"])):
+              if row.get("polygon_context_status") != "CONTAINING_POLYGON_OBSERVED":
+                  print(f"- GeoNames ID {row['geonames_id']} ({row['geonames_name']})")
           print("- Positive containment remains candidate evidence; missing context remains unresolved; no parent links approved.")
           PY
 
