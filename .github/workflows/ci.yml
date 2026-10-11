@@ -747,7 +747,7 @@ jobs:
       - name: Audit Japan collision targets against official historical boundary polygons
         shell: bash
         env:
-          RUNNER_TEMP_DIR: \${{ runner.temp }}
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP_DIR/geonames-japan-estat"
