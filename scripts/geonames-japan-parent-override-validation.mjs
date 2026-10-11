@@ -76,9 +76,14 @@ export function renderOverrideCsv(report){
  return [f.join(","),...report.records.map(r=>f.map(k=>esc(r[k])).join(","))].join("\n")+"\n";
 }
 function mlitValid(x){return x?.status==="PASS_OFFICIAL_MLIT_CODE_SNAPSHOTS_PARSED; KEY_CODE_DESCRIPTIONS_VERIFIED; NO_PARENT_LINKS_APPROVED"&&/^[a-f0-9]{64}$/i.test(x?.mlit_all_snapshot_sha256??"")&&Array.isArray(x?.candidate_code_review);}
+export function parseValidationArgs(args){
+ if(!Array.isArray(args)||args.length!==10)throw new Error("Expected nine source paths and output prefix.");
+ return {jpPath:args[0],jsonPaths:args.slice(1,9),outputPrefix:args[9]};
+}
 async function main(){
- const a=process.argv.slice(2);if(a.length!==10)throw new Error("Expected nine source paths and output prefix.");
- const [jp,src,audit,spatial,details,expansion,hierarchy,mlit,manifest,out]=await Promise.all([readFile(a[0],"utf8"),...a.slice(1,9).map(p=>readFile(p,"utf8").then(JSON.parse))]);
+ const parsed=parseValidationArgs(process.argv.slice(2));
+ const [jp,src,audit,spatial,details,expansion,hierarchy,mlit,manifest]=await Promise.all([readFile(parsed.jpPath,"utf8"),...parsed.jsonPaths.map(p=>readFile(p,"utf8").then(JSON.parse))]);
+ const out=parsed.outputPrefix;
  if(!mlitValid(mlit))throw new Error("MLIT code evidence is invalid.");
  const report=validateJapanParentOverrides({jpText:jp,sourceManifest:src,targetAudit:audit,spatialReport:spatial,eStatDetails:details,parentExpansion:expansion,hierarchyAudit:hierarchy,mlitCodeEvidence:mlit,overrideManifest:manifest});
  await Promise.all([writeFile(resolve(out)+".json",JSON.stringify(report,null,2)+"\n"),writeFile(resolve(out)+".csv",renderOverrideCsv(report))]);
