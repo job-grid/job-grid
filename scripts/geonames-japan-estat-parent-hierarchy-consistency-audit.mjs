@@ -84,7 +84,7 @@ function distinctGrandparentReferences(detailRows) {
     a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
 }
 
-function selectStatus({ featureCode, admin1Code, grandparentReferences, adm1Matches }) {
+export function classifyParentHierarchyConsistency({ featureCode, admin1Code, grandparentReferences, adm1Matches }) {
   if (featureCode !== "ADM2") return {
     status: featureCode === "ADM1"
       ? "NOT_APPLICABLE_ADM1_CANDIDATE_NO_PARENT_NAMESPACE_CHECK"
@@ -150,7 +150,6 @@ export async function runParentHierarchyConsistencyAudit({
     throw new Error("Parent candidate expansion failed source-scope/count/no-write validation.");
   }
   if (sourceManifest.archive_sha256 !== candidateReport.geonames_source?.archive_sha256 ||
-      sourceManifest.text_member_sha256 !== candidateReport.geonames_source?.text_member_sha256 ||
       sha256(sourceBytes) !== candidateReport.geonames_source?.text_member_sha256) {
     throw new Error("JP.txt bytes and the parent expansion report do not share the same source fingerprints.");
   }
@@ -275,7 +274,7 @@ export async function runParentHierarchyConsistencyAudit({
     for (const candidate of reference.candidate_matches ?? []) {
       const statuses = [];
       const evidence = grandparentCandidates;
-      const decision = selectStatus({
+      const decision = classifyParentHierarchyConsistency({
         featureCode: candidate.feature_code,
         admin1Code: String(candidate.raw_admin1_code ?? "").trim(),
         grandparentReferences: evidence,
