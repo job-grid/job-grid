@@ -41,6 +41,15 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def binding_value(binding: dict, key: str) -> str:
+    """Read SPARQL JSON bindings case-insensitively; absent optional labels are blank."""
+    entry = next(
+        (value for name, value in (binding or {}).items() if str(name).lower() == key.lower()),
+        {},
+    )
+    return str(entry.get("value", "") or "")
+
+
 def local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1].split(":")[-1]
 
