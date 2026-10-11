@@ -813,13 +813,13 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1990-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1975-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1970-10-01.html
-            \${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
-            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
-            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
-            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
-            \${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
-            \${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
-            \${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
+            ${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
           if-no-files-found: error
           retention-days: 7
 
