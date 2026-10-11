@@ -22,14 +22,15 @@ The full counts and per-country summary in the detailed report are **reported by
 
 The original `allCountries.zip`, original `countryInfo` file, and original full admin crosswalk files are not included in the sample package. The isolated builder environment attempted to retrieve nine official GeoNames sources, but DNS resolution failed for all nine. That failure remains recorded in `source-manifest.json` and `results/validation-report.json`; it describes the builder retrieval attempt, not the owner-laptop sample run.
 
-Consequently, all of the following remain incomplete:
+**Separate later verification now passes for the current global source scan and unresolved-exception identity fields.** [Phase 0 CI #365](https://github.com/job-grid/job-grid/actions/runs/38100525125) fetched the official `allCountries.zip` over HTTPS at `2026-10-11T01:03:45Z` (HTTP 200), recorded source hashes and response metadata, scanned 13,472,324 source rows with zero malformed/wrong-shape rows, and matched all 2,416 unique unresolved-exception IDs on their exact source identity and raw administrative codes. See the [global source-audit report](../geonames-global-exception-source-audit-2026-10-11.md). This is a separate current-source CI scan; it does not prove that the original owner-laptop sample was generated from those exact bytes or reproduce its selection script.
 
-1. Recomputing and verifying the original-source SHA-256 hashes against original source bytes.
-2. Independently reproducing the owner's reported 13,472,324-record scan and its malformed-row count.
-3. Reproducing the selected sample from the pinned full input and script, including selection decisions.
-4. Comparing country codes to a separately obtained, current, owner-approved ISO authority snapshot.
+The following gates remain incomplete:
 
-The uploaded ZIP's checksum verifies the **uploaded sample package only**. It does not prove that the original source archives match manifest-declared source hashes.
+1. Verifying that the original selection run consumed source bytes identical to a pinned official snapshot; the sample ZIP alone does not establish that provenance.
+2. Reproducing the selected 25,685-row sample from the original full input and builder script, including every selection decision.
+3. Comparing country codes to a separately obtained, current, owner-approved ISO authority snapshot.
+
+The uploaded ZIP's checksum verifies the **uploaded sample package only**. It does not prove original selection-input provenance, and it does not establish that the original source archives used by the selection script match later independently retrieved bytes.
 
 ## Timestamp and relationship caveats
 
