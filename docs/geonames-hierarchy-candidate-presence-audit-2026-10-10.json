@@ -798,5 +798,39 @@
     "unresolved_or_blocked_targets": 128,
     "operational_parent_links_created": 0,
     "interpretation": "GeoNames documents admin code 00 as a general feature for which no specific admin1 code is defined. Raw values are preserved; this does not create or infer a parent."
+  },
+  "kenya_external_county_ancestor_evidence": {
+    "status": "CANDIDATES_FOUND_FOR_OWNER_REVIEW__IMMEDIATE_PARENT_PATHS_UNRESOLVED",
+    "evidence_dossier": "docs/geonames-kenya-external-ancestor-evidence-2026-10-11.md",
+    "machine_readable_review": "docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json",
+    "operational_parent_links_created": 0,
+    "parent_path_complete": false,
+    "owner_approval_required": true,
+    "candidates": [
+      {
+        "target_geonames_id": "192705",
+        "target_name": "Kiambururu Sub-Location",
+        "raw_admin1_code_preserved": "01",
+        "candidate_county_ancestor_geonames_id": "8693007",
+        "candidate_county_ancestor_name": "Kiambu County",
+        "candidate_county_feature_code": "ADM2",
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__ADMIN_LEVEL_CONFLICT"
+      },
+      {
+        "target_geonames_id": "7800132",
+        "target_name": "Imenti Central",
+        "raw_admin1_code_preserved": "03",
+        "candidate_county_ancestor_geonames_id": "8693009",
+        "candidate_county_ancestor_name": "Meru County",
+        "candidate_county_feature_code": "ADM2",
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__NAME_VARIANT_AND_IMMEDIATE_PATH_UNVERIFIED"
+      }
+    ],
+    "interpretation": "External Kenyan government source evidence supports county-level ancestry candidates; it does not establish a full immediate-parent path or a direct source-ID crosswalk. Treat the candidate IDs as evidence for owner review only.",
+    "remaining_admin_parent_status_counts": {
+      "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED": 126,
+      "BLOCKED_PARENT_KEY_NOT_FOUND": 2,
+      "county_ancestor_candidates_available_for_owner_review": 2
+    }
   }
 }
