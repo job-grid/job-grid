@@ -537,9 +537,13 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
   }
   if (catalogRows.length === 0) throw new Error("e-Stat catalog returned zero standard-area-code rows.");
 
+  const initiallyMatchedRows = catalogRows.filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)));
+  const candidateAreaCodes = new Set(initiallyMatchedRows.map((row) => row.area_code));
+  // Once an area code matches a target label, retrieve every period for that code
+  // so the review report captures changes in name, dates, and parent over time.
   const candidateUris = [...new Set(catalogRows
-    .filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)))
-    .map((row) => row.period_uri))];
+    .filter((row) => candidateAreaCodes.has(row.area_code))
+    .map((row) => row.period_uri))].sort();
   const detailBatches = [];
   const detailRows = [];
   for (let offset = 0; offset < candidateUris.length; offset += DETAIL_QUERY_BATCH_SIZE) {
@@ -622,6 +626,8 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     source_snapshot_sha256: combinedSourceHash,
     result_row_count: catalogRows.length,
     result_cap_per_page: CATALOG_PAGE_SIZE,
+    candidate_area_code_count: candidateAreaCodes.size,
+    candidate_history_period_uris_requested: candidateUris.length,
     license_note: "The official Statistical LOD SPARQL API page states that site content is licensed CC BY 4.0 except where otherwise noted; confirm applicable dataset terms before redistribution.",
     source_scope_note: "e-Stat documents standard-area-code and related municipality abolishment, absorption, name-change and hierarchy data from April 1970 onward. This is a candidate evidence source, not a GeoNames crosswalk.",
   };
