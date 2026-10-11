@@ -8,7 +8,6 @@
  *     <current-admin1-audit.json> <county-ancestor-evidence.json> <output-prefix>
  */
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const EXPECTED = new Map([
@@ -51,7 +50,8 @@ function getSourceMetadata(audit) {
   const retrievedAt = source.retrieved_at_utc ?? wrapper.retrieved_at_utc ?? null;
   const rowCount = Number(audit.crosswalk_row_count ?? source.rows ?? NaN);
   const malformedRows = Number(audit.malformed_rows ?? source.malformed_rows ?? NaN);
-  const duplicates = audit.duplicate_crosswalk_keys ?? source.duplicate_composite_keys ?? [];
+  const duplicateValue = audit.duplicate_crosswalk_keys ?? source.duplicate_composite_keys ?? [];
+  const duplicateCount = Array.isArray(duplicateValue) ? duplicateValue.length : Number(duplicateValue ?? 0);
   const metadataVerified = wrapper.retrieval_metadata_verified === true ||
     (httpStatus === 200 &&
      typeof url === "string" &&
@@ -61,7 +61,7 @@ function getSourceMetadata(audit) {
      Number.isSafeInteger(rowCount) && rowCount > 0);
   requireCondition(metadataVerified, "Current official GeoNames admin1 crosswalk provenance failed validation.");
   requireCondition(malformedRows === 0, "Current crosswalk contains malformed rows; ledger must fail closed.");
-  requireCondition(Array.isArray(duplicates) && duplicates.length === 0, "Current crosswalk contains duplicate keys; ledger must fail closed.");
+  requireCondition(Number.isSafeInteger(duplicateCount) && duplicateCount === 0, "Current crosswalk contains duplicate keys; ledger must fail closed.");
   requireCondition(httpStatus === 200, "Current crosswalk HTTP status was not 200.");
   requireCondition(/^[a-f0-9]{64}$/i.test(sha256 ?? ""), "Current crosswalk SHA-256 is missing or invalid.");
   return {
@@ -72,7 +72,7 @@ function getSourceMetadata(audit) {
     sha256,
     row_count: rowCount,
     malformed_rows: malformedRows,
-    duplicate_key_count: duplicates.length,
+    duplicate_key_count: duplicateCount,
     retrieval_metadata_verified: true
   };
 }
