@@ -489,6 +489,157 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
   };
 }
 
+export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandidateAudit, sourceRows) {
+  if (!Array.isArray(targets) || targets.length !== EXPECTED_JAPAN_TARGETS) {
+    throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} source-verified Japanese targets; got ${targets?.length ?? 0}.`);
+  }
+  const englishResults = new Map(
+    (englishCandidateAudit?.target_results ?? []).map((row) => [String(row.geonames_id), row]),
+  );
+  if (englishResults.size !== EXPECTED_JAPAN_TARGETS) {
+    throw new Error("English candidate report is incomplete; cannot define the Japanese-alternate review scope.");
+  }
+  const unmatchedTargets = targets.filter((target) => {
+    const english = englishResults.get(String(target.geonames_id));
+    if (!english || english.source_identity_and_raw_codes_verified !== true ||
+        target.source_identity_and_raw_codes_verified !== true) {
+      throw new Error(`Unverified target in Japanese-alternate review: ${target.geonames_id}`);
+    }
+    return english.exact_name_candidate_count === 0;
+  });
+  const targetResults = unmatchedTargets.map((target) => {
+    const alternateNames = uniqueStrings(
+      (target.source_alternate_names ?? []).map(normalizeJapaneseLabel).filter(Boolean),
+    );
+    const alternateSet = new Set(alternateNames);
+    const matchedRows = sourceRows.filter((row) =>
+      /^\d{5}$/.test(String(row.area_code ?? "")) &&
+      alternateSet.has(normalizeJapaneseLabel(row.label_ja)));
+    const rowsByCode = new Map();
+    for (const row of matchedRows) {
+      const bucket = rowsByCode.get(row.area_code) ?? [];
+      bucket.push(row);
+      rowsByCode.set(row.area_code, bucket);
+    }
+    const candidates = [...rowsByCode.entries()]
+      .sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
+      .map(([areaCode, rows]) => {
+        const matchingUris = uniqueStrings(rows.map((row) => row.period_uri));
+        const matchingLabels = uniqueStrings(rows.map((row) => row.label_ja).filter(Boolean));
+        const history = buildAreaCodeHistory(sourceRows, areaCode, "__no_exact_english_label_match__")
+          .map((period) => ({
+            ...period,
+            matches_target_japanese_alternate_name: alternateSet.has(normalizeJapaneseLabel(period.label_ja)),
+            matching_geo_names_alternate_names: alternateNames.filter(
+              (name) => name === normalizeJapaneseLabel(period.label_ja),
+            ),
+          }));
+        const parentReferences = [];
+        for (const period of history) {
+          for (const parent of period.parent_references) {
+            const signature = JSON.stringify(parent);
+            if (!parentReferences.some((existing) => JSON.stringify(existing) === signature)) {
+              parentReferences.push(parent);
+            }
+          }
+        }
+        parentReferences.sort((a, b) => a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
+        return {
+          area_code: areaCode,
+          exact_matching_japanese_label_period_count: matchingUris.length,
+          exact_matching_period_uris: matchingUris,
+          matched_official_japanese_labels: matchingLabels,
+          geo_names_alternate_names_matching_labels: matchingLabels,
+          history_period_count: history.length,
+          parent_area_codes_across_history: uniqueStrings(parentReferences.map((parent) => parent.area_code)),
+          parent_references_across_history: parentReferences,
+          periods: history,
+        };
+      });
+    const status = candidates.length === 0
+      ? "NO_EXACT_JAPANESE_ALTERNATE_LABEL_MATCH"
+      : candidates.length === 1
+        ? "ONE_JAPANESE_LABEL_CODE_CANDIDATE_REQUIRES_ENTITY_AND_PERIOD_REVIEW"
+        : "MULTIPLE_JAPANESE_LABEL_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION";
+    return {
+      geonames_id: String(target.geonames_id),
+      geonames_name: target.name,
+      source_country_code: target.country_code,
+      source_feature_code: target.feature_code,
+      raw_admin1_code: target.raw_admin1_code,
+      raw_admin2_code: target.raw_admin2_code ?? "",
+      source_identity_and_raw_codes_verified: true,
+      source_alternate_names: alternateNames,
+      alternate_name_count: alternateNames.length,
+      candidate_area_code_count: candidates.length,
+      review_status: status,
+      candidates,
+      operational_parent_link_created: false,
+    };
+  });
+  return {
+    report_version: 1,
+    status: "PASS_EXACT_JAPANESE_ALTERNATE_LABEL_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
+    matching_rule: "Only complete GeoNames alternate-name entries that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidates. No substring, transliteration, reading, fuzzy or proximity matching is used.",
+    target_count: targetResults.length,
+    targets_with_japanese_alternate_label_candidates: targetResults.filter((target) => target.candidates.length > 0).length,
+    targets_without_japanese_alternate_label_candidates: targetResults.filter((target) => target.candidates.length === 0).length,
+    targets_with_one_distinct_area_code_candidate: targetResults.filter((target) => target.candidates.length === 1).length,
+    targets_with_multiple_distinct_area_code_candidates: targetResults.filter((target) => target.candidates.length > 1).length,
+    target_to_area_code_candidate_associations: targetResults.reduce((sum, target) => sum + target.candidates.length, 0),
+    distinct_candidate_area_codes: new Set(targetResults.flatMap((target) => target.candidates.map((candidate) => candidate.area_code))).size,
+    operational_parent_links_created: 0,
+    target_results: targetResults,
+  };
+}
+
+export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSha256 = "") {
+  const headers = [
+    "geonames_id", "geonames_name", "source_country_code", "source_feature_code",
+    "raw_admin1_code", "raw_admin2_code", "source_identity_and_raw_codes_verified",
+    "source_alternate_names", "alternate_name_count", "candidate_area_code_count",
+    "review_status", "candidate_area_code", "exact_matching_japanese_label_period_count",
+    "candidate_history_period_count", "matched_official_japanese_labels",
+    "matching_period_uris", "matching_period_date_ranges", "history_parent_area_codes",
+    "history_parent_labels_en", "history_parent_labels_ja", "source_snapshot_sha256",
+    "operational_parent_link_created",
+  ];
+  const csvCell = (value) => {
+    const text = value == null ? "" : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const lines = [headers.join(",")];
+  for (const target of report.target_results) {
+    const candidates = target.candidates.length ? target.candidates : [null];
+    for (const candidate of candidates) {
+      const matchedPeriods = (candidate?.periods ?? []).filter((period) =>
+        period.matches_target_japanese_alternate_name === true);
+      const historyPeriods = candidate?.periods ?? [];
+      const row = {
+        ...target,
+        source_alternate_names: target.source_alternate_names.join(";"),
+        candidate_area_code: candidate?.area_code ?? "",
+        exact_matching_japanese_label_period_count: candidate?.exact_matching_japanese_label_period_count ?? "",
+        candidate_history_period_count: candidate?.history_period_count ?? "",
+        matched_official_japanese_labels: (candidate?.matched_official_japanese_labels ?? []).join(";"),
+        matching_period_uris: (candidate?.exact_matching_period_uris ?? []).join(";"),
+        matching_period_date_ranges: matchedPeriods.map((period) =>
+          `${period.effective_from || ""}..${period.effective_until || ""}`).join(";"),
+        history_parent_area_codes: uniqueStrings(historyPeriods.flatMap((period) =>
+          period.parent_references.map((parent) => parent.area_code))).join(";"),
+        history_parent_labels_en: uniqueStrings(historyPeriods.flatMap((period) =>
+          period.parent_references.map((parent) => parent.label_en))).join(";"),
+        history_parent_labels_ja: uniqueStrings(historyPeriods.flatMap((period) =>
+          period.parent_references.map((parent) => parent.label_ja))).join(";"),
+        source_snapshot_sha256: sourceSnapshotSha256,
+        operational_parent_link_created: false,
+      };
+      lines.push(headers.map((header) => csvCell(row[header])).join(","));
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
 export function renderCandidateCsv(report) {
   const headers = [
     "geonames_id", "geonames_name", "country_code", "feature_code", "raw_admin1_code",
