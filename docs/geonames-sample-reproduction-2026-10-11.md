@@ -1,6 +1,6 @@
 # GeoNames sample-selection reproduction — 2026-10-11
 
-**Result: same-script reproduction PASS; independent second implementation remains outstanding.** This was a read-only source-data validation run. It did not import data into any database or change production systems.
+**Result: same-script reproduction PASS; separately authored selection-logic reproduction PASS; cross-language PRNG check not performed.** This was a read-only source-data validation run. It did not import data into any database or change production systems.
 
 ## Source inputs verified
 
@@ -50,10 +50,33 @@ Seven deterministic generated files were compared by SHA-256 against the origina
 
 The owner-supplied ZIP `JobGrid-GeoNames-Sample-20261010-163234.zip` has SHA-256 `feba409196d05d77e4a02e194c3223c2a1849231c8e80594934d9e99370ab4bf`. Its ten members—including the script, both timestamp-bearing JSON reports, and the seven generated files above—were verified to match the original extracted output folder. The newly rerun `source_manifest.json` and `summary.json` contain new generation timestamps; the key input hashes and measured summary fields match, but those files are therefore not claimed to be byte-identical across runs.
 
+
+## Separately authored selection-logic check — 2026-10-11
+
+A second selector was authored without importing or invoking the original `prepare_sample.py`. It scans the same source archive and writes a new sample TSV, using a **sorted bounded list** for top-population selection instead of the original script's heap. It preserves the same per-country seeded Python `random.Random` behavior for reservoir draws so the deterministic reservoir sample can be compared byte-for-byte.
+
+The check is committed as [`scripts/geonames-sample-selection-independent-check.py`](../scripts/geonames-sample-selection-independent-check.py), with an aggregate result in [the machine-readable report](geonames-sample-selection-independent-reproduction-2026-10-11.json).
+
+| Independent selector result | Value |
+|---|---:|
+| Worldwide rows scanned | 13,472,324 |
+| Malformed rows | 0 |
+| Duplicate IDs across selected countries | 0 |
+| Invalid coordinates across selected countries | 0 |
+| Selected sample rows / distinct IDs | 25,685 / 25,685 |
+| Expected original sample SHA-256 | `1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad` |
+| Independently selected TSV SHA-256 | `1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad` |
+| Byte-for-byte equality | **PASS** |
+
+Selected rows by country also match: KE 2,631; GB 12,096; JP 4,899; BR 5,888; SG 171.
+
+**Scope limit:** this is an independent selection-logic implementation but not an independent implementation of Python's pseudorandom generator. The reservoir uses the same standard-library seeded `random.Random` algorithm to preserve the original deterministic draws. Thus the alternate ranking/filtering/output construction has reproduced the exact source sample, while a cross-language PRNG test remains unperformed. Neither this result nor the original script run establishes global geographic catalog completeness.
+
+
 ## What this proves—and what it does not
 
-- **Proven:** the recovered original script can be rerun on the same recorded input bytes, reproduces the same 25,685-record selection, and yields byte-identical content for all seven deterministic output artifacts.
-- **Not proven:** an independent reimplementation of the sample-selection algorithm; official HTTP Last-Modified metadata for every local input; global geographic catalog completeness; country administrative parent-path correctness; current ISO 3166-1 conformity; or real backup/restore readiness.
+- **Proven:** the original script rerun reproduces its original output on the recorded input bytes; a separately authored selector implementation also produces the exact same 25,685-record TSV; all seven deterministic output artifacts from the original-script rerun match byte-for-byte.
+- **Not proven:** independent/cross-language PRNG behavior for the reservoir; official HTTP Last-Modified metadata for every local input; global geographic catalog completeness; country administrative parent-path correctness; current ISO 3166-1 conformity; or real backup/restore readiness.
 - The original script's `last_modified_utc` manifest field is populated from local filesystem `st_mtime`, not a captured HTTP `Last-Modified` header. Treat it as a local filesystem timestamp only.
 - The sample is a validation sample for five countries, using all administrative features plus bounded population/reservoir samples and priority-name matches. It is not a globally complete place catalog.
 
