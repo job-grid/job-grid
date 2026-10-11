@@ -1,6 +1,6 @@
 # GeoNames country archive sample validation
 
-**Current status: INDEPENDENT CURRENT-SOURCE GLOBAL SCAN AND EXCEPTION IDENTITY RECONCILIATION PASS; SAMPLE-SELECTION ALGORITHM, ISO COMPARISON AND CATALOG ACCEPTANCE REMAIN BLOCKED.** This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification.
+**Current status (2026-10-11 update): same-script and separately authored sample-selection checks PASS; current-source global scan and exception identity reconciliation PASS; ISO comparison and catalog acceptance remain BLOCKED.** This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification. This README records historical builder evidence and later owner-computer verification separately. The builder's historical DNS retrieval failure remains accurate for that environment and is not contradicted by the later successful local-source verification.
 
 ## Stage A — Owner-laptop sample generation and artifact inspection
 
@@ -163,3 +163,20 @@ The exact current admin1 keys `KE.01` and `KE.03` remain absent. Separate offici
 - `7800132` Imenti Central: Meru County Government lists Central Imenti as an administrative sub-county and constituency and uses “Imenti Central” in its administrator list; a 2022 Gazette places Central Imenti under Meru County. Candidate county ancestor only: GeoNames Meru County ADM2 ID `8693009` (not related Meru ADM1 ID `186824`).
 
 See the [Kenya external ancestor evidence review](../geonames-kenya-external-ancestor-evidence-2026-10-11.md) and its [machine-readable candidate list](../geonames-kenya-external-ancestor-evidence-2026-10-11.json). These are owner-review candidates only and have not been approved or written as parent links. Raw codes `01` and `03` remain unchanged.
+
+## Stage G — same-script and independent sample-selection reproduction — 2026-10-11
+
+The previously open sample-selection reproduction gate has now been advanced and the exact selected output has been recreated twice:
+
+1. The recovered original `prepare_sample.py` was rerun using the five input files whose hashes match the original local manifest. All 13,472,324 source rows were scanned; 0 rows were malformed; 25,685 sample rows were emitted. Seven deterministic generated output files were byte-identical to the original output folder, and all ten members in the owner-supplied sample ZIP matched the original extracted folder.
+2. A separately authored checker, `scripts/geonames-sample-selection-independent-check.py`, independently reconstructed the selection without importing or executing the original generator. It uses a sorted bounded list rather than the original heap for top-population ranking. It scanned 13,472,324 rows, found 0 malformed rows, 0 duplicate IDs across the selected country set and 0 invalid coordinates, and produced 25,685 unique sample IDs.
+
+The original and independently authored selection TSVs have the same SHA-256:
+
+`1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad`
+
+The independent selection report is in [machine-readable JSON](../geonames-sample-selection-independent-reproduction-2026-10-11.json), with full methodology and limits in [the source-pinned reproduction report](../geonames-sample-reproduction-2026-10-11.md).
+
+**Scope limits remain:** the separate selector uses the same seeded Python `random.Random` behavior for reservoir draws; no cross-language PRNG implementation was tested. The allCountries archive hash matches the separately retrieved official-source audit, but the local manifest's filesystem timestamps are not verified HTTP Last-Modified headers for all other input files. Neither selection run establishes worldwide geographic catalog completeness or resolves administrative parentage.
+
+**Still blocked:** current official ISO 3166-1 comparison; the 128 immediate parent paths (126 Japan raw admin1 `00`, two unresolved Kenya records); 2,568 non-country reference cases requiring hierarchy/association review; worldwide product completeness; and independent real backup/restore readiness. No database migration, seed, import, live database, production or deployment action occurred.
