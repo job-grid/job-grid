@@ -582,7 +582,7 @@ See the [current-source recheck report](geonames-input-source-recheck-2026-10-11
 
 Sample selection is now **PASS for same-script reproduction and separately authored selection-logic reproduction**. The following remain blocked or unverified:
 
-- 128 current administrative parent paths (126 Japan ADM4 raw admin1 `00`, plus two Kenya ADM3 records with absent current `KE.01`/`KE.03` keys);
+- 128 current administrative parent paths remain unresolved (126 Japan ADM4 raw admin1 `00`, plus two Kenya ADM3 records with absent current `KE.01`/`KE.03` keys), but these records are now **excluded from the initial operational administrative catalog** via the generated [exclusion manifest](geonames-sample-validation/results/crosswalk-reconciliation-20261010/initial-operational-admin-catalog-exclusions.csv); later re-entry requires a verified parent path;
 - current official ISO 3166-1 snapshot acquisition and deterministic comparison under permitted access terms;
 - 2,568 non-country reference cases that still need hierarchy/administrative-association review;
 - worldwide geographic catalog completeness; and
@@ -590,25 +590,30 @@ Sample selection is now **PASS for same-script reproduction and separately autho
 
 No source archives were committed. The original source files and sample output were not modified. No operational parent links, migrations, seeds, imports, database writes, production or deployment actions occurred. PR #27 remains open, draft and unmerged.
 
-## 5P. Separate source-record retention from selector activation — 2026-10-11
+## 5P. Exclude unresolved parent-path records from the initial operational catalog — 2026-10-11
 
-**Decision: do not delete the 128 unresolved administrative records. Preserve them as source-verified reference records, but keep them ineligible for current administrative selectors until their parent paths are proven.** This follows the owner-approved conservative policy and avoids treating incomplete hierarchy metadata as evidence that the source entities themselves are invalid.
+**Owner instruction: if a permanent parent-path fix is not established, remove the record from the initial operational administrative catalog.** The evidence is not sufficient to fix the 128 parent links safely, so all 128 are excluded from the initial operational catalog—not just hidden from selectors. Their original source/audit rows are preserved unchanged for traceability; they are not loaded as accepted operational administrative nodes. A future release may re-admit an individual record only after the parent path is verified.
 
 The latest source-pinned checks support this split:
 - The global GeoNames exception source audit verified all **2,416 / 2,416** unique exception IDs against the current official `allCountries.zip` on GeoNames ID, name, country, feature code and raw admin1/admin2 values, with zero missing IDs, duplicate IDs or identity/raw-code drift.
 - The latest current-administration path set is **128 records**: 126 Japan ADM4 records with raw admin1 `00`, plus Kenya ADM3 IDs `192705` and `7800132`, whose current `KE.01` and `KE.03` crosswalk keys are absent.
 - The Japan e-Stat/MLIT audit completed successfully, but exact GeoNames parent identities remain unapproved; the Kenya sources provide possible county ancestry but not verified immediate-parent paths.
 
-### Required future import and query behavior
+### Implemented exclusion artifact and re-entry rule
 
-For these 128 records, an approved future source import may retain the source identity and raw codes in a reference/staging layer without setting a parent:
-- Preserve the GeoNames ID, source name, country, feature code, raw admin codes and source snapshot provenance.
-- Set the parent association to null/unresolved; do not synthesize a parent, normalize raw `00`, or replace the missing Kenya keys with a guessed code.
-- Mark hierarchy resolution as unresolved and selector eligibility as false. Exclude these records from current administrative selection APIs and user-facing administrative pickers by default.
-- Keep record identity/referenceability so later evidence can update the resolution without changing or deleting the source record.
-- Promote a record only after a row-level check establishes entity identity, administrative level, effective period where relevant, and an evidenced immediate-parent path. A name match, spatial containment, or internal code consistency alone is not enough.
+The updated [disposition generator](../scripts/geonames-approved-exception-dispositions.mjs) now creates the source-separated [initial operational admin catalog exclusion manifest](geonames-sample-validation/results/crosswalk-reconciliation-20261010/initial-operational-admin-catalog-exclusions.csv). The manifest contains exactly 128 unique records:
+- Japan: 126 ADM4 entries with raw admin1 `00`, reason `RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED`.
+- Kenya: ADM3 GeoNames IDs `192705` and `7800132`, reason `EXACT_COUNTRY_ADMIN_PARENT_KEY_NOT_FOUND`.
 
-**Acceptance effect:** unresolved paths remain a blocker for publishing these records as *current selectable administrative nodes*, not a reason to delete them or to discard otherwise source-verified reference rows. This is a documented target behavior, not a claim that a production selector or database has already been changed; this PR remains a documentation/design proposal and no migration, import, application rollout or production change has been performed.
+For these records:
+- Keep original GeoNames IDs, names, country/feature identifiers, raw codes and source rows in the audit exports. Do not rewrite or delete source data.
+- **Exclude all 128 from initial operational administrative catalog output.** Do not include them in an accepted seed/import/catalog candidate set for current administrative nodes.
+- Do not create parent IDs or links, normalize raw `00`, or replace the absent Kenya keys with guessed codes.
+- Keep the row-level exclusion reason and zero-parent-link assertion. Re-admit an individual record only after source-pinned review proves identity, level, applicable period and the immediate-parent path.
 
-The overall catalog proposal remains **BLOCKED** on its separate ISO source comparison, policy/completeness and provenance gates. The 128 path investigations remain open for evidence-led repair, while safe retention and default selector exclusion are the agreed disposition in the meantime.
+The generated summary records **128 excluded / 0 eligible** from this unresolved-current-admin exception set. Automated tests check the exact 126 Japan + 2 Kenya split, manifest reproducibility, raw-code preservation and the no-parent-link boundary.
+
+**Acceptance effect:** the 128 records are removed from the *initial operational administrative catalog*, so their unresolved paths no longer require us to fabricate a relationship just to include them. Their entity/path investigations stay in the audit backlog; later inclusion is a new evidence-based decision. This is implemented in the repository's design/reconciliation artifacts only. The PR remains a proposal: no application runtime, database, migration, seed, import, production or deployment change has been performed.
+
+The overall catalog proposal remains **BLOCKED** on separate ISO-source, remaining exception-policy, provenance and worldwide-completeness gates.
 
