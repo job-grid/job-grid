@@ -520,3 +520,21 @@ The current official `allCountries.zip` was retrieved in CI, fingerprinted with 
 The same source scan verified every distinct record in the unresolved crosswalk-exception export: **2,416 / 2,416** unique IDs matched exactly on GeoNames ID, name, country, feature code, raw admin1 code and raw admin2 code. Missing IDs, duplicate IDs and identity/raw-code drift: **0**. Aggregate status and provenance are committed in [the machine-readable summary](geonames-global-exception-source-audit-2026-10-11.json); the [row-level audit](https://github.com/job-grid/job-grid/actions/runs/38097453927/artifacts/11686636684) is retained in the CI artifact through 2026-10-18.
 
 This closes source identity/raw-code drift for these 2,416 exception IDs in the current global dump. It does **not** mean the missing crosswalk keys now exist, approve any parentage, or reproduce how the separate 25,685-record sample was selected. Product/worldwide geographic completeness remains unverified. The independent hierarchy audit still reports 128 current admin parent-path blockers, the ISO authority comparison remains unverified, and Phase 4C backup/recovery readiness remains separately blocked. No migrations, seeds, imports, database, production or deployment changes were made.
+
+
+## 5M. Kenya legacy admin1 codes — exact live crosswalk test — 2026-10-11
+
+The read-only [current GeoNames admin1 crosswalk audit](geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.md) retrieved and fingerprinted the official `admin1CodesASCII.txt` from GeoNames. Of 3,865 parsed rows, there were zero malformed rows and zero duplicate keys. The exact composite keys `KE.01` and `KE.03` were both absent.
+
+| Target | Raw code preserved | Exact key | Rows in current crosswalk | Disposition |
+|---|---|---|---:|---|
+| Kiambururu Sub-Location — GeoNames 192705, ADM3 | `01` | `KE.01` | 0 | Unresolved parent |
+| Imenti Central — GeoNames 7800132, ADM3 | `03` | `KE.03` | 0 | Unresolved parent |
+
+The live file contains other current KE keys, including `KE.22` (Kiambu County, GeoNames 192709) and `KE.35` (Meru County, GeoNames 186824). These were noted only as keys present in the same file; they were **not** assigned to either target. The [2013 GeoNames maintainer forum thread](https://forum.geonames.org/gforum/posts/list/4269.page) described these older `KE.01`/`KE.03` keys as obsolete and did not know their replacements at that time. That historic statement is context, not a current authoritative replacement map.
+
+The current authoritative exact-key evidence establishes why these records cannot resolve through current `admin1CodesASCII.txt`, but it does not identify new parent IDs. The current GeoNames hierarchy file also has no direct `ADM` edge for either target. Both remain blocked pending verified, source-backed parent lineage; raw codes remain unchanged. No candidates, parent links, imports, migrations, seeds, database or production changes resulted.
+
+Source metadata: retrieved `2026-10-11T00:18:08Z`; HTTP 200; Last-Modified `2026-10-10T01:58:39Z`; ETag `"2501f-65d72cdb3fbc2"`; 151,583 bytes; SHA-256 `1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a`. The [machine-readable report](geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json) is committed. The row-level CSV/JSON and retrieval manifest are temporarily in [CI artifact](https://github.com/job-grid/job-grid/actions/runs/38097953584/artifacts/11686852169) through 2026-10-18.
+
+The Phase 0 run at commit `2e231945d57d3f71d1345962a4fc212fd714f5dc` passed the legacy-key audit and all **79 automated tests**. The wider global-source audit, source-pinned parent-path audit, repository integrity, database migration validation, dependency scan and secret scan also passed.
