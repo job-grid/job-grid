@@ -328,7 +328,7 @@ test("supplemental candidate-period audit joins parent labels to the exact targe
   }
 });
 
-test("supplemental audit refuses a target report from a different GeoNames text snapshot", () => {
+test("supplemental candidate validator rejects unverified target identity fields", () => {
   const { targetCandidateReport } = supplementalInputReports("some pinned source bytes");
   targetCandidateReport.target_results[0].source_identity_and_raw_codes_verified = false;
   assert.throws(
