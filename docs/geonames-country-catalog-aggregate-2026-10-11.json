@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "audit": "geonames-country-info-vs-country-feature-identity",
+  "generated_at_utc": "2026-10-11T19:11:59Z",
+  "status": "PASS_GEO_NAMES_COUNTRY_IDENTITY_WITH_REVIEW_ITEMS",
+  "sources": {
+    "country_info": {
+      "filename": "countryInfo.txt.txt",
+      "bytes": 31680,
+      "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+      "raw_rows_or_country_values_in_report": false
+    },
+    "all_countries_archive": {
+      "filename": "allCountries.zip",
+      "bytes": 422010093,
+      "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+      "member_name": "allCountries.txt",
+      "member_sha256": "e563a236d3fcbfb24414534b4fcc8feff4c4230fced91dbaf8d28a9be8242532",
+      "raw_rows_or_country_values_in_report": false
+    }
+  },
+  "counts": {
+    "country_info_rows": 252,
+    "country_info_malformed_rows": 0,
+    "country_info_rows_missing_numeric_geoname_id": 0,
+    "country_info_duplicate_geoname_id_groups": 0,
+    "country_info_blank_alpha2_rows": 0,
+    "country_info_blank_alpha3_rows": 0,
+    "country_info_blank_numeric3_rows": 0,
+    "country_info_invalid_alpha2_rows": 0,
+    "country_info_invalid_alpha3_rows": 0,
+    "country_info_invalid_numeric3_rows": 1,
+    "country_info_duplicate_alpha2_groups": 0,
+    "country_info_duplicate_alpha3_groups": 0,
+    "country_info_duplicate_numeric3_groups": 0,
+    "all_countries_rows_scanned": 13472324,
+    "all_countries_malformed_rows": 0,
+    "pcli_rows": 193,
+    "pcli_duplicate_geoname_id_groups": 0,
+    "current_or_territory_country_feature_rows": 253,
+    "current_or_territory_duplicate_geoname_id_groups": 0,
+    "historical_political_feature_rows": 18,
+    "historical_political_duplicate_geoname_id_groups": 0,
+    "recognized_country_entity_rows": 271,
+    "recognized_country_entity_duplicate_geoname_id_groups": 0,
+    "country_info_ids_matching_pcli": 193,
+    "country_info_ids_not_pcli": 59,
+    "pcli_ids_without_country_info": 0,
+    "country_info_ids_matching_current_or_territory_feature": 250,
+    "country_info_ids_matching_historical_political_feature": 2,
+    "country_info_ids_matching_any_recognized_country_feature": 252,
+    "country_info_ids_without_recognized_country_feature": 0,
+    "current_or_territory_feature_ids_without_country_info": 3
+  },
+  "interpretation": {
+    "country_info_to_recognized_country_feature_id_join": "PASS",
+    "current_or_territory_feature_to_country_info_id_join": "REVIEW_SCOPE_ONLY",
+    "pcli_to_country_info_id_join": "PASS",
+    "numeric3_format_review_required": 1,
+    "historical_country_metadata_rows_review_required": 2,
+    "iso3166_authority_comparison": "NOT_PERFORMED",
+    "catalog_acceptance": "BLOCKED_PENDING_ISO_REVIEW_AND_OTHER_ACCEPTANCE_GATES",
+    "worldwide_product_completeness": "NOT_ESTABLISHED_BY_THIS_AUDIT",
+    "admin_parent_links_created": 0,
+    "raw_country_code_tuples_in_report": false,
+    "source_rows_in_report": false
+  },
+  "limitations": [
+    "This is a GeoNames country metadata to recognized country/political-feature identity and shape audit only.",
+    "PCLI is only the independent-political-entity subset; countryInfo entries may be represented by other country-level or territorial feature codes.",
+    "Historical political entities and numeric-code format anomalies remain review items, not automatic replacements or deletions.",
+    "It does not use an ISO 3166 snapshot and does not close the separate ISO authority comparison gate.",
+    "It does not establish that Job Grid has complete worldwide geographic product coverage.",
+    "The aggregate report intentionally omits country names, ISO code tuples, and GeoNames IDs."
+  ]
+}

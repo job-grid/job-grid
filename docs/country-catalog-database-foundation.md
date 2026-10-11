@@ -617,3 +617,30 @@ The generated summary records **128 excluded / 0 eligible** from this unresolved
 
 The overall catalog proposal remains **BLOCKED** on separate ISO-source, remaining exception-policy, provenance and worldwide-completeness gates.
 
+## 5Q. GeoNames country-master identity audit — 2026-10-11
+
+A new source-pinned, streaming audit compares the current GeoNames country metadata file against recognized country-related feature IDs from the current worldwide archive. The local raw sources and row-level data were not committed; only a privacy-safe aggregate report, the reproducible script, and synthetic tests are included.
+
+**Result: PASS WITH REVIEW ITEMS for the GeoNames identity/shape join.**
+
+| Aggregate measure | Result |
+|---|---:|
+| Country metadata rows | 252 |
+| Malformed country metadata rows | 0 |
+| Duplicate country IDs or alpha-2/alpha-3/numeric code groups | 0 |
+| Worldwide rows scanned | 13,472,324 |
+| Malformed worldwide rows | 0 |
+| PCLI rows | 193 |
+| Country metadata IDs matched to PCLI | 193 |
+| Country metadata IDs matched to recognized current/territorial/historical country-related features | 252 / 252 |
+| Historical country-related matches | 2 |
+| Current/territory features not listed in country metadata | 3 |
+| Numeric-code-format anomalies requiring review | 1 |
+
+A PCLI-only join would incorrectly treat country-related entries represented by other GeoNames feature codes as missing. The implemented audit checks the broader country-related feature set. It preserves the two historical-feature cases, the numeric-format anomaly, and the three extra current/territory feature rows as review items; it does not change or delete source records or assign replacement codes.
+
+The aggregate report records source byte lengths and SHA-256 fingerprints while omitting country names, code tuples, GeoNames IDs, and row-level mismatch details. Six synthetic regression tests cover exact identity joins, missing-feature blockers, dependent/historical features, numeric-format review, duplicate identifiers/code groups, and malformed rows; all six pass. The script also passes Python compilation.
+
+**This does not perform or clear ISO 3166-1 authority comparison.** The report explicitly records that ISO was not compared. Follow the existing ISO local-comparison protocol and its permitted-use boundary; do not send ISO non-Open-Data source rows or code tuples to AI tools, put them into Git, bypass access controls, or purchase paid access without owner authorization. No ISO values were used by the new audit.
+
+Worldwide product completeness is still not established. The 128 unresolved administrative parent paths remain excluded from the initial operational administrative catalog. The remaining 2,568 non-country hierarchy/association cases, ISO comparison, global product-coverage proof, and Phase 4C backup/restore readiness remain separate acceptance gates. No parent links, migrations, seeds, imports, database changes, or deployment actions were performed.
