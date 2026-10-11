@@ -108,6 +108,15 @@ export function normalizeExactLabel(value) {
     .replace(/\s+/g, " ");
 }
 
+/** Canonical Unicode normalization only; no transliteration or fuzzy matching. */
+export function normalizeJapaneseLabel(value) {
+  return String(value ?? "").normalize("NFC").trim();
+}
+
+export function parseGeoNamesAlternateNames(value) {
+  return String(value ?? "").split(",").filter((name) => name.length > 0);
+}
+
 export function selectJapanTargets(dispositionRows) {
   const rows = dispositionRows.filter((row) =>
     row.country_code === "JP" &&
@@ -141,6 +150,8 @@ export function parseGeoNamesSourceRow(line) {
     geonames_id: fields[0],
     name: fields[1],
     ascii_name: fields[2],
+    alternate_names_raw: fields[3] ?? "",
+    alternate_names: parseGeoNamesAlternateNames(fields[3] ?? ""),
     feature_class: fields[6],
     latitude: fields[4],
     longitude: fields[5],
@@ -192,6 +203,8 @@ export function verifyTargetSourceRows(targets, sourceRows) {
       ...target,
       source_modification_date: source.modification_date,
       source_ascii_name: source.ascii_name,
+      source_alternate_names_raw: source.alternate_names_raw ?? "",
+      source_alternate_names: source.alternate_names ?? [],
       source_feature_class: source.feature_class ?? "",
       source_latitude: source.latitude,
       source_longitude: source.longitude,
