@@ -1668,7 +1668,7 @@ jobs:
       - name: Build source-pinned Kenya crosswalk rebuild ledger (candidate-only)
         shell: bash
         env:
-          RUNNER_TEMP_DIR: \${{ runner.temp }}
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP_DIR"

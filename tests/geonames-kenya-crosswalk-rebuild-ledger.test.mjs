@@ -72,7 +72,7 @@ test("ledger retains the specific blockers for the two different Kenya records",
   assert.ok(kiambururu.missing_evidence.some((item) => /GeoNames ID 192705/.test(item)));
   assert.equal(imenti.identity_and_path_review_status, "BLOCKED_NAME_VARIANT_AND_UNIT_TYPE_CROSSWALK");
   assert.ok(imenti.missing_evidence.some((item) => /administrative unit from an electoral constituency/.test(item)));
-  assert.ok(imenti.missing_evidence.some((item) => /GeoNames ID 7800132/.test(item));
+  assert.ok(imenti.missing_evidence.some((item) => /GeoNames ID 7800132/.test(item)));
 });
 
 test("even a newly present legacy key cannot auto-create parentage", async () => {
