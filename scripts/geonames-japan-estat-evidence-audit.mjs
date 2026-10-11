@@ -53,7 +53,10 @@ LIMIT 20000
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
 function bindingValue(binding, key) {
-  return binding?.[key]?.value ?? "";
+  // Statistical LOD's endpoint currently uppercases SELECT-variable keys in its JSON.
+  // Match variable names case-insensitively while preserving the original values.
+  const entry = Object.entries(binding ?? {}).find(([name]) => name.toLowerCase() === key.toLowerCase());
+  return entry?.[1]?.value ?? "";
 }
 
 /** Accent-insensitive, punctuation-insensitive exact label key. No fuzzy matching. */
