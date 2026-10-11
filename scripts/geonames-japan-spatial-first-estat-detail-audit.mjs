@@ -483,8 +483,8 @@ export async function runSpatialFirstDetailAudit({
     });
   }
 
-  const outputPrefix = resolve(outputPrefixPath(outputPrefix));
-  await mkdir(dirname(outputPrefix), { recursive: true });
+  const outputPath = resolve(outputPrefixPath(outputPrefix));
+  await mkdir(dirname(outputPath), { recursive: true });
   const pageManifest = catalog.pageManifest;
   const detailBatchManifest = detailBatches.map((batch) => ({
     target_offset: batch.target_offset,
@@ -537,6 +537,7 @@ export async function runSpatialFirstDetailAudit({
     detail_periods_reconciled: mergedPeriods.length,
     detail_rows_received: detailRows.length,
     detail_batches: detailBatches.length,
+    detail_batch_manifest: detailBatchManifest,
     detail_source_fingerprint: detailFingerprint,
     e_stat_catalog_row_count: catalog.totalRows,
     e_stat_catalog_source_snapshot_sha256: auditedCatalog.source_snapshot_sha256,
@@ -562,13 +563,13 @@ export async function runSpatialFirstDetailAudit({
     ],
   };
 
-  const jsonPath = outputPrefix + ".json";
-  const codePath = outputPrefix + ".area-code-candidates.csv";
-  const targetCodePath = outputPrefix + ".target-code-details.csv";
-  const targetSummaryPath = outputPrefix + ".target-summary.csv";
-  const historyPath = outputPrefix + ".area-code-period-history.csv";
-  const responsePath = outputPrefix + ".source-response.json";
-  const manifestPath = outputPrefix + ".manifest.json";
+  const jsonPath = outputPath + ".json";
+  const codePath = outputPath + ".area-code-candidates.csv";
+  const targetCodePath = outputPath + ".target-code-details.csv";
+  const targetSummaryPath = outputPath + ".target-summary.csv";
+  const historyPath = outputPath + ".area-code-period-history.csv";
+  const responsePath = outputPath + ".source-response.json";
+  const manifestPath = outputPath + ".manifest.json";
 
   const codeFields = [
     "area_code", "target_count", "geonames_ids", "geonames_names", "containing_area_names_1995",
