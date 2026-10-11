@@ -2,8 +2,8 @@
 
 **Result: PASS for full current-source scan and source identity/raw-code reconciliation. Catalog acceptance remains BLOCKED.**
 
-**Latest completed verification at the time of this evidence update:** [Phase 0 CI #360](https://github.com/job-grid/job-grid/actions/runs/38099824612)  
-**Detailed artifact:** [Row-level CSV, JSON summary and source manifest](https://github.com/job-grid/job-grid/actions/runs/38099824612/artifacts/11687570013)  
+**Latest completed verification:** [Phase 0 CI #365](https://github.com/job-grid/job-grid/actions/runs/38100525125)  
+**Detailed artifact:** [Row-level CSV, JSON summary and source manifest](https://github.com/job-grid/job-grid/actions/runs/38100525125/artifacts/11687337124)  
 **Machine-readable aggregate:** [Global audit summary JSON](geonames-global-exception-source-audit-2026-10-11.json)
 
 ## What was checked
@@ -25,7 +25,7 @@ Per-country unique exception IDs all matched: Brazil 1; Great Britain 32; Japan 
 
 ## GeoNames country-code and feature-class footprint — follow-up run
 
-The audit utility now computes aggregate coverage metrics while streaming the same official source. The verified Phase 0 CI #357 run retrieved the archive at `2026-10-11T00:47:56Z`; the archive and extracted-text hashes match the source fingerprints reported above.
+The audit utility now computes aggregate coverage metrics while streaming the same official source. In Phase 0 CI #365, the source was fetched at `2026-10-11T00:51:58Z`. Its archive and extracted-text hashes match the fingerprints below. The earlier #357 retrieval is retained as historical evidence and produced the same hashes.
 
 | Aggregate source measure | Result |
 |---|---:|
@@ -61,7 +61,7 @@ These counts characterize only the contents of this GeoNames snapshot. They do n
 ## Source fingerprint
 
 - URL: `https://download.geonames.org/export/dump/allCountries.zip`
-- Actual retrieval time in the latest verified run: `2026-10-11T00:47:56Z`
+- Actual retrieval time in the latest verified run: `2026-10-11T00:51:58Z`
 - HTTP status: 200
 - HTTP Last-Modified: `Sat, 10 Oct 2026 01:58:39 GMT` (`2026-10-10T01:58:39Z`)
 - ETag: `"19275ced-65d72cdb3f7da"`
@@ -78,4 +78,4 @@ This run independently reproduces the previously reported 13,472,324-line full s
 
 The parent-path check was independently run against the official Japan/Kenya country archives and the official hierarchy archive: **126 Japan ADM4 records still contain raw admin1 `00`, and two Kenyan ADM3 records still lack a matching ADM1 composite key and direct `ADM` hierarchy edge**. Current ISO authority comparison and product/worldwide completeness remain unverified.
 
-At the completed verification commit `166963a7596ec0376292ec6b061fbcfcff5b8708`, Phase 0 CI passed with 83 tests / 0 failures; Phase 4C tooling validation and backup-executor validation passed. Follow-up code now exposes both aggregate totals and a boolean reconciliation check; the regression test asserts the consistency fields. The CI run triggered by these newest edits is tracked separately and must pass before this newest code is called verified. No raw codes were normalized, no parent links were written, and no schema, migration, seed, import, live database, production or deployment changes occurred.
+At the current PR head `0fd7a9ea10472d95bf9f961c6072f40e536b4497`, [Phase 0 CI #365](https://github.com/job-grid/job-grid/actions/runs/38100525125) completed successfully with 83 tests / 0 failures. Database migration validation, application validation, global source audit, secret scanning, repository integrity, dependency scanning, Kenya legacy admin1 audit, and the GeoNames parent-path audit all passed. Phase 4C tooling and backup-executor validations also passed in their separate workflows on the current PR head. The latest aggregate checks confirm that both raw country-code and feature-class totals reconcile to 13,472,324 source rows. No raw codes were normalized, no parent links were written, and no schema, migration, seed, import, live database, production or deployment changes occurred.
