@@ -1,0 +1,3 @@
+geonames_id,name,country_code,feature_code,raw_admin1_code_preserved,target_area_code,target_area_code_japanese_label,target_period_uri,immediate_parent_area_code,immediate_parent_geonames_id,immediate_parent_geonames_name,parent_feature_code,exact_parent_japanese_alternate_name,grandparent_area_code,grandparent_area_code_japanese_label,spatial_snapshot_date,complete_parent_path_verified,raw_admin1_code_changed,source_record_modified,operational_parent_link_created
+1850471,Tawaramoto-chō,JP,ADM4,00,29363,田原本町,http://data.e-stat.go.jp/lod/sac/C29363-19700401,,,,,磯城郡,29000,奈良県,1995-10-01,true,false,false,false
+1850496,Tatsuno-machi,JP,ADM4,00,20382,辰野町,http://data.e-stat.go.jp/lod/sac/C20382-19700401,,,,,上伊那郡,20000,長野県,1995-10-01,true,false,false,false

@@ -16,10 +16,11 @@ async function fixtures() {
     new URL("geonames-kenya-external-ancestor-evidence-2026-10-11.json",docs),
     new URL("geonames-kenya-current-unit-evidence-2026-10-12.json",docs),
     new URL("geonames-kenya-admin1-parent-override-2026-10-12.json",docs),
-    new URL("initial-operational-admin-catalog-exclusions.csv",exclusionsDir)
+    new URL("initial-operational-admin-catalog-exclusions.csv",exclusionsDir),
+    new URL("../geonames-japan-parent-overrides-2026-10-12.json",docs)
   ];
-  const [a,b,c,d,e]=await Promise.all(urls.map(url=>readFile(url,"utf8")));
-  return [JSON.parse(a),JSON.parse(b),JSON.parse(c),JSON.parse(d),e];
+  const [a,b,c,d,e,f]=await Promise.all(urls.map(url=>readFile(url,"utf8")));
+  return [JSON.parse(a),JSON.parse(b),JSON.parse(c),JSON.parse(d),e,JSON.parse(f)];
 }
 test("ledger verifies one parent override and retains one unresolved target",async()=>{
   const [a,b,c,d]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
@@ -71,15 +72,15 @@ test("source code drift, wrong parent ID, or wrong historic lineage fail closed"
   const history=structuredClone(d); history.approved_records[0].history_observation="no transition";
   assert.throws(()=>buildKenyaCrosswalkRebuildLedger(a,b,c,history),/Exact parent record history transition is missing/);
 });
-test("effective overlay removes only Imenti from the immutable 128-row historic snapshot",async()=>{
-  const [a,b,c,d,original]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
-  const overlay=buildEffectiveExclusionOverlayCsv(ledger,original);
+test("combined effective overlay re-admits only the three separately source-backed records",async()=>{
+  const [a,b,c,d,original,japan]=await fixtures(), ledger=buildKenyaCrosswalkRebuildLedger(a,b,c,d);
+  const overlay=buildEffectiveExclusionOverlayCsv(ledger,original,japan);
   const before=parseCsvRecords(original), after=parseCsvRecords(overlay);
   const oldIds=before.map(row=>row.geonames_id), newIds=after.map(row=>row.geonames_id);
-  assert.equal(before.length,128); assert.equal(after.length,127);
-  assert.deepEqual(oldIds.filter(id=>!newIds.includes(id)),["7800132"]);
-  assert.ok(newIds.includes("192705")); assert.ok(!newIds.includes("7800132"));
-  assert.equal(after.filter(row=>row.country_code==="JP").length,126);
+  assert.equal(before.length,128); assert.equal(after.length,125);
+  assert.deepEqual(oldIds.filter(id=>!newIds.includes(id)),["1850471","1850496","7800132"]);
+  assert.ok(newIds.includes("192705"));
+  assert.equal(after.filter(row=>row.country_code==="JP").length,124);
   assert.equal(after.filter(row=>row.country_code==="KE").length,1);
 });
 test("ledger CSV lists exact source-backed parent for Imenti and unresolved status for Kiambururu",async()=>{

@@ -1367,6 +1367,40 @@ jobs:
           print("Internal GeoNames admin1-code consistency is review evidence only; no parent identity was approved.")
           PY
 
+      - name: Validate two source-backed current Japan parent paths (candidate override only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-parent-override-validation.test.mjs
+          node scripts/geonames-japan-parent-override-validation.mjs \
+            "$work/extracted/JP.txt" \
+            "$work/geonames-source-manifest.json" \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-1995-all-126-spatial-first.json" \
+            "$work/japan-mlit-1995-all-126-estat-details.json" \
+            "$work/japan-estat-parent-geonames-candidate-expansion.json" \
+            "$work/japan-estat-parent-hierarchy-consistency.json" \
+            "$work/mlit-code-evidence.json" \
+            docs/geonames-japan-parent-overrides-2026-10-12.json \
+            "$work/japan-parent-overrides"
+          python - "$work/japan-parent-overrides.json" "$work/japan-parent-overrides.csv" <<'PY'
+          import csv, json, sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          with Path(sys.argv[2]).open(encoding="utf-8", newline="") as stream:
+              rows = list(csv.DictReader(stream))
+          if report.get("status") != "PASS_TWO_SOURCE_BACKED_CURRENT_JAPAN_PARENT_PATHS__NO_OPERATIONAL_LINKS_CREATED":
+              raise SystemExit("Japan source-backed parent path validation failed.")
+          if report.get("summary", {}).get("source_backed_parent_paths_verified") != 2 or len(rows) != 2:
+              raise SystemExit("Expected exactly two validated Japan parent paths.")
+          if {r["geonames_id"]: r["immediate_parent_geonames_id"] for r in rows} != {"1850471": "1852501", "1850496": "1860552"}:
+              raise SystemExit("Validated Japan parent IDs do not match the versioned override manifest.")
+          if any(r.get("operational_parent_link_created", "").lower() != "false" for r in rows):
+              raise SystemExit("Operational parent links must remain zero.")
+          print("Two source-backed current Japan parent paths validated; zero operational links.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -1385,6 +1419,10 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.candidate-results.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.parent-reference-dispositions.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-hierarchy-consistency.source-response.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-overrides.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-overrides.csv
+            docs/geonames-japan-parent-overrides-2026-10-12.json
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/japan-admin2-parent-overrides-2026-10-12.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-code-evidence.json
@@ -1746,13 +1784,14 @@ jobs:
               raise SystemExit("Evidence CI must not create live parent links.")
           with Path(sys.argv[2]).open(encoding="utf-8", newline="") as stream:
               effective = list(csv.DictReader(stream))
-          if len(effective) != 127:
-              raise SystemExit("Effective exclusion overlay must contain 127 rows.")
-          if any(row["geonames_id"] == "7800132" for row in effective) or not any(row["geonames_id"] == "192705" for row in effective):
-              raise SystemExit("Effective overlay failed to re-admit only Imenti Central.")
-          if sum(row["country_code"] == "JP" for row in effective) != 126 or sum(row["country_code"] == "KE" for row in effective) != 1:
+          if len(effective) != 125:
+              raise SystemExit("Combined effective exclusion overlay must contain 125 rows.")
+          re_admitted = {"1850471", "1850496", "7800132"}
+          if any(row["geonames_id"] in re_admitted for row in effective) or not any(row["geonames_id"] == "192705" for row in effective):
+              raise SystemExit("Effective overlay must re-admit only Imenti, Tawaramoto and Tatsuno; Kiambururu remains excluded.")
+          if sum(row["country_code"] == "JP" for row in effective) != 124 or sum(row["country_code"] == "KE" for row in effective) != 1:
               raise SystemExit("Effective overlay geographic counts do not reconcile.")
-          print("Kenya rebuild validated: Imenti parent ID 186824 approved through source-backed override; Kiambururu remains blocked; raw codes and live data unchanged.")
+          print("Combined overlay validated: Imenti, Tawaramoto and Tatsuno proposed for inclusion; Kiambururu and 124 Japan records remain excluded; zero live parent links.")
           PY
       - name: Upload Kenya legacy-code audit and retrieval manifest
         uses: actions/upload-artifact@v4

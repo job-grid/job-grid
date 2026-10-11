@@ -190,16 +190,32 @@ export function renderKenyaCrosswalkRebuildLedgerCsv(ledger) {
   }));
   return renderCsv(LEDGER_FIELDS,rows);
 }
-export function buildEffectiveExclusionOverlayCsv(ledger, originalCsv) {
+export function buildEffectiveExclusionOverlayCsv(ledger, originalCsv, japanOverrideEvidence) {
   const rows=parseCsvRecords(originalCsv,"Historic initial admin catalog exclusions");
   need(rows.length===128,"Historic exclusion manifest must have exactly 128 rows.");
   const ids=new Set(rows.map(row=>String(row.geonames_id)));
   need(ids.size===rows.length && ids.has("192705") && ids.has("7800132"),"Historic exclusion IDs are incomplete or duplicated.");
+  need(japanOverrideEvidence?.status==="TWO_SOURCE_BACKED_CURRENT_JAPAN_PARENT_PATHS__NO_OPERATIONAL_LINKS_CREATED" &&
+    Array.isArray(japanOverrideEvidence.approved_records) && japanOverrideEvidence.approved_records.length===2,
+    "Exactly two source-backed Japan path manifests are required.");
+  const expectedJapan=new Map([["1850471","1852501"],["1850496","1860552"]]), japanIds=new Set();
+  for(const row of japanOverrideEvidence.approved_records) {
+    const id=String(row.geonames_id);
+    need(expectedJapan.get(id)===String(row.parent_geonames_id) && row.country_code==="JP" &&
+      row.feature_code==="ADM4" && row.raw_admin1_code_preserved==="00" && row.complete_parent_path_verified===true &&
+      row.current_initial_selector_disposition==="INCLUDE_VIA_SOURCE_BACKED_PARENT_OVERRIDE" &&
+      row.raw_admin1_code_changed===false && row.source_record_modified===false && row.operational_parent_link_created===false,
+      "Japan override safety/identity invariant failed for "+id+".");
+    japanIds.add(id);
+  }
+  need(japanIds.size===2 && japanIds.has("1850471") && japanIds.has("1850496"),"Japan parent override IDs do not reconcile.");
   const include=new Set(ledger.records.filter(row=>row.active_selector_disposition.startsWith("INCLUDE_")).map(row=>String(row.geonames_id)));
-  need(include.size===1 && include.has("7800132"),"Only Imenti may be removed from the effective exclusions.");
+  need(include.size===1 && include.has("7800132"),"Only Imenti may be approved by the Kenya ledger.");
+  for(const id of japanIds)include.add(id);
   const effective=rows.filter(row=>!include.has(String(row.geonames_id)));
-  need(effective.length===127 && effective.filter(row=>row.country_code==="JP").length===126,"Effective exclusion count or Japan count is wrong.");
+  need(effective.length===125 && effective.filter(row=>row.country_code==="JP").length===124,"Combined effective exclusion counts are wrong.");
   need(effective.filter(row=>row.country_code==="KE").length===1 && effective.some(row=>String(row.geonames_id)==="192705"),"Kiambururu must remain excluded.");
+  need(!effective.some(row=>["7800132","1850471","1850496"].includes(String(row.geonames_id))),"Only the three source-backed targets may leave the effective exclusion list.");
   return renderCsv(Object.keys(rows[0]),effective);
 }
 async function main() {
@@ -209,11 +225,12 @@ async function main() {
     process.exitCode=2; return;
   }
   const inputs=await Promise.all([auditPath,ancestorPath,unitPath,overridePath,exclusionsPath].map(path=>readFile(path,"utf8")));
+  const japanOverrideEvidence=JSON.parse(await readFile(new URL("../docs/geonames-japan-parent-overrides-2026-10-12.json",import.meta.url),"utf8"));
   const ledger=buildKenyaCrosswalkRebuildLedger(JSON.parse(inputs[0]),JSON.parse(inputs[1]),JSON.parse(inputs[2]),JSON.parse(inputs[3]));
   await Promise.all([
     writeFile(prefix+".json",JSON.stringify(ledger,null,2)+"\n","utf8"),
     writeFile(prefix+".csv",renderKenyaCrosswalkRebuildLedgerCsv(ledger),"utf8"),
-    writeFile(prefix+".effective-initial-admin-catalog-exclusions.csv",buildEffectiveExclusionOverlayCsv(ledger,inputs[4]),"utf8")
+    writeFile(prefix+".effective-initial-admin-catalog-exclusions.csv",buildEffectiveExclusionOverlayCsv(ledger,inputs[4],japanOverrideEvidence),"utf8")
   ]);
   console.log(JSON.stringify({status:ledger.status,...ledger.totals},null,2));
 }
