@@ -193,8 +193,11 @@ test("CLI writes row-level mismatch report and source hash using a small fixture
     assert.equal(coverage.rows_with_19_fields_and_nonempty_id, 3);
     assert.equal(coverage.malformed_or_wrong_shape_source_lines, 0);
     assert.equal(coverage.distinct_raw_country_code_buckets, 3);
+    assert.equal(coverage.country_code_bucket_record_total, 3);
     assert.deepEqual(coverage.country_code_record_counts, { "(blank)": 1, "??": 1, "XX": 1 });
+    assert.equal(coverage.feature_class_record_total, 3);
     assert.deepEqual(coverage.feature_class_record_counts, { A: 1, P: 2 });
+    assert.equal(coverage.aggregate_totals_match_source_row_count, true);
     assert.equal(coverage.rows_with_blank_country_code, 1);
     assert.equal(coverage.rows_with_nonstandard_country_code_format, 1);
     assert.match(csv, /BLOCKED_SOURCE_ID_NOT_FOUND/);
