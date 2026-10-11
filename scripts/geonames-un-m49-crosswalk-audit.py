@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""Compare GeoNames country codes to ISO alpha codes displayed in official UN M49.
+
+UN M49 numeric codes are kept separate; they are not treated as ISO numeric-3 proof.
+This is a read-only cross-check, not automatic code replacement or catalog acceptance.
+"""
+from __future__ import annotations
+import argparse, csv, hashlib, html, json, re, sys
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+from html.parser import HTMLParser
+from pathlib import Path
+
+GEONAMES_URL = "https://download.geonames.org/export/dump/countryInfo.txt"
+M49_URL = "https://unstats.un.org/unsd/methodology/m49/overview/"
+A2 = re.compile(r"^[A-Z]{2}$")
+A3 = re.compile(r"^[A-Z]{3}$")
+N3 = re.compile(r"^[0-9]{3}$")
+ID = re.compile(r"^[0-9]+$")
+
+
+def clean(v):
+    return " ".join(html.unescape(v).replace("\xa0", " ").split())
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def now():
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+class Tables(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.tables, self.table, self.row, self.cell = [], None, None, None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table" and self.table is None:
+            self.table = []
+        elif tag == "tr" and self.table is not None:
+            self.row = []
+        elif tag in ("td", "th") and self.row is not None:
+            self.cell = []
+        elif tag in ("br", "p", "div") and self.cell is not None:
+            self.cell.append(" ")
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell.append(data)
+
+    def handle_endtag(self, tag):
+        if tag in ("td", "th") and self.row is not None and self.cell is not None:
+            self.row.append(clean("".join(self.cell)))
+            self.cell = None
+        elif tag == "tr" and self.table is not None and self.row is not None:
+            if any(self.row):
+                self.table.append(self.row)
+            self.row = None
+        elif tag == "table" and self.table is not None:
+            self.tables.append(self.table)
+            self.table = None
+
+
+def parse_m49(source, minimum_rows=200):
+    parser = Tables()
+    parser.feed(source)
+    required = {"country or area", "m49 code", "iso-alpha2 code", "iso-alpha3 code"}
+    candidates = []
+    for table in parser.tables:
+        for i, row in enumerate(table):
+            positions = {clean(x).casefold(): j for j, x in enumerate(row)}
+            if not required.issubset(positions):
+                continue
+            output = []
+            for data in table[i + 1:]:
+                if max(positions.values()) >= len(data):
+                    continue
+                name = clean(data[positions["country or area"]])
+                n = clean(data[positions["m49 code"]])
+                a2 = clean(data[positions["iso-alpha2 code"]]).upper()
+                a3 = clean(data[positions["iso-alpha3 code"]]).upper()
+                if not (A2.fullmatch(a2) and A3.fullmatch(a3)):
+                    continue  # regional aggregates do not have ISO alpha codes
+                if not name or not N3.fullmatch(n):
+                    raise ValueError("Invalid coded country/area row in UN M49 table.")
+                output.append({"name": name, "m49_code": n, "alpha2": a2, "alpha3": a3})
+            candidates.append(output)
+    if not candidates:
+        raise ValueError("Expected UN M49 country/area table was not found.")
+    rows = max(candidates, key=len)
+    if len(rows) < minimum_rows:
+        raise ValueError(f"UN M49 coded rows={len(rows)}; expected at least {minimum_rows}.")
+    for field in ("alpha2", "alpha3", "m49_code"):
+        if any(n > 1 for n in Counter(r[field] for r in rows).values()):
+            raise ValueError(f"Duplicate {field} identifiers in UN M49.")
+    return rows
+
+
+def parse_geonames(source):
+    rows, malformed = [], 0
+    for line_no, line in enumerate(source.splitlines(), 1):
+        if not line or line.startswith("#"):
+            continue
+        f = line.split("\t")
+        if len(f) != 19 or not f[4].strip() or not ID.fullmatch(f[16].strip()):
+            malformed += 1
+            continue
+        rows.append({"name": f[4].strip(), "geonames_id": f[16].strip(),
+                     "alpha2": f[0].strip().upper(), "alpha3": f[1].strip().upper(),
+                     "numeric3": f[2].strip(), "line": str(line_no)})
+    if malformed:
+        raise ValueError(f"GeoNames countryInfo malformed rows={malformed}.")
+    if not rows:
+        raise ValueError("GeoNames countryInfo has no rows.")
+    return rows
+
+
+def idx(rows, field):
+    out = defaultdict(list)
+    for row in rows:
+        if row.get(field):
+            out[row[field]].append(row)
+    return out
+
+
+def reconcile(geo, m49, sources):
+    m49_pairs = {(r["alpha2"], r["alpha3"]): r for r in m49}
+    geo_pairs = {(r["alpha2"], r["alpha3"]): r for r in geo
+                 if A2.fullmatch(r["alpha2"]) and A3.fullmatch(r["alpha3"])}
+    ma2, ma3 = idx(m49, "alpha2"), idx(m49, "alpha3")
+    ga2, ga3 = idx(geo, "alpha2"), idx(geo, "alpha3")
+    detail = []
+    exact, missing, a2conf, a3conf, numeric_equal = 0, 0, 0, 0, 0
+    for r in geo:
+        pair = (r["alpha2"], r["alpha3"])
+        m = m49_pairs.get(pair)
+        if m:
+            state, exact = "MATCHED_ALPHA2_ALPHA3_PAIR", exact + 1
+            numeric_equal += r["numeric3"] == m["m49_code"]
+        elif A2.fullmatch(pair[0]) and ma2.get(pair[0]):
+            state, a2conf = "ALPHA2_MATCH_ALPHA3_CONFLICT", a2conf + 1
+        elif A3.fullmatch(pair[1]) and ma3.get(pair[1]):
+            state, a3conf = "ALPHA3_MATCH_ALPHA2_CONFLICT", a3conf + 1
+        else:
+            state, missing = "GEONAMES_CODE_PAIR_NOT_PRESENT_IN_UN_M49", missing + 1
+        detail.append({"source_side":"GeoNames countryInfo", "name":r["name"],
+            "geonames_id":r["geonames_id"], "alpha2":r["alpha2"], "alpha3":r["alpha3"],
+            "numeric3":r["numeric3"], "comparison_m49_code":m["m49_code"] if m else "",
+            "comparison_name":m["name"] if m else "", "match_status":state})
+    mexact, mmissing = 0, 0
+    for r in m49:
+        pair = (r["alpha2"], r["alpha3"])
+        g = geo_pairs.get(pair)
+        if g:
+            state, mexact = "MATCHED_ALPHA2_ALPHA3_PAIR", mexact + 1
+        elif ga2.get(pair[0]):
+            state, mmissing = "ALPHA2_MATCH_ALPHA3_CONFLICT", mmissing + 1
+        elif ga3.get(pair[1]):
+            state, mmissing = "ALPHA3_MATCH_ALPHA2_CONFLICT", mmissing + 1
+        else:
+            state, mmissing = "UN_M49_PAIR_NOT_PRESENT_IN_GEONAMES_COUNTRY_INFO", mmissing + 1
+        detail.append({"source_side":"UN M49", "name":r["name"], "geonames_id":"",
+            "alpha2":r["alpha2"], "alpha3":r["alpha3"], "numeric3":"",
+            "comparison_m49_code":r["m49_code"], "comparison_name":g["name"] if g else "",
+            "match_status":state})
+
+    def dup(rows, field):
+        c = Counter(r[field] for r in rows if r.get(field))
+        return sum(n > 1 for n in c.values())
+    pairs = Counter((r["alpha2"], r["alpha3"]) for r in geo)
+    dup_pairs = sum(n > 1 for n in pairs.values())
+    duplicates = dup_pairs + dup(geo,"alpha2") + dup(geo,"alpha3") + dup(m49,"alpha2") + dup(m49,"alpha3")
+    review = missing + a2conf + a3conf + mmissing
+    verified = all(x.get("http_status") == 200 and re.fullmatch(r"[a-f0-9]{64}", x.get("sha256",""))
+                   for x in sources.values())
+    report = {
+      "schema_version":1, "audit":"geonames-country-info-vs-official-un-m49-iso-alpha-codes",
+      "generated_at_utc":now(),
+      "status":"BLOCKED_STRUCTURAL_SOURCE_ISSUES" if duplicates else
+               ("PASS_ALPHA_CODE_CROSSCHECK_WITH_REVIEW_ITEMS" if review else "PASS_ALPHA_CODE_CROSSCHECK"),
+      "sources":sources,
+      "counts":{
+        "geonames_country_info_rows":len(geo), "un_m49_country_area_rows":len(m49),
+        "geonames_exact_alpha2_alpha3_pair_matches":exact, "un_m49_exact_alpha2_alpha3_pair_matches":mexact,
+        "geonames_pairs_not_present_in_un_m49":missing, "geonames_alpha2_match_alpha3_conflicts":a2conf,
+        "geonames_alpha3_match_alpha2_conflicts":a3conf, "un_m49_pairs_missing_or_conflicting":mmissing,
+        "numeric3_equals_m49_code_diagnostic_only":int(numeric_equal), "duplicate_code_groups":duplicates,
+        "review_items":review},
+      "interpretation":{
+        "source_retrieval_metadata_verified":verified,
+        "identity_join":"exact alpha-2 + alpha-3 pair; names are not identity keys",
+        "un_m49_numeric_code_is_iso_numeric3":False,
+        "direct_iso_country_codes_collection_snapshot":"NOT_CAPTURED_BY_THIS_AUDIT",
+        "automatic_code_replacement_authorized":False,
+        "catalog_acceptance":"BLOCKED_PENDING_REVIEW_ITEMS_AND_OTHER_CATALOG_GATES",
+        "worldwide_destination_completeness":"NOT_ESTABLISHED",
+        "database_or_production_changes":False},
+      "limitations":[
+        "UN M49 is an official UN reference that displays ISO-assigned alpha-2/alpha-3 codes; it is not an ISO Country Codes Collection download.",
+        "M49 numeric identifiers are not treated as proof of ISO numeric-3 conformity.",
+        "Unmatched tuples are review cases, not automatic proof of invalidity or permission to replace codes.",
+        "Code reconciliation does not establish administrative parentage or worldwide destination completeness."]}
+    return report, detail
+
+
+def check_manifest(manifest_path, geopath, m49path):
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    by_key = {x.get("key"): x for x in manifest.get("sources", [])}
+    result = {}
+    for key, path, url in (
+        ("geoNames_country_info", geopath, GEONAMES_URL),
+        ("un_m49_overview", m49path, M49_URL)):
+        e = by_key.get(key)
+        raw = path.read_bytes()
+        if not e or e.get("source_url") != url or e.get("http_status") != 200:
+            raise ValueError(f"Invalid source retrieval metadata: {key}.")
+        if e.get("sha256") != digest(raw) or e.get("size_bytes") != len(raw):
+            raise ValueError(f"SHA-256/size mismatch: {key}.")
+        result[key] = {"source_url":url, "retrieved_at_utc":e.get("retrieved_at_utc"),
+          "http_status":e.get("http_status"), "http_last_modified_header":e.get("http_last_modified_header"),
+          "etag":e.get("etag"), "size_bytes":len(raw), "sha256":digest(raw)}
+    return result
+
+
+def write_report(report, rows, out):
+    out.mkdir(parents=True, exist_ok=True)
+    (out/"country-area-code-crosswalk-aggregate.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+    (out/"country-area-code-crosswalk-rows.json").write_text(json.dumps(rows,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+    fields=["source_side","name","geonames_id","alpha2","alpha3","numeric3","comparison_m49_code","comparison_name","match_status"]
+    with (out/"country-area-code-crosswalk-rows.csv").open("w",newline="",encoding="utf-8") as f:
+        w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
+
+
+def main(argv=None):
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--country-info",required=True,type=Path)
+    p.add_argument("--m49-html",required=True,type=Path)
+    p.add_argument("--source-manifest",required=True,type=Path)
+    p.add_argument("--output-dir",required=True,type=Path)
+    a=p.parse_args(argv)
+    try:
+        sources=check_manifest(a.source_manifest,a.country_info,a.m49_html)
+        geo=parse_geonames(a.country_info.read_text(encoding="utf-8-sig"))
+        m49=parse_m49(a.m49_html.read_text(encoding="utf-8"))
+        report,rows=reconcile(geo,m49,sources)
+    except (OSError,UnicodeError,json.JSONDecodeError,ValueError) as exc:
+        print(f"BLOCKED_COUNTRY_AREA_CODE_AUDIT: {type(exc).__name__}: {exc}",file=sys.stderr); return 2
+    write_report(report,rows,a.output_dir)
+    print(json.dumps({"status":report["status"],"counts":report["counts"]},indent=2))
+    return 1 if report["status"]=="BLOCKED_STRUCTURAL_SOURCE_ISSUES" else 0
+
+if __name__=="__main__":
+    raise SystemExit(main())
