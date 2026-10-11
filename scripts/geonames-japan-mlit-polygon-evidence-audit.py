@@ -333,7 +333,7 @@ def normalize_xml_bytes_for_expat(xml_bytes: bytes) -> bytes:
     transcoded. A declared encoding is required for any non-UTF-8 conversion.
     """
     declaration = re.search(
-        br"<\\?xml[^>]*\\bencoding\\s*=\\s*['\"]([^'\"]+)['\"]",
+        br"<\?xml[^>]*\bencoding\s*=\s*['\"]([^'\"]+)['\"]",
         xml_bytes[:2048],
         re.IGNORECASE,
     )
@@ -350,8 +350,8 @@ def normalize_xml_bytes_for_expat(xml_bytes: bytes) -> bytes:
         return xml_bytes
     decoded = xml_bytes.decode(encoding, errors="strict")
     updated, count = re.subn(
-        r"(?i)(<\\?xml[^>]*\\bencoding\\s*=\\s*['\"])[^'\"]+(['\"])",
-        r"\\1UTF-8\\2",
+        r"(?i)(<\?xml[^>]*\bencoding\s*=\s*['\"])[^'\"]+(['\"])",
+        r"\1UTF-8\2",
         decoded,
         count=1,
     )
