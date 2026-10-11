@@ -272,7 +272,7 @@ test("rejects explicit hierarchy paths that conflict with raw 00 rather than nor
   ];
   const [result] = auditCurrentAdminParents([targetRow], sourceRows, edges);
   assert.equal(result.hierarchy_path_audit_status, "BLOCKED_HIERARCHY_RAW_CODE_DISAGREEMENT");
-  assert.equal(result.parent_path_audit_status, "BLOCKED_PARENT_CODE_MISSING_OR_PLACEHOLDER");
+  assert.equal(result.parent_path_audit_status, "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED");
   assert.equal(result.candidate_path_geonames_ids, "");
   assert.equal(result.hierarchy_path_candidate_geonames_ids, "1861060>100>200>300>400");
   assert.equal(result.operational_parent_link_created, false);
