@@ -100,10 +100,10 @@ test("ledger rejects source identity drift or a different county entity", async 
   const [audit, evidence, currentUnitEvidence] = await fixtures();
   const changedCode = structuredClone(audit);
   changedCode.targets[0].raw_admin1_code_preserved = "22";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(changedCode, evidence), /Raw admin1 code drift/);
+  assert.throws(() => buildKenyaCrosswalkRebuildLedger(changedCode, evidence, currentUnitEvidence), /Raw admin1 code drift/);
   const changedCounty = structuredClone(evidence);
   changedCounty.records.find((row) => row.geonames_id === "192705").candidate_county_ancestor.geonames_id = "192709";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, changedCounty), /County candidate identity mismatch/);
+  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, changedCounty, currentUnitEvidence), /County candidate identity mismatch/);
 });
 
 test("CSV renders exactly one summary header and two records without approving ancestry", async () => {
@@ -169,5 +169,5 @@ test("generator fails closed if official native path evidence has a different ra
   assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, evidence, changedCode), /Current official-unit evidence raw code mismatch/);
   const approvedTooEarly = structuredClone(currentUnitEvidence);
   approvedTooEarly.records.find((row) => row.geonames_id === "7800132").geonames_crosswalk.immediate_parent_geonames_id = "186824";
-  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, evidence, approvedTooEarly), /must remain explicitly pending/);
+  assert.throws(() => buildKenyaCrosswalkRebuildLedger(audit, evidence, approvedTooEarly), /must not approve GeoNames parent IDs/);
 });
