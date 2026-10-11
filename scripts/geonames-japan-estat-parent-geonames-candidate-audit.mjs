@@ -141,7 +141,7 @@ export function buildOfficialParentReferenceIndex(detailReport) {
 }
 
 function parentReferenceKey(areaCode, uri) {
-  return [String(areaCode ?? "").trim(), String(uri ?? "").trim()].join("\\u0000");
+  return [String(areaCode ?? "").trim(), String(uri ?? "").trim()].join("\u0000");
 }
 
 function addParentReferenceValues(reference, parent, childAreaCode, childPeriodUri, sourceKind) {
@@ -149,7 +149,7 @@ function addParentReferenceValues(reference, parent, childAreaCode, childPeriodU
   const uri = String(parent.uri ?? "").trim();
   const labelEn = String(parent.label_en ?? "").trim();
   const labelJa = String(parent.label_ja ?? "").trim();
-  if (!/^\\d{5}$/.test(areaCode) || !uri) {
+  if (!/^\d{5}$/.test(areaCode) || !uri) {
     throw new Error("An added e-Stat parent reference lacks a five-digit area code or exact period URI.");
   }
   if (labelEn && !reference.parent_label_en_values.includes(labelEn)) reference.parent_label_en_values.push(labelEn);
@@ -191,7 +191,7 @@ export function validateExactLabelTargetCandidateReport(report) {
       throw new Error(`Target ${target.geonames_id} failed the exact Japan ADM4/raw-admin1-00 source guard.`);
     }
     for (const candidate of target.candidates) {
-      if (!/^\\d{5}$/.test(String(candidate.area_code ?? "")) || !Array.isArray(candidate.periods)) {
+      if (!/^\d{5}$/.test(String(candidate.area_code ?? "")) || !Array.isArray(candidate.periods)) {
         throw new Error(`Target ${target.geonames_id} has malformed e-Stat candidate code/history.`);
       }
       for (const period of candidate.periods) {
@@ -275,11 +275,11 @@ export function mergeExactLabelTargetCandidateParentReferences(parentReferences,
 }
 
 function snapshotFallsWithinPeriod(snapshotDate, effectiveFrom, effectiveUntil) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(snapshotDate)) return false;
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(effectiveFrom ?? ""))) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(effectiveFrom ?? ""))) return false;
   if (snapshotDate < effectiveFrom) return false;
   const until = String(effectiveUntil ?? "").trim();
-  return !/^\\d{4}-\\d{2}-\\d{2}$/.test(until) || snapshotDate <= until;
+  return !/^\d{4}-\d{2}-\d{2}$/.test(until) || snapshotDate <= until;
 }
 
 export function buildTargetCandidateParentQueue(targetCandidateReport, parentReferences, spatialPolygonReport) {
@@ -298,14 +298,14 @@ export function buildTargetCandidateParentQueue(targetCandidateReport, parentRef
     reference,
   ]));
   const spatialByTargetCode = new Map(spatialPolygonReport.candidate_results.map((row) => [
-    [String(row.geonames_id), String(row.candidate_code)].join("\\u0000"),
+    [String(row.geonames_id), String(row.candidate_code)].join("\u0000"),
     row,
   ]));
   const queue = [];
 
   for (const target of targetCandidateReport.target_results.filter((row) => row.candidates?.length)) {
     for (const candidate of target.candidates) {
-      const spatial = spatialByTargetCode.get([String(target.geonames_id), String(candidate.area_code)].join("\\u0000"));
+      const spatial = spatialByTargetCode.get([String(target.geonames_id), String(candidate.area_code)].join("\u0000"));
       if (!spatial) throw new Error(`Spatial report lacks target/code association ${target.geonames_id}/${candidate.area_code}.`);
       const pointHitSnapshots = String(spatial.point_inside_candidate_polygon_snapshots ?? "")
         .split(";").map((value) => value.trim()).filter(Boolean);
