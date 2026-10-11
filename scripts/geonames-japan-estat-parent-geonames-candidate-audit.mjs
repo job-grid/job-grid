@@ -398,11 +398,24 @@ export async function runParentIdentityCandidateAudit({
   detailReportPath,
   geonamesSourceManifestPath,
   outputPrefix,
+  targetCandidateReportPath = null,
+  spatialPolygonReportPath = null,
 }) {
   const detailBytes = await readFile(detailReportPath);
   const detailReport = JSON.parse(detailBytes.toString("utf8"));
   const sourceManifestBytes = await readFile(geonamesSourceManifestPath);
   const sourceManifest = JSON.parse(sourceManifestBytes.toString("utf8"));
+  if (Boolean(targetCandidateReportPath) !== Boolean(spatialPolygonReportPath)) {
+    throw new Error("Supplemental mode requires both the exact-label candidate report and expanded spatial report.");
+  }
+  const targetCandidateReportBytes = targetCandidateReportPath ? await readFile(targetCandidateReportPath) : null;
+  const targetCandidateReport = targetCandidateReportBytes
+    ? JSON.parse(targetCandidateReportBytes.toString("utf8"))
+    : null;
+  const spatialPolygonReportBytes = spatialPolygonReportPath ? await readFile(spatialPolygonReportPath) : null;
+  const spatialPolygonReport = spatialPolygonReportBytes
+    ? JSON.parse(spatialPolygonReportBytes.toString("utf8"))
+    : null;
   if (sourceManifest?.country_code !== "JP" ||
       sourceManifest?.archive_filename !== "JP.zip" ||
       sourceManifest?.source_url !== "https://download.geonames.org/export/dump/JP.zip" ||
@@ -411,7 +424,25 @@ export async function runParentIdentityCandidateAudit({
     throw new Error("GeoNames Japan source manifest failed country, URL, status or SHA-256 validation.");
   }
 
-  const parentReferences = buildOfficialParentReferenceIndex(detailReport);
+  let parentReferences = buildOfficialParentReferenceIndex(detailReport);
+  let targetCandidateExpansion = null;
+  let targetCandidateParentQueue = null;
+  if (targetCandidateReport) {
+    const supplemental = mergeExactLabelTargetCandidateParentReferences(parentReferences, targetCandidateReport);
+    parentReferences = supplemental.parentReferences;
+    targetCandidateExpansion = {
+      ...supplemental.inputSummary,
+      candidate_period_count: supplemental.candidatePeriodCount,
+      parent_reference_occurrence_count: supplemental.parentReferenceOccurrenceCount,
+      expanded_parent_reference_count: supplemental.expandedParentReferenceCount,
+      report_sha256: sha256(targetCandidateReportBytes),
+    };
+    targetCandidateParentQueue = buildTargetCandidateParentQueue(
+      targetCandidateReport,
+      parentReferences,
+      spatialPolygonReport,
+    );
+  }
   const referencesByJapaneseLabel = new Map();
   for (const reference of parentReferences) {
     if (reference.candidate_status === "BLOCKED_CONFLICTING_OFFICIAL_JAPANESE_PARENT_LABELS") continue;
@@ -502,8 +533,27 @@ export async function runParentIdentityCandidateAudit({
       operational_parent_link_created: "false",
     })));
 
+  const geonamesTextMemberSha256 = geonamesTextHash.digest("hex");
+  if (targetCandidateReport) {
+    if (targetCandidateReport.input?.geonames_country_text_sha256 !== geonamesTextMemberSha256 ||
+        targetCandidateExpansion.geonames_archive_sha256 !== sourceManifest.archive_sha256) {
+      throw new Error("Supplemental target-candidate report does not use the same pinned GeoNames JP.zip/JP.txt source bytes.");
+    }
+    if (Number(spatialPolygonReport.source_snapshot_archive_count) !== 122 ||
+        Number(spatialPolygonReport.candidate_codes_tested) !== targetCandidateExpansion.target_to_candidate_code_associations ||
+        Number(spatialPolygonReport.operational_parent_links_created) !== 0) {
+      throw new Error("Supplemental spatial report does not reconcile to the 122-archive/46-association source-pinned audit.");
+    }
+    if (Number(targetCandidateExpansion.exact_name_matched_period_rows) !== 156) {
+      throw new Error("Unexpected exact-name matched period coverage; requires review before candidate comparison.");
+    }
+  }
+
   const summary = {
-    report_version: 1,
+    report_version: targetCandidateReport ? 2 : 1,
+    audit_scope: targetCandidateReport
+      ? "SPATIAL_FIRST_1995_HISTORY_PLUS_EXACT_ENGLISH_LABEL_TARGET_CANDIDATE_HISTORY"
+      : "SPATIAL_FIRST_1995_HISTORY_ONLY",
     status: "PASS_EXACT_JAPANESE_LABEL_PARENT_ID_CANDIDATE_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
     generated_at_utc: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
     matching_rule: "Exact full Unicode NFC-normalized, outer-trimmed equality between official e-Stat parent label_ja and GeoNames Japan ADM1/ADM2/ADM3 primary name, ASCII name, or a complete comma-delimited alternate-name entry. No substring, transliteration, fuzzy, proximity, or parent inference.",
@@ -514,7 +564,7 @@ export async function runParentIdentityCandidateAudit({
       archive_sha256: sourceManifest.archive_sha256,
       archive_size_bytes: sourceManifest.archive_size_bytes,
       text_member_filename: "JP.txt",
-      text_member_sha256: geonamesTextHash.digest("hex"),
+      text_member_sha256: geonamesTextMemberSha256,
       text_rows_scanned: geonamesSourceRows,
       malformed_or_wrong_shape_rows: malformedRows,
       duplicate_japan_administrative_ids: duplicateAdministrativeIds,
@@ -537,6 +587,20 @@ export async function runParentIdentityCandidateAudit({
     distinct_candidate_geonames_ids: new Set(allCandidateMatches.map((candidate) => candidate.geonames_id)).size,
     candidate_match_rows: allCandidateMatches.length,
     operational_parent_links_created: 0,
+    ...(targetCandidateExpansion ? {
+      supplemental_target_candidate_input: targetCandidateExpansion,
+      supplemental_spatial_input: {
+        selection_mode: spatialPolygonReport.selection_mode,
+        target_count: spatialPolygonReport.target_count,
+        target_code_associations_tested: spatialPolygonReport.target_code_associations_tested,
+        distinct_candidate_area_codes_tested: spatialPolygonReport.distinct_candidate_area_codes_tested,
+        source_snapshot_archive_count: spatialPolygonReport.source_snapshot_archive_count,
+        target_rows_with_polygon_context: spatialPolygonReport.target_rows_with_polygon_context,
+        target_rows_without_polygon_context: spatialPolygonReport.target_rows_without_polygon_context,
+        report_sha256: sha256(spatialPolygonReportBytes),
+      },
+      target_candidate_parent_queue_summary: targetCandidateParentQueue,
+    } : {}),
     parent_references: parentReferences,
     limitations: [
       "Exact label matches only provide candidate identity evidence. Common Japanese names may refer to multiple places, and exact labels do not prove that the candidate is the administrative parent of any target.",
@@ -554,7 +618,7 @@ export async function runParentIdentityCandidateAudit({
   const parentFields = [
     "parent_area_code", "parent_uri", "parent_label_en", "parent_label_ja",
     "parent_label_en_values", "parent_label_ja_values", "child_area_codes",
-    "child_period_uri_count", "published_parent_reference_rows", "candidate_count",
+    "child_period_uri_count", "published_parent_reference_rows", "reference_source_kinds", "candidate_count",
     "candidate_geonames_ids", "candidate_status", "operational_parent_link_created",
   ];
   const parentRows = parentReferences.map((reference) => ({
@@ -567,6 +631,7 @@ export async function runParentIdentityCandidateAudit({
     child_area_codes: reference.child_area_codes.join(";"),
     child_period_uri_count: reference.child_period_uris.length,
     published_parent_reference_rows: reference.published_parent_reference_rows,
+    reference_source_kinds: (reference.reference_source_kinds ?? []).join(";"),
     candidate_count: reference.candidate_count,
     candidate_geonames_ids: reference.candidate_geonames_ids.join(";"),
     candidate_status: reference.candidate_status,
@@ -585,20 +650,45 @@ export async function runParentIdentityCandidateAudit({
     exact_match_fields: candidate.exact_match_fields.join(";"),
   }));
   await mkdir(dirname(jsonPath), { recursive: true });
-  await Promise.all([
+  const writes = [
     writeFile(jsonPath, JSON.stringify(summary, null, 2) + "\n", "utf8"),
     writeFile(parentCsvPath, renderCsv(parentFields, parentRows), "utf8"),
     writeFile(candidateCsvPath, renderCsv(candidateFields, candidateRows), "utf8"),
-  ]);
+  ];
+  if (targetCandidateParentQueue) {
+    const queuePath = prefix + ".target-candidate-parent-queue.csv";
+    const queueFields = [
+      "target_geonames_id", "target_geonames_name", "target_raw_admin1_code",
+      "target_candidate_area_code", "target_candidate_period_uri", "target_candidate_label_en",
+      "target_candidate_label_ja", "target_period_effective_from", "target_period_effective_until",
+      "target_admin_class_uris", "exact_target_name_match", "target_spatial_hit_snapshots",
+      "period_aligned_spatial_hit_snapshots", "spatial_period_evidence_status",
+      "parent_area_code", "parent_period_uri", "parent_label_en", "parent_label_ja",
+      "parent_candidate_source_kinds", "candidate_parent_geonames_ids", "candidate_parent_count",
+      "candidate_parent_feature_codes", "candidate_parent_match_fields",
+      "parent_identity_candidate_status", "operational_parent_link_created",
+    ];
+    writes.push(writeFile(queuePath, renderCsv(queueFields, targetCandidateParentQueue.target_candidate_parent_queue_rows), "utf8"));
+  }
+  await Promise.all(writes);
   return summary;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const [geonamesJapanTextPath, detailReportPath, geonamesSourceManifestPath, outputPrefix] = process.argv.slice(2);
-  if (!geonamesJapanTextPath || !detailReportPath || !geonamesSourceManifestPath || !outputPrefix) {
+  const [
+    geonamesJapanTextPath,
+    detailReportPath,
+    geonamesSourceManifestPath,
+    outputPrefix,
+    targetCandidateReportPath,
+    spatialPolygonReportPath,
+  ] = process.argv.slice(2);
+  if (!geonamesJapanTextPath || !detailReportPath || !geonamesSourceManifestPath || !outputPrefix ||
+      (Boolean(targetCandidateReportPath) !== Boolean(spatialPolygonReportPath))) {
     process.stderr.write(
       "Usage: geonames-japan-estat-parent-geonames-candidate-audit.mjs " +
-      "<JP.txt> <spatial-first-estat-details.json> <geonames-source-manifest.json> <output-prefix>\n",
+      "<JP.txt> <spatial-first-estat-details.json> <geonames-source-manifest.json> <output-prefix> " +
+      "[japan-estat-evidence-audit.json japan-mlit-polygon-audit.json]\n",
     );
     process.exitCode = 2;
   } else {
@@ -607,6 +697,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       detailReportPath,
       geonamesSourceManifestPath,
       outputPrefix,
+      targetCandidateReportPath,
+      spatialPolygonReportPath,
     }).then((summary) => {
       process.stdout.write(JSON.stringify({
         status: summary.status,
@@ -617,6 +709,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
         parent_references_without_japanese_label: summary.parent_references_without_japanese_label,
         distinct_candidate_geonames_ids: summary.distinct_candidate_geonames_ids,
         candidate_match_rows: summary.candidate_match_rows,
+        ...(summary.target_candidate_parent_queue_summary ? {
+          target_candidate_parent_queue_summary: summary.target_candidate_parent_queue_summary,
+        } : {}),
         operational_parent_links_created: 0,
       }, null, 2) + "\n");
     }).catch((error) => {
