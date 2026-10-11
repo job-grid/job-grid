@@ -146,6 +146,17 @@ class GmlAuditTests(unittest.TestCase):
         geometry = {"type": "Polygon", "coordinates": records[0]["polygons"][0]}
         self.assertEqual(AUDIT.geometry_location((140.0, 36.0), geometry), "INSIDE")
 
+
+    def test_missing_polygon_context_is_explicit_and_not_silently_dropped(self):
+        self.assertEqual(
+            AUDIT.polygon_context_status([]),
+            "NO_CONTAINING_POLYGON_OBSERVED_IN_SELECTED_SNAPSHOTS",
+        )
+        self.assertEqual(
+            AUDIT.polygon_context_status([{"snapshot_date": "1995-10-01"}]),
+            "CONTAINING_POLYGON_OBSERVED",
+        )
+
     def test_candidate_target_selection_requires_all_six_exact_ids(self):
         rows = []
         for geonames_id in sorted(AUDIT.EXPECTED_TARGET_IDS, key=int):
