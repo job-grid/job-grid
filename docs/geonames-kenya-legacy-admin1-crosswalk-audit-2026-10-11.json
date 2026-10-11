@@ -1,0 +1,73 @@
+{
+  "report_version": "1.0",
+  "audit_date_utc": "2026-10-11",
+  "status": "PASS_CURRENT_ADMIN1_CROSSWALK_CHECK__PARENTAGE_UNRESOLVED",
+  "source": {
+    "owner": "GeoNames",
+    "filename": "admin1CodesASCII.txt",
+    "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+    "retrieved_at_utc": "2026-10-11T00:18:08Z",
+    "http_status": 200,
+    "http_last_modified_utc": "2026-10-10T01:58:39Z",
+    "etag": "\"2501f-65d72cdb3fbc2\"",
+    "bytes": 151583,
+    "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+    "rows": 3865,
+    "malformed_rows": 0,
+    "duplicate_composite_keys": 0
+  },
+  "targets": [
+    {
+      "geonames_id": "192705",
+      "name": "Kiambururu Sub-Location",
+      "feature_code": "ADM3",
+      "country_code": "KE",
+      "raw_admin1_code_preserved": "01",
+      "composite_key_checked": "KE.01",
+      "crosswalk_rows_found": 0,
+      "disposition": "KEY_ABSENT_FROM_CURRENT_ADMIN1_CROSSWALK_PARENT_UNRESOLVED",
+      "candidate_parent_id_assigned": false,
+      "parent_link_authorized": false
+    },
+    {
+      "geonames_id": "7800132",
+      "name": "Imenti Central",
+      "feature_code": "ADM3",
+      "country_code": "KE",
+      "raw_admin1_code_preserved": "03",
+      "composite_key_checked": "KE.03",
+      "crosswalk_rows_found": 0,
+      "disposition": "KEY_ABSENT_FROM_CURRENT_ADMIN1_CROSSWALK_PARENT_UNRESOLVED",
+      "candidate_parent_id_assigned": false,
+      "parent_link_authorized": false
+    }
+  ],
+  "present_current_keys_used_only_as_examples_not_assignments": [
+    {
+      "composite_key": "KE.22",
+      "name": "Kiambu County",
+      "geonames_id": "192709"
+    },
+    {
+      "composite_key": "KE.35",
+      "name": "Meru County",
+      "geonames_id": "186824"
+    }
+  ],
+  "totals": {
+    "targets": 2,
+    "raw_codes_normalized": 0,
+    "parent_ids_assigned": 0,
+    "operational_parent_links_created": 0,
+    "database_or_production_changes": false
+  },
+  "historical_context_url": "https://forum.geonames.org/gforum/posts/list/4269.page",
+  "official_kenya_context_url": "https://www.knbs.or.ke/2019-kenya-population-and-housing-census-reports/",
+  "limitations": [
+    "Historical GeoNames forum guidance is not a current mapping authority.",
+    "Current crosswalk key absence does not identify replacement parent IDs.",
+    "No name/proximity/feature-class inference was used.",
+    "No parent linkage or operational/database change is authorized by this audit.",
+    "The 126 Japan ADM4 records with raw admin1 00 remain a separate open gate."
+  ]
+}
