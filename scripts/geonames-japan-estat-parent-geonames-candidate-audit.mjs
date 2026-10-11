@@ -180,6 +180,7 @@ export function validateExactLabelTargetCandidateReport(report) {
   const associations = positiveTargets.reduce((sum, target) => sum + target.candidates.length, 0);
   const distinctCodes = new Set(positiveTargets.flatMap((target) => target.candidates.map((candidate) =>
     String(candidate.area_code ?? "").trim())));
+  let exactMatchedPeriodRows = 0;
   if (positiveTargets.length !== 33 || associations !== 46 || distinctCodes.size !== 35) {
     throw new Error(
       `Unexpected source-derived exact-label candidate coverage: ${positiveTargets.length} targets, ${associations} associations, ${distinctCodes.size} codes.`
@@ -194,6 +195,12 @@ export function validateExactLabelTargetCandidateReport(report) {
       if (!/^\d{5}$/.test(String(candidate.area_code ?? "")) || !Array.isArray(candidate.periods)) {
         throw new Error(`Target ${target.geonames_id} has malformed e-Stat candidate code/history.`);
       }
+      const matchedPeriods = candidate.periods.filter((period) => period.matches_target_name === true);
+      if (!Number.isSafeInteger(Number(candidate.exact_matching_period_count)) ||
+          Number(candidate.exact_matching_period_count) !== matchedPeriods.length) {
+        throw new Error(`Target ${target.geonames_id}, area code ${candidate.area_code} has inconsistent exact-name period counts.`);
+      }
+      exactMatchedPeriodRows += matchedPeriods.length;
       for (const period of candidate.periods) {
         if (String(period.area_code ?? "") !== String(candidate.area_code) ||
             !String(period.period_uri ?? "").trim() || !Array.isArray(period.parent_references)) {
@@ -202,13 +209,19 @@ export function validateExactLabelTargetCandidateReport(report) {
       }
     }
   }
+  if (!Number.isSafeInteger(Number(report.total_exact_name_matched_period_rows)) ||
+      Number(report.total_exact_name_matched_period_rows) !== exactMatchedPeriodRows) {
+    throw new Error(
+      `The source report's exact-name matched period total (${report.total_exact_name_matched_period_rows}) does not reconcile to candidate-period rows (${exactMatchedPeriodRows}).`
+    );
+  }
   return {
     target_count: report.target_count,
     target_source_identity_and_raw_code_matches: report.target_source_identity_and_raw_code_matches,
     positive_candidate_target_count: positiveTargets.length,
     target_to_candidate_code_associations: associations,
     distinct_candidate_area_code_count: distinctCodes.size,
-    exact_name_matched_period_rows: Number(report.total_exact_name_matched_period_rows),
+    exact_name_matched_period_rows: exactMatchedPeriodRows,
     source_snapshot_sha256: report.source_snapshot_sha256,
     geonames_archive_sha256: report.source?.geoNames?.archive_sha256 ?? "",
     operational_parent_links_created: 0,
@@ -553,9 +566,6 @@ export async function runParentIdentityCandidateAudit({
         Number(spatialPolygonReport.candidate_codes_tested) !== targetCandidateExpansion.target_to_candidate_code_associations ||
         Number(spatialPolygonReport.operational_parent_links_created) !== 0) {
       throw new Error("Supplemental spatial report does not reconcile to the 122-archive/46-association source-pinned audit.");
-    }
-    if (Number(targetCandidateExpansion.exact_name_matched_period_rows) !== 156) {
-      throw new Error("Unexpected exact-name matched period coverage; requires review before candidate comparison.");
     }
   }
 
