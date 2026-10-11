@@ -317,8 +317,12 @@ function auditCurrentAdminParentsByCodes(targetRows, sourceRecords) {
       if (missingIndex >= 0) {
         const field = CODE_LEVELS[missingIndex];
         const rawCode = codes[missingIndex];
+        if (field === "admin1_code" && rawCode === "00") {
+          return block("BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED",
+            `Raw admin1_code is "00"; the official GeoNames README defines "00" as a general feature with no specific admin1 code. Preserve it and leave the ancestor unresolved; do not normalize or synthesize a parent.`);
+        }
         const reason = rawCode === "00"
-          ? `Raw ${field} is "00"; the official GeoNames README defines "00" as a general feature with no specific admin1 code. Preserve the raw value and leave the ancestor unresolved; do not normalize or synthesize a parent.`
+          ? `Raw ${field} is "00"; preserve the raw value and do not normalize or synthesize an ancestor.`
           : `Raw ${field} is blank; the exact composite key for ADM${level} cannot be formed.`;
         return block("BLOCKED_PARENT_CODE_MISSING_OR_PLACEHOLDER", reason);
       }
