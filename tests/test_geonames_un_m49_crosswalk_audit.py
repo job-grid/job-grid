@@ -1,8 +1,12 @@
-import sys
+import importlib.util
 import unittest
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from geonames_un_m49_crosswalk_audit import parse_geonames, parse_m49, reconcile
+
+script_path = Path(__file__).resolve().parents[1] / "scripts" / "geonames-un-m49-crosswalk-audit.py"
+spec = importlib.util.spec_from_file_location("geonames_un_m49_crosswalk_audit", script_path)
+audit = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(audit)
+parse_geonames, parse_m49, reconcile = audit.parse_geonames, audit.parse_m49, audit.reconcile
 
 
 def row(a2, a3, n3, name, gid):
