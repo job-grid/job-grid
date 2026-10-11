@@ -4,11 +4,12 @@
 
 ## Reproducibility
 
-- PR branch code head reviewed: `cdfec51b700122f837dcd6032bfd4f3014892ea4`.
-- [Phase 0 CI #393](https://github.com/job-grid/job-grid/actions/runs/38103790293): passed, **98 tests passed / 0 failed**. GeoNames Japan, Kenya, global-source, parent-path, migration, repository-integrity, dependency, and secret checks passed.
-- [Full Japan identity/candidate evidence artifact](https://github.com/job-grid/job-grid/actions/runs/38103790293/artifacts/11688463721), available until 2026-10-18. It contains all 126 records, source coordinates, current raw codes, row-level candidate/period data, source response snapshots, and manifests.
+- PR branch code head for the latest source/evidence run: `b31027f705ff833f9d620ba40ad63e4b330567b2`.
+- [Phase 0 CI #399](https://github.com/job-grid/job-grid/actions/runs/38104465597): passed, **98 tests passed / 0 failed**. GeoNames Japan, Kenya, global-source, parent-path, migration, repository-integrity, dependency, secret-scan, and artifact-integrity checks passed.
+- [Latest full Japan evidence artifact](https://github.com/job-grid/job-grid/actions/runs/38104465597/artifacts/11688913666), available until 2026-10-18. It contains all 126 records, source coordinates, raw codes, e-Stat candidate/period history, five MLIT code-table snapshots, the row-level MLIT code CSV, and source manifests.
 - GeoNames Japan source archive `JP.zip`: SHA-256 `f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58`; HTTP 200; archive integrity passed; all 126 selected IDs matched the retrieved source name, country, feature code and raw administrative codes.
 - e-Stat code-history query: 14,741 source rows; 156 candidate/history periods retrieved for 35 area-code candidates; combined response SHA-256 `ca52a59ef64294e9af01c303ebad7f4408ac0156031c885538e4aeb6f4c17f33`.
+- The extended [MLIT code evidence report](https://github.com/job-grid/job-grid/blob/docs/country-catalog-foundation/docs/geonames-japan-mlit-candidate-code-evidence-2026-10-11.md) records five source hashes (1965, 1970, 1975, 1990 and current snapshot). It finds 34 of 35 candidate codes in at least one captured code list; only `22360` remains absent from these lists. This is a source-list coverage result, not a claim that the code is invalid.
 
 ## 1. Takaoka-chō — reject code 45381 as the entity crosswalk for both targets
 
