@@ -141,9 +141,11 @@ export function parseGeoNamesSourceRow(line) {
     geonames_id: fields[0],
     name: fields[1],
     ascii_name: fields[2],
+    feature_class: fields[6],
     latitude: fields[4],
     longitude: fields[5],
     feature_code: fields[7],
+    timezone: fields[17],
     country_code: fields[8],
     raw_admin1_code: fields[10],
     raw_admin2_code: fields[11],
@@ -186,7 +188,15 @@ export function verifyTargetSourceRows(targets, sourceRows) {
       });
       continue;
     }
-    verified.push({ ...target, source_modification_date: source.modification_date });
+    verified.push({
+      ...target,
+      source_modification_date: source.modification_date,
+      source_ascii_name: source.ascii_name,
+      source_feature_class: source.feature_class ?? "",
+      source_latitude: source.latitude,
+      source_longitude: source.longitude,
+      source_timezone: source.timezone ?? "",
+    });
   }
   if (failures.length) {
     const error = new Error(`GeoNames target source verification failed for ${failures.length} of ${targets.length} targets.`);
@@ -281,6 +291,76 @@ function buildAreaCodeHistory(sourceRows, areaCode, targetNameKey) {
   return periods;
 }
 
+function buildCrossTargetIdentityReview(targetResults) {
+  const normalizedNameGroups = new Map();
+  const candidateCodeGroups = new Map();
+  for (const target of targetResults) {
+    const ids = normalizedNameGroups.get(target.normalized_name_key) ?? [];
+    ids.push(target);
+    normalizedNameGroups.set(target.normalized_name_key, ids);
+    for (const candidate of target.candidates) {
+      const records = candidateCodeGroups.get(candidate.area_code) ?? [];
+      records.push({
+        geonames_id: target.geonames_id,
+        geonames_name: target.geonames_name,
+        normalized_name_key: target.normalized_name_key,
+        source_latitude: target.source_latitude ?? "",
+        source_longitude: target.source_longitude ?? "",
+        source_feature_class: target.source_feature_class ?? "",
+        raw_admin1_code: target.raw_admin1_code,
+        raw_admin2_code: target.raw_admin2_code ?? "",
+      });
+      candidateCodeGroups.set(candidate.area_code, records);
+    }
+  }
+
+  const repeatedNameGroups = [...normalizedNameGroups.entries()]
+    .filter(([, targets]) => targets.length > 1)
+    .map(([normalized_name_key, targets]) => {
+      const candidateSets = targets.map((target) => new Set(target.candidates.map((candidate) => candidate.area_code)));
+      const shared = candidateSets.length
+        ? [...candidateSets[0]].filter((code) => candidateSets.every((set) => set.has(code))).sort()
+        : [];
+      return {
+        normalized_name_key,
+        geonames_ids: targets.map((target) => target.geonames_id).sort((a, b) => Number(a) - Number(b)),
+        source_names: uniqueStrings(targets.map((target) => target.geonames_name)),
+        source_coordinate_pairs: uniqueStrings(targets.map((target) =>
+          target.source_latitude && target.source_longitude
+            ? `${target.source_latitude},${target.source_longitude}`
+            : "")),
+        feature_classes: uniqueStrings(targets.map((target) => target.source_feature_class ?? "")),
+        target_count: targets.length,
+        shared_candidate_area_codes: shared,
+        coordinate_collision: targets.some((target) => !target.source_latitude || !target.source_longitude)
+          ? "COORDINATE_CONTEXT_INCOMPLETE"
+          : new Set(targets.map((target) => `${target.source_latitude},${target.source_longitude}`)).size < targets.length
+            ? "EXACT_COORDINATE_COLLISION_REQUIRES_SOURCE_REVIEW"
+            : "DISTINCT_COORDINATES_REQUIRE_ENTITY_REVIEW",
+        approval: "NO_ENTITY_CROSSWALK_APPROVED",
+      };
+    })
+    .sort((a, b) => a.normalized_name_key.localeCompare(b.normalized_name_key));
+
+  const sharedCodeGroups = [...candidateCodeGroups.entries()]
+    .filter(([, records]) => new Set(records.map((row) => row.geonames_id)).size > 1)
+    .map(([area_code, records]) => ({
+      area_code,
+      distinct_geonames_ids: uniqueStrings(records.map((row) => row.geonames_id)),
+      records: records.sort((a, b) => Number(a.geonames_id) - Number(b.geonames_id)),
+      approval: "NO_ENTITY_CROSSWALK_APPROVED",
+    }))
+    .sort((a, b) => a.area_code.localeCompare(b.area_code));
+
+  return {
+    repeated_normalized_name_groups: repeatedNameGroups,
+    repeated_normalized_name_group_count: repeatedNameGroups.length,
+    shared_candidate_area_code_groups: sharedCodeGroups,
+    shared_candidate_area_code_group_count: sharedCodeGroups.length,
+    note: "This is a collision-review aid only. Source coordinates, feature class, names, and identical area-code candidates are not sufficient by themselves to approve identity or administrative parentage.",
+  };
+}
+
 export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
   if (!Array.isArray(targets) || targets.length !== EXPECTED_JAPAN_TARGETS) {
     throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} unique Japan ADM4 raw-admin1-00 targets; got ${targets?.length ?? 0}.`);
@@ -344,6 +424,11 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
       country_code: target.country_code,
       feature_code: target.feature_code,
       source_modification_date: target.source_modification_date ?? "",
+      source_ascii_name: target.source_ascii_name ?? "",
+      source_feature_class: target.source_feature_class ?? "",
+      source_latitude: target.source_latitude ?? "",
+      source_longitude: target.source_longitude ?? "",
+      source_timezone: target.source_timezone ?? "",
       raw_admin1_code: target.raw_admin1_code,
       raw_admin2_code: target.raw_admin2_code ?? "",
       source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified === true,
@@ -373,6 +458,7 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
     matching_rule: "Targets match only on exact normalized English labels. Historical periods are grouped by distinct official 5-digit area code for candidate counting; full period history and parent references are retained. Neither a matching name nor an area code is a verified GeoNames entity crosswalk.",
     source_snapshot_sha256: sourceSnapshotSha256,
     target_results: targetResults,
+    cross_target_identity_review: buildCrossTargetIdentityReview(targetResults),
     operational_parent_links_created: 0,
     limitations: [
       "An exact normalized label and distinct source area code are candidate-discovery evidence, not proof of GeoNames entity identity.",
@@ -389,7 +475,8 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
 export function renderCandidateCsv(report) {
   const headers = [
     "geonames_id", "geonames_name", "country_code", "feature_code", "raw_admin1_code",
-    "raw_admin2_code", "source_modification_date", "source_identity_and_raw_codes_verified",
+    "raw_admin2_code", "source_modification_date", "source_ascii_name", "source_feature_class",
+    "source_latitude", "source_longitude", "source_timezone", "source_identity_and_raw_codes_verified",
     "normalized_name_key", "exact_name_candidate_count", "exact_name_matched_period_count", "review_status",
     "candidate_area_code", "candidate_exact_matching_period_count", "candidate_history_period_count",
     "candidate_period_uri", "candidate_period_label_en", "candidate_period_label_ja",
@@ -418,6 +505,11 @@ export function renderCandidateCsv(report) {
           raw_admin1_code: target.raw_admin1_code,
           raw_admin2_code: target.raw_admin2_code,
           source_modification_date: target.source_modification_date,
+          source_ascii_name: target.source_ascii_name,
+          source_feature_class: target.source_feature_class,
+          source_latitude: target.source_latitude,
+          source_longitude: target.source_longitude,
+          source_timezone: target.source_timezone,
           source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified,
           normalized_name_key: target.normalized_name_key,
           exact_name_candidate_count: target.exact_name_candidate_count,
