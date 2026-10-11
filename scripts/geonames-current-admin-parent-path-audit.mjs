@@ -318,7 +318,7 @@ function auditCurrentAdminParentsByCodes(targetRows, sourceRecords) {
         const field = CODE_LEVELS[missingIndex];
         const rawCode = codes[missingIndex];
         const reason = rawCode === "00"
-          ? `Raw ${field} is "00"; preserve it and do not normalize or synthesize an ancestor.`
+          ? `Raw ${field} is "00"; the official GeoNames README defines "00" as a general feature with no specific admin1 code. Preserve the raw value and leave the ancestor unresolved; do not normalize or synthesize a parent.`
           : `Raw ${field} is blank; the exact composite key for ADM${level} cannot be formed.`;
         return block("BLOCKED_PARENT_CODE_MISSING_OR_PLACEHOLDER", reason);
       }
@@ -551,7 +551,8 @@ export function buildAuditSummary(rows, sourceMetadata) {
       "A retrieval URL, timestamp and hash pin the downloaded bytes but do not establish an immutable publisher release ID.",
       "HTTP Last-Modified is reported as captured only when that response header was actually present.",
       "A candidate path is not owner approval and must never be imported as a parent relationship from this report alone.",
-      "Raw code 00, blank codes, absent keys, duplicate keys, source identity mismatches, and source raw-code mismatches remain unresolved.",
+      "GeoNames README semantics: admin code 00 means a general feature with no specific admin1 code defined. This remains unresolved for parent-linking; raw 00 is preserved and no ancestor is synthesized.",
+      "Blank codes, absent keys, duplicate keys, source identity mismatches, and source raw-code mismatches remain unresolved.",
     ],
   };
 }
