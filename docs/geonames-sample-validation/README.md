@@ -121,3 +121,23 @@ The reusable preflight in `scripts/geonames-sample-validate.mjs` is now version 
 - Automated synthetic tests cover these behaviors. They do not download or validate the actual upstream GeoNames files.
 
 This updates the tool for future local retrievals. It does **not** retroactively establish official-source provenance or HTTP retrieval metadata for previously observed local files. The country catalog remains **BLOCKED** pending the approved ISO comparison, source-origin evidence and unresolved hierarchy/feature policy decisions.
+
+
+## Stage D — independent live global-source audit — 2026-10-11
+
+**Result: PASS for full current source scan and all unresolved crosswalk-exception record identities; catalog acceptance remains BLOCKED.** A new CI job downloaded GeoNames' official `allCountries.zip` directly, captured the HTTP response metadata and hash, validated ZIP integrity, extracted the full source, then scanned it end-to-end.
+
+| Measure | Independently measured current-source result |
+|---|---:|
+| Source archive HTTP status / ZIP CRC | 200 / PASS |
+| Extracted source lines | 13,472,324 |
+| Malformed or wrong-shape rows | 0 |
+| Unique IDs in crosswalk exception export | 2,416 |
+| Exact ID, name, country, feature code, raw admin1 and admin2 matches | 2,416 |
+| Missing/duplicate source IDs or source identity/raw-code drift | 0 |
+
+The current run therefore independently reproduces the reported 13,472,324-line worldwide source scan count and verifies every unique record in the unresolved exception export against that full source. This closes source identity/raw-code drift for the 2,416 exception IDs in the current snapshot. It does **not** establish that any absent admin crosswalk key has been found, nor does it approve any parent relationship.
+
+The official source fingerprint and aggregate result are committed in [the machine-readable global audit summary](../geonames-global-exception-source-audit-2026-10-11.json). The full row-level CSV, detailed JSON and source retrieval manifest are in [the seven-day workflow artifact](https://github.com/job-grid/job-grid/actions/runs/38097453927/artifacts/11686636684) (expires 2026-10-18). The full 422 MB archive and its 1.79 GB extracted text were not committed and are not included in the artifact.
+
+**Still unverified:** independent reproduction of the algorithm that selected the separate 25,685-row sample; current ISO authority comparison; and product/worldwide geographic completeness. The current administrative hierarchy gate remains blocked: 126 Japan ADM4 records preserve raw admin1 `00`, and two Kenyan ADM3 records have neither an exact ADM1 composite-key match nor a direct `ADM` hierarchy edge. No parent links, schema/migration/seed/import, database, production or deployment changes were made.
