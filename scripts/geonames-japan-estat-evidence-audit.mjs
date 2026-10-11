@@ -217,6 +217,70 @@ export function parseEstatBindings(bindings) {
   }));
 }
 
+function uniqueStrings(values) {
+  return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))].sort();
+}
+
+function buildAreaCodeHistory(sourceRows, areaCode, targetNameKey) {
+  const rows = sourceRows.filter((row) => row.area_code === areaCode);
+  const periodsByUri = new Map();
+  for (const row of rows) {
+    let period = periodsByUri.get(row.period_uri);
+    if (!period) {
+      period = {
+        period_uri: row.period_uri,
+        area_code: row.area_code,
+        label_en: row.label_en,
+        label_ja: row.label_ja ?? "",
+        effective_from: row.effective_from ?? "",
+        effective_until: row.effective_until ?? "",
+        matches_target_name: normalizeExactLabel(row.label_en) === targetNameKey,
+        parent_references: [],
+        previous_period_uris: [],
+        succeeding_period_uris: [],
+        administrative_class_uris: [],
+      };
+      periodsByUri.set(row.period_uri, period);
+    } else {
+      period.matches_target_name ||= normalizeExactLabel(row.label_en) === targetNameKey;
+      if (!period.label_ja && row.label_ja) period.label_ja = row.label_ja;
+      if (!period.effective_from && row.effective_from) period.effective_from = row.effective_from;
+      if (!period.effective_until && row.effective_until) period.effective_until = row.effective_until;
+    }
+    if (row.parent_uri || row.parent_area_code || row.parent_label_en || row.parent_label_ja) {
+      const parent = {
+        area_code: row.parent_area_code ?? "",
+        uri: row.parent_uri ?? "",
+        label_en: row.parent_label_en ?? "",
+        label_ja: row.parent_label_ja ?? "",
+      };
+      const signature = JSON.stringify(parent);
+      if (!period.parent_references.some((existing) => JSON.stringify(existing) === signature)) {
+        period.parent_references.push(parent);
+      }
+    }
+    for (const value of [row.previous_period_uri]) {
+      if (value && !period.previous_period_uris.includes(value)) period.previous_period_uris.push(value);
+    }
+    for (const value of [row.succeeding_period_uri]) {
+      if (value && !period.succeeding_period_uris.includes(value)) period.succeeding_period_uris.push(value);
+    }
+    for (const value of [row.administrative_class_uri]) {
+      if (value && !period.administrative_class_uris.includes(value)) period.administrative_class_uris.push(value);
+    }
+  }
+  const periods = [...periodsByUri.values()].sort((a, b) =>
+    a.effective_from.localeCompare(b.effective_from) || a.period_uri.localeCompare(b.period_uri));
+  for (const period of periods) {
+    period.parent_references.sort((a, b) =>
+      a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
+    period.previous_period_uris.sort();
+    period.succeeding_period_uris.sort();
+    period.administrative_class_uris.sort();
+  }
+  return periods;
+}
+
 export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
   if (!Array.isArray(targets) || targets.length !== EXPECTED_JAPAN_TARGETS) {
     throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} unique Japan ADM4 raw-admin1-00 targets; got ${targets?.length ?? 0}.`);
@@ -225,31 +289,55 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
     throw new Error("Official e-Stat response contained no code-history rows.");
   }
 
-  const byLabel = new Map();
   for (const sourceRow of sourceRows) {
     if (!sourceRow.period_uri || !sourceRow.area_code) {
       throw new Error(`e-Stat row missing period URI or standard area code: ${JSON.stringify({ period_uri: sourceRow.period_uri, area_code: sourceRow.area_code, label_en: sourceRow.label_en })}`);
     }
-    const key = normalizeExactLabel(sourceRow.label_en);
-    if (!key) continue;
-    const bucket = byLabel.get(key) ?? [];
-    bucket.push(sourceRow);
-    byLabel.set(key, bucket);
   }
 
   const targetResults = targets.map((target) => {
     const key = normalizeExactLabel(target.name);
-    const candidates = (byLabel.get(key) ?? [])
-      .slice()
-      .sort((a, b) =>
-        a.area_code.localeCompare(b.area_code) ||
-        a.effective_from.localeCompare(b.effective_from) ||
-        a.period_uri.localeCompare(b.period_uri));
+    const matchingRows = sourceRows.filter((sourceRow) => normalizeExactLabel(sourceRow.label_en) === key);
+    const matchingRowsByAreaCode = new Map();
+    for (const row of matchingRows) {
+      const bucket = matchingRowsByAreaCode.get(row.area_code) ?? [];
+      bucket.push(row);
+      matchingRowsByAreaCode.set(row.area_code, bucket);
+    }
+
+    const candidates = [...matchingRowsByAreaCode.entries()]
+      .sort(([areaCodeA], [areaCodeB]) => areaCodeA.localeCompare(areaCodeB))
+      .map(([areaCode, matchedRows]) => {
+        const matchingPeriodUris = uniqueStrings(matchedRows.map((row) => row.period_uri));
+        const periods = buildAreaCodeHistory(sourceRows, areaCode, key);
+        const parentsAcrossHistory = [];
+        for (const period of periods) {
+          for (const parent of period.parent_references) {
+            const signature = JSON.stringify(parent);
+            if (!parentsAcrossHistory.some((existing) => JSON.stringify(existing) === signature)) {
+              parentsAcrossHistory.push(parent);
+            }
+          }
+        }
+        parentsAcrossHistory.sort((a, b) =>
+          a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
+        return {
+          area_code: areaCode,
+          matched_labels_en: uniqueStrings(matchedRows.map((row) => row.label_en)),
+          exact_matching_period_count: matchingPeriodUris.length,
+          exact_matching_period_uris: matchingPeriodUris,
+          history_period_count: periods.length,
+          parent_area_codes_across_history: uniqueStrings(parentsAcrossHistory.map((parent) => parent.area_code)),
+          parent_references_across_history: parentsAcrossHistory,
+          periods,
+        };
+      });
+
     const reviewStatus = candidates.length === 0
       ? "NO_EXACT_NORMALIZED_ENGLISH_LABEL_MATCH"
       : candidates.length === 1
-        ? "ONE_EXACT_LABEL_CANDIDATE_REQUIRES_IDENTITY_AND_DATE_REVIEW"
-        : "MULTIPLE_EXACT_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION";
+        ? "ONE_AREA_CODE_CANDIDATE_REQUIRES_ENTITY_IDENTITY_AND_PERIOD_REVIEW"
+        : "MULTIPLE_AREA_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION";
     return {
       geonames_id: target.geonames_id,
       geonames_name: target.name,
@@ -257,10 +345,11 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
       feature_code: target.feature_code,
       source_modification_date: target.source_modification_date ?? "",
       raw_admin1_code: target.raw_admin1_code,
-      raw_admin2_code: target.raw_admin2_code,
+      raw_admin2_code: target.raw_admin2_code ?? "",
       source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified === true,
       normalized_name_key: key,
       exact_name_candidate_count: candidates.length,
+      exact_name_matched_period_count: candidates.reduce((sum, candidate) => sum + candidate.exact_matching_period_count, 0),
       review_status: reviewStatus,
       candidates,
       operational_parent_link_created: false,
@@ -269,26 +358,28 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
 
   const countBy = (predicate) => targetResults.filter(predicate).length;
   return {
-    report_version: 1,
-    status: "PASS_SOURCE_RETRIEVED_TARGET_COVERAGE_COMPLETE; CANDIDATES_REQUIRE_REVIEW; NO_PARENT_LINKS_APPROVED",
+    report_version: 2,
+    status: "PASS_SOURCE_RETRIEVED_TARGET_COVERAGE_COMPLETE; DISTINCT_AREA_CODE_CANDIDATES_REQUIRE_REVIEW; NO_PARENT_LINKS_APPROVED",
     target_count: targetResults.length,
     target_source_identity_and_raw_code_matches: targetResults.filter((row) => row.source_identity_and_raw_codes_verified).length,
     source_code_history_rows: sourceRows.length,
-    targets_with_one_exact_label_candidate: countBy((row) => row.exact_name_candidate_count === 1),
-    targets_with_multiple_exact_label_candidates: countBy((row) => row.exact_name_candidate_count > 1),
+    targets_with_one_exact_area_code_candidate: countBy((row) => row.exact_name_candidate_count === 1),
+    targets_with_multiple_exact_area_code_candidates: countBy((row) => row.exact_name_candidate_count > 1),
     targets_without_exact_label_candidates: countBy((row) => row.exact_name_candidate_count === 0),
-    total_exact_label_candidate_rows: targetResults.reduce((total, row) => total + row.candidates.length, 0),
+    total_exact_name_matched_area_code_candidates: targetResults.reduce((total, row) => total + row.candidates.length, 0),
+    total_exact_name_matched_period_rows: targetResults.reduce((total, row) => total + row.exact_name_matched_period_count, 0),
     candidates_with_official_parent_reference: targetResults.reduce(
-      (total, row) => total + row.candidates.filter((candidate) => candidate.parent_uri).length, 0),
-    matching_rule: "Exact normalized English label only: Unicode NFKD, remove diacritics, lowercase, punctuation to spaces, collapse whitespace. No token removal, fuzzy similarity, coordinates, proximity, or first-match selection.",
+      (total, row) => total + row.candidates.filter((candidate) => candidate.parent_references_across_history.length > 0).length, 0),
+    matching_rule: "Targets match only on exact normalized English labels. Historical periods are grouped by distinct official 5-digit area code for candidate counting; full period history and parent references are retained. Neither a matching name nor an area code is a verified GeoNames entity crosswalk.",
     source_snapshot_sha256: sourceSnapshotSha256,
     target_results: targetResults,
     operational_parent_links_created: 0,
     limitations: [
-      "An exact normalized label is only a candidate discovery mechanism, not proof of entity identity.",
-      "All historical periods and ambiguous candidates are preserved; no first/most recent candidate is selected automatically.",
+      "An exact normalized label and distinct source area code are candidate-discovery evidence, not proof of GeoNames entity identity.",
+      "Historical periods within each area code are grouped for candidate counts but preserved individually, including effective dates, parent references, predecessor/successor links, and administrative class.",
+      "A source area code may match multiple GeoNames IDs with the same normalized name; no one-to-one entity crosswalk is inferred.",
       "An e-Stat parent reference is evidence for administrative hierarchy review, not an approved Job Grid GeoNames parent path.",
-      "Targets without an exact match remain unresolved; no raw code is normalized or synthesized.",
+      "Targets without an exact label match remain unresolved; no fuzzy matching, raw-code normalization, or synthetic parent is used.",
       "This source covers statistical standard-area-code history, documented by e-Stat from April 1970 onward, and may not cover older or differently defined GeoNames features.",
       "No database, migration, seed, import, production, deployment, or PR merge is performed."
     ],
@@ -297,49 +388,62 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
 
 export function renderCandidateCsv(report) {
   const headers = [
-    "geonames_id", "geonames_name", "raw_admin1_code", "raw_admin2_code", "source_modification_date",
-    "source_identity_and_raw_codes_verified", "normalized_name_key", "exact_name_candidate_count", "review_status",
-    "candidate_area_code", "candidate_period_uri", "candidate_label_en", "candidate_label_ja",
-    "candidate_effective_from", "candidate_effective_until", "candidate_parent_area_code",
-    "candidate_parent_uri", "candidate_parent_label_en", "candidate_parent_label_ja",
-    "candidate_previous_period_uri", "candidate_succeeding_period_uri",
-    "candidate_administrative_class_uri", "source_snapshot_sha256", "operational_parent_link_created",
+    "geonames_id", "geonames_name", "country_code", "feature_code", "raw_admin1_code",
+    "raw_admin2_code", "source_modification_date", "source_identity_and_raw_codes_verified",
+    "normalized_name_key", "exact_name_candidate_count", "exact_name_matched_period_count", "review_status",
+    "candidate_area_code", "candidate_exact_matching_period_count", "candidate_history_period_count",
+    "candidate_period_uri", "candidate_period_label_en", "candidate_period_label_ja",
+    "candidate_period_effective_from", "candidate_period_effective_until", "candidate_period_matches_target_name",
+    "candidate_period_parent_area_codes", "candidate_period_parent_uris", "candidate_period_parent_labels_en",
+    "candidate_period_parent_labels_ja", "candidate_period_previous_uris", "candidate_period_succeeding_uris",
+    "candidate_period_administrative_class_uris", "source_snapshot_sha256", "operational_parent_link_created",
   ];
   const csvCell = (value) => {
     const text = String(value ?? "");
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
+  const joinValues = (values) => uniqueStrings(values).join(";");
   const lines = [headers.join(",")];
   for (const target of report.target_results) {
     const candidates = target.candidates.length ? target.candidates : [null];
     for (const candidate of candidates) {
-      const row = {
-        geonames_id: target.geonames_id,
-        geonames_name: target.geonames_name,
-        raw_admin1_code: target.raw_admin1_code,
-        raw_admin2_code: target.raw_admin2_code,
-        source_modification_date: target.source_modification_date,
-        source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified,
-        normalized_name_key: target.normalized_name_key,
-        exact_name_candidate_count: target.exact_name_candidate_count,
-        review_status: target.review_status,
-        candidate_area_code: candidate?.area_code,
-        candidate_period_uri: candidate?.period_uri,
-        candidate_label_en: candidate?.label_en,
-        candidate_label_ja: candidate?.label_ja,
-        candidate_effective_from: candidate?.effective_from,
-        candidate_effective_until: candidate?.effective_until,
-        candidate_parent_area_code: candidate?.parent_area_code,
-        candidate_parent_uri: candidate?.parent_uri,
-        candidate_parent_label_en: candidate?.parent_label_en,
-        candidate_parent_label_ja: candidate?.parent_label_ja,
-        candidate_previous_period_uri: candidate?.previous_period_uri,
-        candidate_succeeding_period_uri: candidate?.succeeding_period_uri,
-        candidate_administrative_class_uri: candidate?.administrative_class_uri,
-        source_snapshot_sha256: report.source_snapshot_sha256,
-        operational_parent_link_created: false,
-      };
-      lines.push(headers.map((header) => csvCell(row[header])).join(","));
+      const periods = candidate?.periods?.length ? candidate.periods : [null];
+      for (const period of periods) {
+        const parents = period?.parent_references ?? [];
+        const row = {
+          geonames_id: target.geonames_id,
+          geonames_name: target.geonames_name,
+          country_code: target.country_code,
+          feature_code: target.feature_code,
+          raw_admin1_code: target.raw_admin1_code,
+          raw_admin2_code: target.raw_admin2_code,
+          source_modification_date: target.source_modification_date,
+          source_identity_and_raw_codes_verified: target.source_identity_and_raw_codes_verified,
+          normalized_name_key: target.normalized_name_key,
+          exact_name_candidate_count: target.exact_name_candidate_count,
+          exact_name_matched_period_count: target.exact_name_matched_period_count,
+          review_status: target.review_status,
+          candidate_area_code: candidate?.area_code,
+          candidate_exact_matching_period_count: candidate?.exact_matching_period_count,
+          candidate_history_period_count: candidate?.history_period_count,
+          candidate_period_uri: period?.period_uri,
+          candidate_period_label_en: period?.label_en,
+          candidate_period_label_ja: period?.label_ja,
+          candidate_period_effective_from: period?.effective_from,
+          candidate_period_effective_until: period?.effective_until,
+          candidate_period_matches_target_name: period?.matches_target_name,
+          candidate_period_parent_area_codes: joinValues(parents.map((parent) => parent.area_code)),
+          candidate_period_parent_uris: joinValues(parents.map((parent) => parent.uri)),
+          candidate_period_parent_labels_en: joinValues(parents.map((parent) => parent.label_en)),
+          candidate_period_parent_labels_ja: joinValues(parents.map((parent) => parent.label_ja)),
+          candidate_period_previous_uris: joinValues(period?.previous_period_uris ?? []),
+          candidate_period_succeeding_uris: joinValues(period?.succeeding_period_uris ?? []),
+          candidate_period_administrative_class_uris: joinValues(period?.administrative_class_uris ?? []),
+          source_snapshot_sha256: report.source_snapshot_sha256,
+          operational_parent_link_created: false,
+        };
+        lines.push(headers.map((header) => csvCell(row[header])).join(","));
+      }
     }
   }
   return lines.join("\n") + "\n";
