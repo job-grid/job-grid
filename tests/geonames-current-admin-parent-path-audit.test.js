@@ -225,9 +225,9 @@ test("CLI reads a pinned source fixture, writes auditable artifacts, and records
 });
 
 test("parses GeoNames hierarchy edges in parentId/childId/type format", () => {
-  assert.deepEqual(parseHierarchyLine("10\\t20\\tADM"), { parent_id: "10", child_id: "20", relation_type: "ADM" });
+  assert.deepEqual(parseHierarchyLine("10\t20\tADM"), { parent_id: "10", child_id: "20", relation_type: "ADM" });
   assert.equal(parseHierarchyLine(""), null);
-  assert.throws(() => parseHierarchyLine("10\\t20"), /expected parentId, childId, type/);
+  assert.throws(() => parseHierarchyLine("10\t20"), /expected parentId, childId, type/);
 });
 
 test("checks a complete type=ADM path while still requiring owner approval and creating no link", () => {
