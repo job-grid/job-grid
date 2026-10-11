@@ -69,5 +69,33 @@
     "No name/proximity/feature-class inference was used.",
     "No parent linkage or operational/database change is authorized by this audit.",
     "The 126 Japan ADM4 records with raw admin1 00 remain a separate open gate."
-  ]
+  ],
+  "external_evidence_review": {
+    "status": "IDENTITY_CORROBORATION_LEAD_ONLY_PARENT_LINEAGE_NOT_VERIFIED",
+    "sources": [
+      {
+        "owner": "Kenya National Bureau of Statistics",
+        "title": "2019 Kenya Population and Housing Census, Volume II: Distribution of Population by Administrative Units",
+        "url": "https://www.knbs.or.ke/wp-content/uploads/2023/09/2019-Kenya-population-and-Housing-Census-Volume-2-Distribution-of-Population-by-Administrative-Units.pdf",
+        "indexed_exact_name_found": "KIAMBURURU",
+        "relevance": "Exact sub-location name appears in indexed Table 2.4 excerpt; the excerpt available in this review does not establish an auditable parent-ID lineage."
+      },
+      {
+        "owner": "Kenya National Bureau of Statistics",
+        "title": "1999 Kenya Population and Housing Census, Volume I",
+        "url": "https://www.knbs.or.ke/wp-content/uploads/2023/09/1999-Kenya-population-and-Housing-Census-Counting-Our-People-For-Development-Volume-1.pdf",
+        "indexed_exact_name_found": "KIAMBURURU",
+        "relevance": "Historical sub-location-name corroboration; no current GeoNames parent ID or replacement admin-code mapping established."
+      },
+      {
+        "owner": "Kenya National Bureau of Statistics",
+        "title": "2019 Kenya Population and Housing Census reports",
+        "url": "https://www.knbs.or.ke/2019-kenya-population-and-housing-census-reports/",
+        "indexed_exact_name_found": "No exact ID-backed match for Imenti Central",
+        "relevance": "Indexed current administrative lists include Meru Central, Imenti North/South and Central Imenti; similar names were not treated as proof that GeoNames ID 7800132 is the same unit."
+      }
+    ],
+    "disposition": "Both exact GeoNames crosswalk keys remain absent; no parent path authorized or created.",
+    "caveat": "Source query excerpts are identity leads only. Replacement administrative IDs require a directly auditable authoritative lineage/crosswalk or suitable boundary evidence."
+  }
 }
