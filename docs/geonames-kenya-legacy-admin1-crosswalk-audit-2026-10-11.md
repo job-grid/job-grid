@@ -43,3 +43,12 @@ The [Kenya National Bureau of Statistics](https://www.knbs.or.ke/2019-kenya-popu
 - Continue to treat the 126 Japanese `ADM4` rows with raw admin1 `00` as a separate unresolved issue.
 
 The [row-level artifact](https://github.com/job-grid/job-grid/actions/runs/38097953584/artifacts/11686852169) contains the machine-readable two-record disposition, 47 current Kenya admin1 keys, and source retrieval manifest. Current official ISO comparison and product/worldwide geographic completeness remain separately unverified.
+
+
+## Additional Kenya administrative-source review — identity lead only
+
+The indexed table excerpt for the [KNBS 2019 Kenya Population and Housing Census, Volume II](https://www.knbs.or.ke/wp-content/uploads/2023/09/2019-Kenya-population-and-Housing-Census-Volume-2-Distribution-of-Population-by-Administrative-Units.pdf) includes the exact spelling `KIAMBURURU` in Table 2.4, a table of population by administrative unit and sub-locations. An indexed excerpt of the [KNBS 1999 Kenya Population and Housing Census, Volume I](https://www.knbs.or.ke/wp-content/uploads/2023/09/1999-Kenya-population-and-Housing-Census-Counting-Our-People-For-Development-Volume-1.pdf) also includes `KIAMBURURU` among sub-location rows. This independently corroborates the place-name identity; the excerpts available in this review did not expose a sufficiently explicit hierarchy/coding chain or GeoNames parent IDs to assign a current administrative parent from that evidence alone.
+
+For GeoNames ID 7800132, indexed searches of KNBS material surfaced current Meru administrative units such as Meru Central, Imenti North/South, and Central Imenti, but did not provide an exact ID-backed lineage establishing that this GeoNames record named “Imenti Central” is the same administrative unit as a currently listed KNBS unit. Similar names are not sufficient mapping evidence.
+
+Accordingly, neither item changes the disposition above: both direct GeoNames composite keys remain absent, no parent path has been created, and any potential Kenya parent assignment remains blocked pending an explicit authoritative lineage or boundary/coding crosswalk with auditable record identity.
