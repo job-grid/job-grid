@@ -101,6 +101,7 @@ export function buildOfficialParentReferenceIndex(detailReport) {
         parent_label_ja_values: [],
         child_area_codes: [],
         child_period_uris: [],
+        reference_source_kinds: ["SPATIAL_FIRST_1995_HISTORY"],
         published_parent_reference_rows: 0,
       };
       if (labelEn && !existing.parent_label_en_values.includes(labelEn)) existing.parent_label_en_values.push(labelEn);
@@ -137,6 +138,240 @@ export function buildOfficialParentReferenceIndex(detailReport) {
   }).sort((a, b) =>
     a.parent_area_code.localeCompare(b.parent_area_code) ||
     a.parent_uri.localeCompare(b.parent_uri));
+}
+
+function parentReferenceKey(areaCode, uri) {
+  return [String(areaCode ?? "").trim(), String(uri ?? "").trim()].join("\\u0000");
+}
+
+function addParentReferenceValues(reference, parent, childAreaCode, childPeriodUri, sourceKind) {
+  const areaCode = String(parent.area_code ?? "").trim();
+  const uri = String(parent.uri ?? "").trim();
+  const labelEn = String(parent.label_en ?? "").trim();
+  const labelJa = String(parent.label_ja ?? "").trim();
+  if (!/^\\d{5}$/.test(areaCode) || !uri) {
+    throw new Error("An added e-Stat parent reference lacks a five-digit area code or exact period URI.");
+  }
+  if (labelEn && !reference.parent_label_en_values.includes(labelEn)) reference.parent_label_en_values.push(labelEn);
+  if (labelJa && !reference.parent_label_ja_values.includes(labelJa)) reference.parent_label_ja_values.push(labelJa);
+  if (!reference.child_area_codes.includes(childAreaCode)) reference.child_area_codes.push(childAreaCode);
+  if (!reference.child_period_uris.includes(childPeriodUri)) reference.child_period_uris.push(childPeriodUri);
+  if (!reference.reference_source_kinds.includes(sourceKind)) reference.reference_source_kinds.push(sourceKind);
+  reference.published_parent_reference_rows += 1;
+  reference.conflicting_parent_label_values =
+    reference.parent_label_en_values.length > 1 || reference.parent_label_ja_values.length > 1;
+  reference.parent_label_en = reference.parent_label_en_values.length === 1 ? reference.parent_label_en_values[0] : "";
+  reference.parent_label_ja = reference.parent_label_ja_values.length === 1 ? reference.parent_label_ja_values[0] : "";
+  if (reference.conflicting_parent_label_values) {
+    reference.candidate_status = "BLOCKED_CONFLICTING_OFFICIAL_JAPANESE_PARENT_LABELS";
+  }
+}
+
+export function validateExactLabelTargetCandidateReport(report) {
+  if (!report || Number(report.target_count) !== EXPECTED_TARGET_COUNT ||
+      Number(report.target_source_identity_and_raw_code_matches) !== EXPECTED_TARGET_COUNT ||
+      Number(report.operational_parent_links_created) !== 0 ||
+      !Array.isArray(report.target_results) || report.target_results.length !== EXPECTED_TARGET_COUNT ||
+      !/^[a-f0-9]{64}$/i.test(String(report.source_snapshot_sha256 ?? ""))) {
+    throw new Error("Exact-label target report lacks all 126 source-verified Japan target rows or a SHA-256 source fingerprint.");
+  }
+  const positiveTargets = report.target_results.filter((target) =>
+    Array.isArray(target.candidates) && target.candidates.length > 0);
+  const associations = positiveTargets.reduce((sum, target) => sum + target.candidates.length, 0);
+  const distinctCodes = new Set(positiveTargets.flatMap((target) => target.candidates.map((candidate) =>
+    String(candidate.area_code ?? "").trim())));
+  if (positiveTargets.length !== 33 || associations !== 46 || distinctCodes.size !== 35) {
+    throw new Error(
+      `Unexpected source-derived exact-label candidate coverage: ${positiveTargets.length} targets, ${associations} associations, ${distinctCodes.size} codes.`
+    );
+  }
+  for (const target of positiveTargets) {
+    if (target.country_code !== "JP" || target.feature_code !== "ADM4" ||
+        target.raw_admin1_code !== "00" || target.source_identity_and_raw_codes_verified !== true) {
+      throw new Error(`Target ${target.geonames_id} failed the exact Japan ADM4/raw-admin1-00 source guard.`);
+    }
+    for (const candidate of target.candidates) {
+      if (!/^\\d{5}$/.test(String(candidate.area_code ?? "")) || !Array.isArray(candidate.periods)) {
+        throw new Error(`Target ${target.geonames_id} has malformed e-Stat candidate code/history.`);
+      }
+      for (const period of candidate.periods) {
+        if (String(period.area_code ?? "") !== String(candidate.area_code) ||
+            !String(period.period_uri ?? "").trim() || !Array.isArray(period.parent_references)) {
+          throw new Error(`Target ${target.geonames_id} has an unreconciled exact-label period row.`);
+        }
+      }
+    }
+  }
+  return {
+    target_count: report.target_count,
+    target_source_identity_and_raw_code_matches: report.target_source_identity_and_raw_code_matches,
+    positive_candidate_target_count: positiveTargets.length,
+    target_to_candidate_code_associations: associations,
+    distinct_candidate_area_code_count: distinctCodes.size,
+    exact_name_matched_period_rows: Number(report.total_exact_name_matched_period_rows),
+    source_snapshot_sha256: report.source_snapshot_sha256,
+    geonames_archive_sha256: report.source?.geoNames?.archive_sha256 ?? "",
+    operational_parent_links_created: 0,
+  };
+}
+
+export function mergeExactLabelTargetCandidateParentReferences(parentReferences, targetCandidateReport) {
+  const inputSummary = validateExactLabelTargetCandidateReport(targetCandidateReport);
+  const byKey = new Map(parentReferences.map((reference) => [
+    parentReferenceKey(reference.parent_area_code, reference.parent_uri),
+    reference,
+  ]));
+  const references = parentReferences;
+  const sourceKind = "EXACT_ENGLISH_LABEL_TARGET_CANDIDATE_HISTORY";
+  let candidatePeriodCount = 0;
+  let parentReferenceOccurrenceCount = 0;
+
+  for (const target of targetCandidateReport.target_results.filter((row) => row.candidates?.length)) {
+    for (const candidate of target.candidates) {
+      for (const period of candidate.periods.filter((row) => row.matches_target_name === true)) {
+        candidatePeriodCount += 1;
+        const childAreaCode = String(candidate.area_code);
+        const childPeriodUri = String(period.period_uri);
+        for (const parent of period.parent_references) {
+          const key = parentReferenceKey(parent.area_code, parent.uri);
+          let reference = byKey.get(key);
+          if (!reference) {
+            reference = {
+              parent_area_code: String(parent.area_code ?? "").trim(),
+              parent_uri: String(parent.uri ?? "").trim(),
+              parent_label_en_values: [],
+              parent_label_ja_values: [],
+              child_area_codes: [],
+              child_period_uris: [],
+              reference_source_kinds: [],
+              published_parent_reference_rows: 0,
+              parent_label_en: "",
+              parent_label_ja: "",
+              conflicting_parent_label_values: false,
+              candidate_matches: [],
+              candidate_geonames_ids: [],
+              candidate_count: 0,
+              candidate_status: "PENDING_EXACT_GEONAMES_JAPANESE_LABEL_MATCH",
+              operational_parent_link_created: false,
+            };
+            byKey.set(key, reference);
+            references.push(reference);
+          }
+          addParentReferenceValues(reference, parent, childAreaCode, childPeriodUri, sourceKind);
+          parentReferenceOccurrenceCount += 1;
+        }
+      }
+    }
+  }
+  references.sort((a, b) =>
+    a.parent_area_code.localeCompare(b.parent_area_code) || a.parent_uri.localeCompare(b.parent_uri));
+  return {
+    parentReferences: references,
+    inputSummary,
+    candidatePeriodCount,
+    parentReferenceOccurrenceCount,
+    expandedParentReferenceCount: references.length,
+  };
+}
+
+function snapshotFallsWithinPeriod(snapshotDate, effectiveFrom, effectiveUntil) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(snapshotDate)) return false;
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(effectiveFrom ?? ""))) return false;
+  if (snapshotDate < effectiveFrom) return false;
+  const until = String(effectiveUntil ?? "").trim();
+  return !/^\\d{4}-\\d{2}-\\d{2}$/.test(until) || snapshotDate <= until;
+}
+
+export function buildTargetCandidateParentQueue(targetCandidateReport, parentReferences, spatialPolygonReport) {
+  const inputSummary = validateExactLabelTargetCandidateReport(targetCandidateReport);
+  if (!spatialPolygonReport ||
+      spatialPolygonReport.selection_mode !== "ALL_POSITIVE_ESTAT_LABEL_CANDIDATE_TARGETS" ||
+      Number(spatialPolygonReport.target_count) !== inputSummary.positive_candidate_target_count ||
+      Number(spatialPolygonReport.target_code_associations_tested) !== inputSummary.target_to_candidate_code_associations ||
+      Number(spatialPolygonReport.candidate_codes_tested) !== inputSummary.target_to_candidate_code_associations ||
+      Number(spatialPolygonReport.operational_parent_links_created) !== 0 ||
+      !Array.isArray(spatialPolygonReport.candidate_results)) {
+    throw new Error("The expanded spatial report failed selection mode, target/code coverage, or zero-parent-write validation.");
+  }
+  const parentByKey = new Map(parentReferences.map((reference) => [
+    parentReferenceKey(reference.parent_area_code, reference.parent_uri),
+    reference,
+  ]));
+  const spatialByTargetCode = new Map(spatialPolygonReport.candidate_results.map((row) => [
+    [String(row.geonames_id), String(row.candidate_code)].join("\\u0000"),
+    row,
+  ]));
+  const queue = [];
+
+  for (const target of targetCandidateReport.target_results.filter((row) => row.candidates?.length)) {
+    for (const candidate of target.candidates) {
+      const spatial = spatialByTargetCode.get([String(target.geonames_id), String(candidate.area_code)].join("\\u0000"));
+      if (!spatial) throw new Error(`Spatial report lacks target/code association ${target.geonames_id}/${candidate.area_code}.`);
+      const pointHitSnapshots = String(spatial.point_inside_candidate_polygon_snapshots ?? "")
+        .split(";").map((value) => value.trim()).filter(Boolean);
+      const periods = candidate.periods.filter((row) => row.matches_target_name === true);
+      for (const period of periods) {
+        const alignedSnapshots = pointHitSnapshots.filter((snapshot) =>
+          snapshotFallsWithinPeriod(snapshot, period.effective_from, period.effective_until));
+        const parentRows = Array.isArray(period.parent_references) && period.parent_references.length
+          ? period.parent_references
+          : [null];
+        for (const parent of parentRows) {
+          const parentRef = parent
+            ? parentByKey.get(parentReferenceKey(parent.area_code, parent.uri))
+            : null;
+          const candidateMatches = parentRef?.candidate_matches ?? [];
+          const spatialStatus = pointHitSnapshots.length === 0
+            ? "NO_POINT_INSIDE_CANDIDATE_POLYGON_IN_SELECTED_SNAPSHOTS"
+            : alignedSnapshots.length > 0
+              ? "SPATIAL_HIT_ALIGNS_WITH_EXACT_NAME_ESTAT_PERIOD"
+              : "SPATIAL_HIT_ONLY_OUTSIDE_THIS_ESTAT_PERIOD";
+          queue.push({
+            target_geonames_id: String(target.geonames_id),
+            target_geonames_name: target.geonames_name,
+            target_raw_admin1_code: String(target.raw_admin1_code ?? ""),
+            target_candidate_area_code: String(candidate.area_code),
+            target_candidate_period_uri: String(period.period_uri),
+            target_candidate_label_en: String(period.label_en ?? ""),
+            target_candidate_label_ja: String(period.label_ja ?? ""),
+            target_period_effective_from: String(period.effective_from ?? ""),
+            target_period_effective_until: String(period.effective_until ?? ""),
+            target_admin_class_uris: (period.administrative_class_uris ?? []).join(";"),
+            exact_target_name_match: "true",
+            target_spatial_hit_snapshots: pointHitSnapshots.join(";"),
+            period_aligned_spatial_hit_snapshots: alignedSnapshots.join(";"),
+            spatial_period_evidence_status: spatialStatus,
+            parent_area_code: parent ? String(parent.area_code ?? "") : "",
+            parent_period_uri: parent ? String(parent.uri ?? "") : "",
+            parent_label_en: parent ? String(parent.label_en ?? "") : "",
+            parent_label_ja: parent ? String(parent.label_ja ?? "") : "",
+            parent_candidate_source_kinds: (parentRef?.reference_source_kinds ?? []).join(";"),
+            candidate_parent_geonames_ids: (parentRef?.candidate_geonames_ids ?? []).join(";"),
+            candidate_parent_count: parentRef?.candidate_count ?? 0,
+            candidate_parent_feature_codes: [...new Set(candidateMatches.map((row) => row.feature_code))].sort().join(";"),
+            candidate_parent_match_fields: [...new Set(candidateMatches.flatMap((row) => row.exact_match_fields))].sort().join(";"),
+            parent_identity_candidate_status: parent
+              ? (parentRef?.candidate_status ?? "PARENT_REFERENCE_NOT_IN_EXPANDED_AUDIT_INDEX")
+              : "NO_OFFICIAL_PARENT_REFERENCE_FOR_TARGET_PERIOD",
+            operational_parent_link_created: "false",
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    inputSummary,
+    target_candidate_parent_queue_rows: queue,
+    queue_row_count: queue.length,
+    queue_rows_with_spatial_hit: queue.filter((row) => row.target_spatial_hit_snapshots).length,
+    queue_rows_with_period_aligned_spatial_hit: queue.filter((row) => row.period_aligned_spatial_hit_snapshots).length,
+    queue_rows_with_one_parent_candidate: queue.filter((row) => Number(row.candidate_parent_count) === 1).length,
+    queue_rows_with_multiple_parent_candidates: queue.filter((row) => Number(row.candidate_parent_count) > 1).length,
+    queue_rows_with_no_parent_candidate: queue.filter((row) => row.parent_period_uri && Number(row.candidate_parent_count) === 0).length,
+    queue_rows_without_official_parent_reference: queue.filter((row) => !row.parent_period_uri).length,
+    operational_parent_links_created: 0,
+  };
 }
 
 export function isEligibleGeoNamesParentFeature(record) {
