@@ -1,0 +1,10 @@
+file,record_id,country_code,reason_code,detail
+KE.zip,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+GB.zip,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+JP.zip,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+BR.zip,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+SG.zip,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+countryInfo.txt,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+admin1CodesASCII.txt,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+admin2Codes.txt,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"
+readme.txt,,,SOURCE_DNS_FAILURE,"Builder-stage source retrieval failed: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"

@@ -128,3 +128,977 @@ jobs:
         if: steps.detect.outputs.has_app == 'false'
         run: >-
           echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
+
+  geonames-current-admin-parent-path-audit:
+    name: Phase 0 CI / GeoNames parent-path audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Fetch and fingerprint official Japan/Kenya country and hierarchy archives
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP_DIR/geonames-source"
+          manifest="$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
+          printf '{"manifest_version":1,"remote_sources":[]}\n' > "$manifest"
+
+          for country in JP KE HIERARCHY; do
+            if [[ "$country" == "HIERARCHY" ]]; then
+              url="https://download.geonames.org/export/dump/hierarchy.zip"
+              archive="$RUNNER_TEMP_DIR/geonames-source/hierarchy.zip"
+            else
+              url="https://download.geonames.org/export/dump/${country}.zip"
+              archive="$RUNNER_TEMP_DIR/geonames-source/${country}.zip"
+            fi
+            headers="$RUNNER_TEMP_DIR/geonames-source/${country}.headers"
+            status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+              --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+            test "$status" = "200"
+            retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            unzip -tq "$archive"
+            test -s "$archive"
+
+            python - "$headers" "$archive" "$country" "$url" "$retrieved_at" "$status" "$manifest" <<'PY'
+          import hashlib
+          import json
+          import re
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, archive_path, country, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw_headers = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block = {}
+          current = {}
+          current_status = None
+          for line in raw_headers.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  parts = line.split()
+                  current_status = parts[1] if len(parts) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+
+          archive = Path(archive_path)
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          last_modified_raw = last_block.get("last-modified")
+          last_modified_utc = None
+          if last_modified_raw:
+              try:
+                  dt = parsedate_to_datetime(last_modified_raw)
+                  if dt.tzinfo is not None:
+                      last_modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  last_modified_utc = None
+
+          record = {
+              "country_code": country,
+              "archive_filename": archive.name,
+              "source_url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": last_modified_raw,
+              "http_last_modified_utc": last_modified_utc,
+              "etag": last_block.get("etag"),
+              "archive_sha256": digest,
+              "archive_size_bytes": archive.stat().st_size,
+              "zip_crc_validation": "PASS",
+          }
+          manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+          manifest["remote_sources"].append(record)
+          Path(manifest_path).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps({
+              "country_code": country,
+              "http_status": record["http_status"],
+              "archive_sha256": digest,
+              "archive_size_bytes": archive.stat().st_size,
+              "http_last_modified_utc": last_modified_utc,
+              "zip_crc_validation": "PASS",
+          }))
+          PY
+
+            extract_dir="$RUNNER_TEMP_DIR/geonames-source/${country}"
+            mkdir -p "$extract_dir"
+            unzip -oq "$archive" -d "$extract_dir"
+            if [[ "$country" == "HIERARCHY" ]]; then
+              test -s "$extract_dir/hierarchy.txt"
+            else
+              test -s "$extract_dir/${country}.txt"
+            fi
+          done
+
+          cat "$RUNNER_TEMP_DIR/geonames-source/JP/JP.txt" "$RUNNER_TEMP_DIR/geonames-source/KE/KE.txt" > "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt"
+          echo "Combined official-source subset SHA-256:"
+          sha256sum "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt"
+
+      - name: Run read-only exact-code hierarchy audit
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          node scripts/geonames-current-admin-parent-path-audit.mjs \
+            "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt" \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
+            "$RUNNER_TEMP_DIR/current-admin-parent-path-audit" \
+            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" \
+            "$RUNNER_TEMP_DIR/geonames-source/HIERARCHY/hierarchy.txt"
+          cat "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 128:
+              raise SystemExit(f"Expected 128 reviewed admin targets, got {report.get('target_count')}")
+          if report.get("source", {}).get("remote_retrieval_metadata_verified") is not True:
+              raise SystemExit("Official archive retrieval metadata did not validate.")
+          if report.get("source", {}).get("sha256") is None:
+              raise SystemExit("Combined source text SHA-256 is missing.")
+          if report.get("source", {}).get("hierarchy_text_sha256") is None:
+              raise SystemExit("Official hierarchy.txt SHA-256 is missing.")
+          if not report.get("source", {}).get("hierarchy_text_line_count"):
+              raise SystemExit("Official hierarchy.txt line count is missing.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: operational parent links must remain zero.")
+          print("Source-pinned audit preconditions verified; paths are candidates only, not approved parent links.")
+          PY
+
+      - name: Upload row-level audit and retrieval manifest (no source archives)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-parent-path-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/current-admin-parent-path-audit.csv
+            ${{ runner.temp }}/current-admin-parent-path-audit.json
+            ${{ runner.temp }}/geonames-source/remote-source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
+  geonames-japan-estat-evidence-audit:
+    name: Phase 0 CI / Japan e-Stat administrative evidence audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint official GeoNames Japan archive
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/JP.zip"
+          archive="$work/JP.zip"
+          headers="$work/JP.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$archive"
+          unzip -tq "$archive"
+          python - "$headers" "$archive" "$url" "$retrieved_at" "$status" "$work/geonames-source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, archive_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block, current, current_status = {}, {}, None
+          for line in raw.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  parts = line.split()
+                  current_status = parts[1] if len(parts) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+          archive = Path(archive_path)
+          modified = last_block.get("last-modified")
+          modified_utc = None
+          if modified:
+              try:
+                  dt = parsedate_to_datetime(modified)
+                  if dt.tzinfo is not None:
+                      modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+          record = {
+              "source_owner": "GeoNames",
+              "country_code": "JP",
+              "archive_filename": archive.name,
+              "source_url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": modified,
+              "http_last_modified_utc": modified_utc,
+              "etag": last_block.get("etag"),
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+              "archive_size_bytes": archive.stat().st_size,
+              "zip_crc_validation": "PASS",
+              "source_authority_note": "Pinned bytes fetched during this CI run; no immutable upstream release ID is claimed."
+          }
+          Path(manifest_path).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(record))
+          PY
+          mkdir -p "$work/extracted"
+          unzip -oq "$archive" -d "$work/extracted"
+          test -s "$work/extracted/JP.txt"
+
+      - name: Query official Japan Statistical LOD and audit exact-label candidates
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          node scripts/geonames-japan-estat-evidence-audit.mjs \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
+            "$work/extracted/JP.txt" \
+            "$work/japan-estat-evidence-audit" \
+            "$work/geonames-source-manifest.json"
+          python - "$work/japan-estat-evidence-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 126:
+              raise SystemExit(f"Expected 126 Japan targets, got {report.get('target_count')}")
+          if report.get("target_source_identity_and_raw_code_matches") != 126:
+              raise SystemExit("All 126 targets must match the current GeoNames source exactly.")
+          if report.get("input", {}).get("geonames_country_malformed_or_wrong_shape_lines") != 0:
+              raise SystemExit("Official JP.txt contains malformed/wrong-shape rows.")
+          if report.get("source", {}).get("geoNames", {}).get("http_status") != 200:
+              raise SystemExit("GeoNames JP source retrieval was not verified.")
+          estat = report.get("source", {}).get("eStat", {})
+          if estat.get("http_status") != 200 or not estat.get("response_sha256"):
+              raise SystemExit("Official e-Stat machine-readable response was not pinned.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: parent links must remain zero.")
+          if len(report.get("target_results", [])) != 126:
+              raise SystemExit("Row-level evidence must include all 126 Japan targets.")
+          print("Japan candidate audit complete: every target is source-verified; e-Stat matches are candidates only; no parent links were written.")
+          PY
+          python - "$work/japan-estat-evidence-audit.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print("## Japan e-Stat administrative evidence audit")
+          print(f"- Target source identity/raw-code matches: {r['target_source_identity_and_raw_code_matches']}/{r['target_count']}")
+          print(f"- Distinct area-code candidates from exact labels: {r['total_exact_name_matched_area_code_candidates']}")
+          print(f"- Exact-label-matched historical periods across target rows: {r['total_exact_name_matched_period_rows']}")
+          print(f"- Targets with one distinct area-code candidate: {r['targets_with_one_exact_area_code_candidate']}")
+          print(f"- Targets with multiple distinct area-code candidates: {r['targets_with_multiple_exact_area_code_candidates']}")
+          print(f"- Targets with no exact label candidate: {r['targets_without_exact_label_candidates']}")
+          print("- Complete historical period and parent-reference evidence is retained per candidate area code.")
+          print("- Operational parent links created: 0")
+          print("- Every match requires separate GeoNames entity identity and administrative-chain review.")
+          PY
+
+      - name: Retrieve and fingerprint official MLIT historical/current administrative-code tables
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          mkdir -p "$work/mlit"
+          retrieve() {
+            local name="$1"
+            local url="$2"
+            local output="$work/mlit/$name.html"
+            local headers="$work/mlit/$name.headers"
+            local status
+            status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+              --dump-header "$headers" --output "$output" --write-out '%{http_code}' "$url")"
+            test "$status" = "200"
+            test -s "$output"
+            printf '%s %s\n' "$name" "$status"
+          }
+          retrieve "mlit-adminarea-current" "https://nlftp.mlit.go.jp/ksj/jpgis/codelist/AdminAreaCd.html"
+          retrieve "mlit-adminarea-1990-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_901001.html"
+          retrieve "mlit-adminarea-1975-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_751001.html"
+          retrieve "mlit-adminarea-1970-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_701001.html"
+          retrieve "mlit-adminarea-1965-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_651001.html"
+          python - "$work/mlit" "$work/japan-estat-evidence-audit.json" "$work/mlit-code-evidence.json" "$work/mlit-code-evidence.csv" <<'PY'
+          import csv
+          import hashlib
+          import html
+          import json
+          import re
+          import sys
+          from datetime import datetime, timezone
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from email.utils import parsedate_to_datetime
+
+          root = Path(sys.argv[1])
+          audit_path = Path(sys.argv[2])
+          json_out = Path(sys.argv[3])
+          csv_out = Path(sys.argv[4])
+          audit = json.loads(audit_path.read_text(encoding="utf-8"))
+          retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+          sources = [
+              {
+                  "key": "mlit-adminarea-current",
+                  "title": "MLIT National Land Numerical Information — AdminAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/jpgis/codelist/AdminAreaCd.html",
+                  "as_of_date": "Not stated in filename; treat as the publisher's current page snapshot only",
+                  "html_path": root / "mlit-adminarea-current.html",
+                  "headers_path": root / "mlit-adminarea-current.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1990-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_901001.html",
+                  "as_of_date": "1990-10-01",
+                  "html_path": root / "mlit-adminarea-1990-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1990-10-01.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1975-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_751001.html",
+                  "as_of_date": "1975-10-01",
+                  "html_path": root / "mlit-adminarea-1975-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1975-10-01.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1970-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_701001.html",
+                  "as_of_date": "1970-10-01",
+                  "html_path": root / "mlit-adminarea-1970-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1970-10-01.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1965-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_651001.html",
+                  "as_of_date": "1965-10-01",
+                  "html_path": root / "mlit-adminarea-1965-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1965-10-01.headers",
+              },
+          ]
+
+          class CodeTableParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.in_row = False
+                  self.in_cell = False
+                  self.cell_parts = []
+                  self.cells = []
+                  self.records = {}
+
+              def handle_starttag(self, tag, attrs):
+                  tag = tag.lower()
+                  if tag == "tr":
+                      self.in_row = True
+                      self.cells = []
+                  elif tag in ("td", "th") and self.in_row:
+                      self.in_cell = True
+                      self.cell_parts = []
+
+              def handle_data(self, data):
+                  if self.in_cell:
+                      self.cell_parts.append(data)
+
+              def handle_endtag(self, tag):
+                  tag = tag.lower()
+                  if tag in ("td", "th") and self.in_cell:
+                      value = re.sub(r"\s+", " ", html.unescape("".join(self.cell_parts))).strip()
+                      self.cells.append(value)
+                      self.cell_parts = []
+                      self.in_cell = False
+                  elif tag == "tr" and self.in_row:
+                      if len(self.cells) >= 2 and re.fullmatch(r"\d{5}", self.cells[0]):
+                          self.records[self.cells[0]] = self.cells[1]
+                      self.in_row = False
+                      self.cells = []
+
+          source_rows = []
+          source_manifest = []
+          records_by_code = {}
+          for source in sources:
+              raw = source["html_path"].read_bytes()
+              header_text = source["headers_path"].read_text(encoding="iso-8859-1", errors="replace")
+              header_blocks = re.split(r"(?m)^HTTP/[^\r\n]+\r?\n", header_text)
+              headers = {}
+              for block in header_blocks:
+                  for line in block.splitlines():
+                      if ":" in line:
+                          key, value = line.split(":", 1)
+                          headers[key.strip().lower()] = value.strip()
+              parser = CodeTableParser()
+              parser.feed(raw.decode("utf-8", errors="replace"))
+              if not parser.records:
+                  raise SystemExit(f"Failed to parse any 5-digit codes from {source['key']}; fail closed.")
+              source_info = {
+                  "key": source["key"],
+                  "title": source["title"],
+                  "source_url": source["url"],
+                  "stated_as_of_date": source["as_of_date"],
+                  "retrieved_at_utc": retrieved_at,
+                  "http_status": 200,
+                  "http_last_modified_header": headers.get("last-modified"),
+                  "etag": headers.get("etag"),
+                  "content_length_header": headers.get("content-length"),
+                  "response_bytes": len(raw),
+                  "response_sha256": hashlib.sha256(raw).hexdigest(),
+                  "parsed_five_digit_code_rows": len(parser.records),
+              }
+              source_manifest.append(source_info)
+              for code, label in parser.records.items():
+                  record = {
+                      "area_code": code,
+                      "official_area_description_ja": label,
+                      "source_key": source["key"],
+                      "source_url": source["url"],
+                      "source_as_of_date": source["as_of_date"],
+                      "source_response_sha256": source_info["response_sha256"],
+                  }
+                  records_by_code.setdefault(code, []).append(record)
+                  source_rows.append(record)
+
+          expected = {
+              "45381": ["宮崎県", "高岡町"],
+              "06382": ["山形県", "川西町"],
+              "15481": ["新潟県", "川西町"],
+              "06427": ["山形県", "朝日村"],
+              "08401": ["茨城県", "旭村"],
+              "15584": ["新潟県", "朝日村"],
+              "20451": ["長野県", "朝日村"],
+              "21607": ["岐阜県", "朝日村"],
+          }
+          for code, fragments in expected.items():
+              labels = [item["official_area_description_ja"] for item in records_by_code.get(code, [])]
+              if not labels or not any(all(fragment in label for fragment in fragments) for label in labels):
+                  raise SystemExit(
+                      f"Official MLIT code evidence for {code} did not contain expected description fragments {fragments}; found {labels!r}. "
+                      "Do not treat e-Stat name candidates as identity matches."
+                  )
+
+          candidate_targets = {}
+          for target in audit.get("target_results", []):
+              for candidate in target.get("candidates", []):
+                  record = {
+                      "geonames_id": target["geonames_id"],
+                      "geonames_name": target["geonames_name"],
+                      "geonames_latitude": target.get("source_latitude", ""),
+                      "geonames_longitude": target.get("source_longitude", ""),
+                      "raw_admin1_code": target.get("raw_admin1_code", ""),
+                      "raw_admin2_code": target.get("raw_admin2_code", ""),
+                  }
+                  candidate_targets.setdefault(candidate["area_code"], []).append(record)
+
+          candidate_codes = sorted(candidate_targets)
+          all_source_codes = {
+              "candidate_area_codes": candidate_codes,
+              "candidate_area_codes_found_in_mlit_lists": [code for code in candidate_codes if code in records_by_code],
+              "candidate_area_codes_not_found_in_mlit_lists": [code for code in candidate_codes if code not in records_by_code],
+              "parent_area_codes": sorted({
+                  parent_code
+                  for target in audit.get("target_results", [])
+                  for candidate in target.get("candidates", [])
+                  for parent_code in candidate.get("parent_area_codes_across_history", [])
+                  if parent_code
+              }),
+          }
+          code_review = []
+          for code in candidate_codes:
+              code_review.append({
+                  "candidate_area_code": code,
+                  "target_records": candidate_targets[code],
+                  "official_mlit_descriptions": records_by_code.get(code, []),
+                  "operational_parent_link_created": False,
+                  "review_rule": "MLIT code descriptions establish what the cited historical/current code list calls the area; code/name matches do not alone establish a GeoNames entity crosswalk or a parent path.",
+              })
+
+          result = {
+              "report_version": 1,
+              "status": "PASS_OFFICIAL_MLIT_CODE_SNAPSHOTS_PARSED; KEY_CODE_DESCRIPTIONS_VERIFIED; NO_PARENT_LINKS_APPROVED",
+              "generated_at_utc": retrieved_at,
+              "mlit_sources": source_manifest,
+              "mlit_all_snapshot_sha256": hashlib.sha256(
+                  "\\n".join(f"{item['key']}:{item['response_sha256']}" for item in source_manifest).encode("utf-8")
+              ).hexdigest(),
+              "candidate_counts": all_source_codes,
+              "candidate_code_review": code_review,
+              "operational_parent_links_created": 0,
+              "limitations": [
+                  "The administrative-code tables provide official code descriptions, not GeoNames ID crosswalks or polygon containment proof.",
+                  "Historical codes can correspond to municipalities that later merged or were renamed.",
+                  "Any apparent coordinate/code mismatch is a review flag; do not promote or reject a parent path without the project's accepted source-evidence process.",
+                  "No database, migration, seed, import, production, deployment, or PR merge occurs.",
+              ],
+          }
+          json_out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          with csv_out.open("w", newline="", encoding="utf-8") as handle:
+              fields = [
+                  "candidate_area_code", "geonames_id", "geonames_name", "geonames_latitude", "geonames_longitude",
+                  "raw_admin1_code", "raw_admin2_code", "mlit_source_key", "mlit_source_as_of_date",
+                  "mlit_official_area_description_ja", "mlit_source_url", "mlit_source_response_sha256",
+                  "operational_parent_link_created"
+              ]
+              writer = csv.DictWriter(handle, fieldnames=fields)
+              writer.writeheader()
+              for code in candidate_codes:
+                  target_records = candidate_targets[code]
+                  mlit_records = records_by_code.get(code, [])
+                  if not mlit_records:
+                      mlit_records = [{
+                          "source_key": "NO_MATCH_IN_CAPTURED_MLIT_LISTS",
+                          "source_as_of_date": "",
+                          "official_area_description_ja": "",
+                          "source_url": "",
+                          "source_response_sha256": "",
+                      }]
+                  for target_record in target_records:
+                      for mlit_record in mlit_records:
+                          writer.writerow({
+                              "candidate_area_code": code,
+                              **target_record,
+                              "mlit_source_key": mlit_record["source_key"],
+                              "mlit_source_as_of_date": mlit_record["source_as_of_date"],
+                              "mlit_official_area_description_ja": mlit_record["official_area_description_ja"],
+                              "mlit_source_url": mlit_record["source_url"],
+                              "mlit_source_response_sha256": mlit_record["source_response_sha256"],
+                              "operational_parent_link_created": "false",
+                          })
+          print(json.dumps({
+              "status": result["status"],
+              "candidate_area_codes": len(candidate_codes),
+              "candidate_area_codes_found_in_mlit_lists": len(all_source_codes["candidate_area_codes_found_in_mlit_lists"]),
+              "candidate_area_codes_not_found_in_mlit_lists": all_source_codes["candidate_area_codes_not_found_in_mlit_lists"],
+              "official_source_snapshots": source_manifest,
+              "operational_parent_links_created": 0,
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Validate captured MLIT evidence JSON and CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          python -m json.tool "$work/mlit-code-evidence.json" >/dev/null
+          python -m json.tool "$work/japan-estat-evidence-audit.json" >/dev/null
+          python - "$work/mlit-code-evidence.json" "$work/mlit-code-evidence.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          json_path, csv_path = map(Path, sys.argv[1:])
+          data = json.loads(json_path.read_text(encoding="utf-8"))
+          with csv_path.open(encoding="utf-8", newline="") as stream:
+              rows = list(csv.DictReader(stream))
+          if data.get("status") != "PASS_OFFICIAL_MLIT_CODE_SNAPSHOTS_PARSED; KEY_CODE_DESCRIPTIONS_VERIFIED; NO_PARENT_LINKS_APPROVED":
+              raise SystemExit("MLIT evidence report does not have the approved candidate-only status.")
+          if len(data.get("candidate_counts", {}).get("candidate_area_codes", [])) != 35:
+              raise SystemExit("Expected all 35 distinct e-Stat area-code candidates in MLIT evidence.")
+          if not rows:
+              raise SystemExit("MLIT code-evidence CSV is empty.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in rows):
+              raise SystemExit("MLIT evidence CSV violates the no-parent-write boundary.")
+          if len(data.get("mlit_sources", [])) != 5:
+              raise SystemExit("Expected five captured MLIT source manifests.")
+          if any(len(source.get("response_sha256", "")) != 64 for source in data["mlit_sources"]):
+              raise SystemExit("An MLIT source lacks a SHA-256 response fingerprint.")
+          print(f"Validated MLIT evidence JSON and CSV: {len(data['candidate_counts']['candidate_area_codes'])} area-code candidates; {len(rows)} row-level code/source records; zero parent links.")
+          PY
+
+      - name: Audit Japan collision targets against official historical boundary polygons
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          python -m pip install --disable-pip-version-check pyshp
+          python -m py_compile scripts/geonames-japan-mlit-polygon-evidence-audit.py
+          python tests/test_geonames_japan_mlit_polygon_evidence_audit.py
+          python scripts/geonames-japan-mlit-polygon-evidence-audit.py \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-polygon-audit"
+          python -m json.tool "$work/japan-mlit-polygon-audit.json" >/dev/null
+          python -m json.tool "$work/japan-mlit-polygon-audit.manifest.json" >/dev/null
+          python - "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, observations_path, candidate_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          with observations_path.open(encoding="utf-8", newline="") as stream:
+              observations = list(csv.DictReader(stream))
+          with candidate_path.open(encoding="utf-8", newline="") as stream:
+              candidates = list(csv.DictReader(stream))
+          if report.get("target_count") != 6 or len(report.get("target_observations", [])) != 6:
+              raise SystemExit("Expected all six Japan identity-collision targets in point-in-polygon evidence.")
+          if report.get("source_snapshot_archive_count") != 65 or len(report.get("source_snapshots", [])) != 65:
+              raise SystemExit("Expected 65 verified historical prefecture boundary archives.")
+          if len(candidates) != 19:
+              raise SystemExit(f"Expected 19 target-to-candidate-code rows, got {len(candidates)}.")
+          if not observations:
+              raise SystemExit("Point-in-polygon CSV is empty.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in observations):
+              raise SystemExit("Point-in-polygon observations violate the no-parent-write boundary.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in candidates):
+              raise SystemExit("Point-in-polygon candidate dispositions violate the no-parent-write boundary.")
+          if any(len(item.get("archive_sha256", "")) != 64 for item in report["source_snapshots"]):
+              raise SystemExit("At least one historical polygon archive lacks a SHA-256 fingerprint.")
+          for target in report["target_observations"]:
+              if not target.get("polygon_observations"):
+                  raise SystemExit(f"No polygon context recorded for GeoNames ID {target['geonames_id']}; fail closed.")
+          print(f"Validated official polygon audit: {report['target_count']} targets; {report['source_snapshot_archive_count']} source archives; {len(observations)} containing-polygon rows; {len(candidates)} candidate rows; zero parent links.")
+          print("## Japan point-in-polygon collision evidence")
+          print(f"- Collision targets with official boundary context: {report['target_count']}/6")
+          print(f"- Historical MLIT boundary archives retrieved and CRC-checked: {report['source_snapshot_archive_count']}")
+          print(f"- Candidate area-code records inspected: {len(candidates)}")
+          print(f"- Candidate codes containing at least one target point: {sum(bool(row['point_inside_candidate_polygon_snapshots']) for row in candidates)}")
+          print("- Point containment is candidate evidence only; no GeoNames crosswalk or parent link approved.")
+          PY
+
+      - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-japan-estat-evidence-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
+            ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/mlit-code-evidence.json
+            ${{ runner.temp }}/geonames-japan-estat/mlit-code-evidence.csv
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-current.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1990-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1975-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1970-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
+            ${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  geonames-crosswalk-exception-source-audit:
+    name: Phase 0 CI / Global source audit of crosswalk exceptions
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint official global GeoNames archive
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/allCountries.zip"
+          archive="$work/allCountries.zip"
+          headers="$work/allCountries.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$archive"
+          unzip -tq "$archive"
+
+          python - "$headers" "$archive" "$url" "$retrieved_at" "$status" "$work/source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, archive_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw_headers = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block = {}
+          current = {}
+          current_status = None
+          for line in raw_headers.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  pieces = line.split()
+                  current_status = pieces[1] if len(pieces) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+
+          archive = Path(archive_path)
+          last_modified_raw = last_block.get("last-modified")
+          last_modified_utc = None
+          if last_modified_raw:
+              try:
+                  dt = parsedate_to_datetime(last_modified_raw)
+                  if dt.tzinfo is not None:
+                      last_modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+
+          record = {
+              "country_code": "WORLD",
+              "archive_filename": archive.name,
+              "source_url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": last_modified_raw,
+              "http_last_modified_utc": last_modified_utc,
+              "etag": last_block.get("etag"),
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+              "archive_size_bytes": archive.stat().st_size,
+              "zip_crc_validation": "PASS",
+          }
+          Path(manifest_path).write_text(
+              json.dumps({"manifest_version": 1, "remote_sources": [record]}, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps({key: record[key] for key in [
+              "source_url", "retrieved_at_utc", "http_status",
+              "http_last_modified_utc", "etag", "archive_sha256",
+              "archive_size_bytes", "zip_crc_validation"
+          ]}))
+          PY
+
+          mkdir -p "$work/extracted"
+          unzip -oq "$archive" -d "$work/extracted"
+          test -s "$work/extracted/allCountries.txt"
+
+      - name: Compare all unique crosswalk exception IDs against the official global source
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          node scripts/geonames-crosswalk-exception-source-audit.mjs \
+            "$work/extracted/allCountries.txt" \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
+            "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit" \
+            "$work/source-manifest.json"
+          cat "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("unique_exception_ids") != 2416:
+              raise SystemExit("Expected 2,416 unique exception IDs, got " + str(report.get("unique_exception_ids")))
+          if report.get("input", {}).get("remote_retrieval_metadata_verified") is not True:
+              raise SystemExit("Official global-source retrieval metadata did not validate.")
+          if report.get("input", {}).get("malformed_or_wrong_shape_source_lines") != 0:
+              raise SystemExit("Global GeoNames source contained malformed/wrong-shape rows.")
+          if report.get("parent_ids_or_links_assigned") != 0:
+              raise SystemExit("Safety boundary violation: parent IDs or links must remain zero.")
+          coverage = report.get("input", {}).get("source_country_code_coverage", {})
+          source_rows = coverage.get("rows_with_19_fields_and_nonempty_id")
+          if coverage.get("aggregate_totals_match_source_row_count") is not True:
+              raise SystemExit("Country-code/feature-class aggregate totals do not reconcile.")
+          if coverage.get("country_code_bucket_record_total") != source_rows:
+              raise SystemExit("Country-code bucket count total does not match source row count.")
+          if coverage.get("feature_class_record_total") != source_rows:
+              raise SystemExit("Feature-class count total does not match source row count.")
+          if sum(coverage.get("country_code_record_counts", {}).values()) != source_rows:
+              raise SystemExit("Persisted raw country-code bucket frequencies do not reconcile.")
+          if sum(coverage.get("feature_class_record_counts", {}).values()) != source_rows:
+              raise SystemExit("Feature-class frequencies do not reconcile.")
+          accounted = report.get("source_identity_and_raw_codes_match", 0) + report.get("blocked_or_drifted_ids", 0)
+          if accounted != report.get("unique_exception_ids"):
+              raise SystemExit("Every unique exception ID must have a source audit disposition.")
+          print("Global source audit complete; all exceptions have a row-level disposition and no parent links were written.")
+          PY
+
+      - name: Upload row-level global source audit and retrieval manifest (no source archive)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-global-exception-source-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.csv
+            ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.json
+            ${{ runner.temp }}/geonames-world-source/source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
+  geonames-kenya-legacy-admin1-crosswalk-audit:
+    name: Phase 0 CI / Kenya legacy admin1 crosswalk audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint current official GeoNames admin1 crosswalk
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-kenya-admin1"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/admin1CodesASCII.txt"
+          source="$work/admin1CodesASCII.txt"
+          headers="$work/admin1CodesASCII.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$source" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$source"
+
+          python - "$headers" "$source" "$url" "$retrieved_at" "$status" "$work/source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, source_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw_headers = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block = {}
+          current = {}
+          current_status = None
+          for line in raw_headers.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  pieces = line.split()
+                  current_status = pieces[1] if len(pieces) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+
+          path = Path(source_path)
+          last_modified_raw = last_block.get("last-modified")
+          last_modified_utc = None
+          if last_modified_raw:
+              try:
+                  dt = parsedate_to_datetime(last_modified_raw)
+                  if dt.tzinfo is not None:
+                      last_modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+          record = {
+              "filename": path.name,
+              "url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": last_modified_raw,
+              "http_last_modified_utc": last_modified_utc,
+              "etag": last_block.get("etag"),
+              "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              "size_bytes": path.stat().st_size,
+          }
+          Path(manifest_path).write_text(
+              json.dumps({"manifest_version": 1, "remote_source": record}, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(record))
+          PY
+
+      - name: Audit exact KE.01 and KE.03 crosswalk keys without inferring replacements
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-kenya-admin1"
+          node scripts/geonames-kenya-legacy-admin1-crosswalk-audit.mjs \
+            "$work/admin1CodesASCII.txt" \
+            "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit" \
+            "$work/source-manifest.json"
+          cat "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 2:
+              raise SystemExit("Expected the two known Kenya legacy-code targets.")
+          if report.get("source", {}).get("retrieval_metadata_verified") is not True:
+              raise SystemExit("Official admin1 crosswalk retrieval metadata did not validate.")
+          if report.get("malformed_rows") != 0:
+              raise SystemExit("Official admin1 crosswalk contained malformed rows.")
+          if report.get("candidate_parent_ids_assigned") != 0 or report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: no parent IDs or links may be assigned here.")
+          if len(report.get("targets", [])) != 2:
+              raise SystemExit("Both legacy-code targets need explicit row-level disposition.")
+          print("Kenya legacy-key audit complete; replacement parentage remains unresolved unless separately evidenced and approved.")
+          PY
+
+      - name: Upload Kenya legacy-code audit and retrieval manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-kenya-legacy-admin1-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.csv
+            ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.json
+            ${{ runner.temp }}/geonames-kenya-admin1/source-manifest.json
+          if-no-files-found: error
+          retention-days: 7

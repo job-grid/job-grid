@@ -1,0 +1,836 @@
+{
+  "report_version": "2.0",
+  "generated_on_utc_date": "2026-10-10",
+  "pr": 27,
+  "status": {
+    "local_crosswalk_candidate_presence": "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED",
+    "admin1_crosswalk_reconciliation": "PARTIAL_2333_UNRESOLVED_REFERENCES",
+    "admin2_crosswalk_reconciliation": "PARTIAL_240_UNRESOLVED_CONTEXT_OR_KEY_REFERENCES",
+    "approved_parent_hierarchy": "NOT_APPROVED_OR_ASSIGNED",
+    "current_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED",
+    "phase_4c_recovery_readiness": "BLOCKED",
+    "conservative_feature_selectability_policy": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS_2026_10_11",
+    "owner_approved_exception_dispositions": "PASS_DISPOSITION_ONLY_NO_PARENT_LINKS_APPROVED",
+    "current_admin_parent_path_review": "PARTIAL_128_CURRENT_ADMIN_FEATURES_REQUIRE_SOURCE_VERIFICATION"
+  },
+  "scope": {
+    "implementation": "Committed reproducible read-only Python audit, executed locally on owner-connected Windows computer; ADM1/ADM2 crosswalk identity matches are separated from true self-reference candidates.",
+    "source_sample": "sample-output-20261010-163234/geonames_places_sample.tsv",
+    "crosswalk_sources": [
+      "admin1CodesASCII.txt",
+      "admin2Codes.txt"
+    ],
+    "database_operations": false,
+    "parent_links_written": false,
+    "source_files_modified": false,
+    "method": "For each non-empty raw admin code, determine whether its composite key exists in the full crosswalk. For found keys, check candidate ID presence as a same-country administrative feature. When an active ADM1 or ADM2 row resolves its own level-specific code back to its own GeoNames ID, classify that as an identity match, not a parent relationship. No parent IDs are assigned."
+  },
+  "input_integrity": {
+    "sample_rows": 25685,
+    "unique_sample_ids": 25685,
+    "duplicate_sample_ids": 0,
+    "admin1_unique_keys": 3865,
+    "admin1_malformed_rows": 0,
+    "admin1_duplicate_keys": 0,
+    "admin2_unique_keys": 47642,
+    "admin2_malformed_rows": 0,
+    "admin2_duplicate_keys": 0,
+    "administrative_feature_rows_in_sample": 24693
+  },
+  "admin1": {
+    "nonblank_code_references": 25653,
+    "code_references_with_exact_crosswalk_key": 23320,
+    "code_references_without_exact_key": 2333,
+    "raw_00_placeholder_candidates": 2284,
+    "unmatched_nonzero_code_references": 49,
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 23195,
+    "candidate_self_references": 0,
+    "candidate_presence_mismatches_other_than_self_reference": 0,
+    "candidate_identity_matches": 125,
+    "candidate_presence_issues": 0
+  },
+  "admin2": {
+    "nonblank_code_references": 20685,
+    "references_with_exact_composite_crosswalk_key": 20445,
+    "references_missing_composite_crosswalk_key": 239,
+    "references_uncheckable_due_to_blank_admin1_context": 1,
+    "total_unresolved_admin2_rows_in_export": 240,
+    "resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature": 13468,
+    "candidate_self_references": 0,
+    "candidate_presence_mismatches_other_than_self_reference": 0,
+    "candidate_identity_matches": 6977,
+    "candidate_presence_issues": 0
+  },
+  "per_country": {
+    "KE": {
+      "sample_rows": 2631,
+      "administrative_features": 2424,
+      "admin1_key_found_references": 2605,
+      "admin1_key_missing_references": 26,
+      "admin1_raw_00_candidates": 1,
+      "admin1_unmatched_nonzero_references": 25,
+      "admin2_key_found_references": 32,
+      "admin2_key_missing_references": 5,
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 2558,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0,
+      "admin1_candidate_identity_matches": 47,
+      "admin2_candidate_identity_matches": 32
+    },
+    "GB": {
+      "sample_rows": 12096,
+      "administrative_features": 11895,
+      "admin1_key_found_references": 12092,
+      "admin1_key_missing_references": 3,
+      "admin1_raw_00_candidates": 3,
+      "admin2_key_found_references": 12004,
+      "admin2_key_missing_references": 29,
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 12088,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 11819,
+      "admin1_candidate_identity_matches": 4,
+      "admin2_candidate_identity_matches": 185
+    },
+    "JP": {
+      "sample_rows": 4899,
+      "administrative_features": 4697,
+      "admin1_key_found_references": 2736,
+      "admin1_key_missing_references": 2161,
+      "admin1_raw_00_candidates": 2161,
+      "admin2_key_found_references": 2554,
+      "admin2_key_missing_references": 205,
+      "admin2_blank_admin1_context": 1,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 2689,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 1364,
+      "admin1_candidate_identity_matches": 47,
+      "admin2_candidate_identity_matches": 1190
+    },
+    "BR": {
+      "sample_rows": 5888,
+      "administrative_features": 5676,
+      "admin1_key_found_references": 5887,
+      "admin1_key_missing_references": 1,
+      "admin1_raw_00_candidates": 1,
+      "admin2_key_found_references": 5855,
+      "admin2_key_missing_references": 0,
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 5860,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 285,
+      "admin1_candidate_identity_matches": 27,
+      "admin2_candidate_identity_matches": 5570
+    },
+    "SG": {
+      "sample_rows": 171,
+      "administrative_features": 1,
+      "admin1_key_found_references": 0,
+      "admin1_key_missing_references": 142,
+      "admin1_raw_00_candidates": 118,
+      "admin1_unmatched_nonzero_references": 24,
+      "admin2_key_found_references": 0,
+      "admin2_key_missing_references": 0,
+      "admin2_blank_admin1_context": 0,
+      "admin1_candidate_self_references": 0,
+      "admin1_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0,
+      "admin2_candidate_self_references": 0,
+      "admin2_candidate_ids_distinct_from_child_present_as_same_country_admin_feature": 0,
+      "admin1_candidate_identity_matches": 0,
+      "admin2_candidate_identity_matches": 0
+    }
+  },
+  "review_case": {
+    "reason": "One admin2 exported row has an empty raw admin1 code and a non-empty raw admin2 code. No complete composite key can be formed, so the row is classified as unresolved missing admin1 context, not as a confirmed missing admin2 key.",
+    "export_updated": true,
+    "classification": "UNRESOLVED_MISSING_ADMIN1_CONTEXT",
+    "crosswalk_lookup_key": null,
+    "raw_values_preserved": true
+  },
+  "outcome": {
+    "crosswalk_identity_match_cases": 7102,
+    "breakdown": {
+      "admin1_identity_matches": 125,
+      "admin2_identity_matches": 6977
+    },
+    "true_self_reference_cases": 0,
+    "other_candidate_presence_mismatches": 0,
+    "distinct_candidate_ids_present_as_same_country_administrative_features": {
+      "admin1": 23195,
+      "admin2": 13468
+    },
+    "candidate_id_checks": "The 125 ADM1 and 6,977 ADM2 matches correspond to active administrative feature records whose own level-specific crosswalk code resolves back to that record's GeoNames ID. These are identity matches, not proposed parent links. Other distinct same-country administrative candidate IDs show availability only and do not approve semantic parentage.",
+    "caveat": "Identity matches must not be converted to parent links. Distinct candidate IDs remain evidence of availability only. No parent links were created.",
+    "outstanding": [
+      "2,333 admin1 references remain without an exact crosswalk key (2,284 raw 00 candidates and 49 unmatched nonzero references).",
+      "240 admin2 references remain unresolved: 239 absent composite keys and one missing admin1 context.",
+      "Review/disposition of individual placeholder/nonstandard references under the owner-approved conservative default",
+      "ISO snapshot acquisition and comparison under permitted terms",
+      "Source-origin and remote retrieval metadata",
+      "Worldwide geographic completeness",
+      "Implement and regression-test the approved current-selector defaults when catalog functionality is introduced; 128 current ADM3/ADM4 records require country-specific ancestor-path evidence before selector inclusion.",
+      "Full approved parent-hierarchy rules",
+      "The five country-level PCLI entities are disposed as no-parent-required; the remaining 128 current ADM3/ADM4 administrative records are the current administrative-selector parent-path review set."
+    ],
+    "catalog_acceptance": "BLOCKED"
+  },
+  "governance": {
+    "pr_merged": false,
+    "migrations": false,
+    "seeds": false,
+    "database_imports": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "secrets_changes": false,
+    "deployment": false,
+    "backup_recovery_changes": false,
+    "phase_4c_recovery_readiness": "BLOCKED",
+    "parent_links_written": false,
+    "source_files_modified": false,
+    "database_operations": false,
+    "owner_approved_conservative_defaults": true,
+    "owner_approved_conservative_defaults_date": "2026-10-11",
+    "owner_approved_disposition_audit": true,
+    "owner_approved_disposition_audit_date": "2026-10-11",
+    "owner_approved_disposition_source_exports_unchanged": true
+  },
+  "audit_script": {
+    "path": "scripts/geonames-hierarchy-candidate-presence-audit.py",
+    "sha256": "04762896cae8fd9e861d4b52d209eb0fb238ae3ffcbba4ac5a1c657ba22a9909",
+    "hash_method": "SHA-256 calculated by the audit script for the exact repository script fetched and executed byte-for-byte",
+    "executed_copy_sha256": "04762896cae8fd9e861d4b52d209eb0fb238ae3ffcbba4ac5a1c657ba22a9909",
+    "executed_copy_filename": "hierarchy_audit_key_consistency_v3.py",
+    "repository_branch": "docs/country-catalog-foundation",
+    "repository_commit_at_fetch": "c613242e5238de244437fb1b7f312109bc6af335",
+    "repository_blob_sha1": "1ca2aafb61acc231d8b0d17b547933b6c11e2fec",
+    "generated_summary_at_utc": "2026-10-10T22:21:39.784548+00:00",
+    "report_generation_scope": "Exact current repository script fetched from PR branch, copied byte-for-byte to owner-connected Windows computer, and run against owner-local sample and full crosswalk files.",
+    "current_repository_script_reexecuted_against_source_data_after_hardening": true,
+    "current_repository_script_is_covered_by_synthetic_tests": true
+  },
+  "latest_execution": {
+    "status": "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED",
+    "execution_time_utc": "2026-10-10T22:21:39.784548+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:21:39.784548+03:00",
+    "exit_code": 0,
+    "exit_code_meaning": "Candidate presence, candidate feature-code profile, and resolved target key-code consistency checks passed for the selected sample. Unresolved codes remain open, and no parent links were written.",
+    "input_manifest": [
+      {
+        "key": "sample",
+        "file": "sample-output-20261010-163234/geonames_places_sample.tsv",
+        "bytes": 4626293,
+        "sha256": "1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad"
+      },
+      {
+        "key": "admin1",
+        "file": "admin1CodesASCII.txt",
+        "bytes": 151583,
+        "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a"
+      },
+      {
+        "key": "admin2",
+        "file": "admin2Codes.txt",
+        "bytes": 2366368,
+        "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3"
+      }
+    ],
+    "result": {
+      "sample_rows": 25685,
+      "sample_unique_ids": 25685,
+      "duplicate_sample_ids": 0,
+      "malformed_sample_rows": 0,
+      "admin1_keys": 3865,
+      "admin1_malformed_rows": 0,
+      "admin1_duplicate_keys": 0,
+      "admin2_keys": 47642,
+      "admin2_malformed_rows": 0,
+      "admin2_duplicate_keys": 0,
+      "administrative_feature_rows": 24693,
+      "admin1_resolved_key_references": 23320,
+      "admin1_unresolved_references": 2333,
+      "admin1_identity_matches": 125,
+      "admin1_distinct_candidate_targets": 23195,
+      "admin1_target_admin1_code_matches": 23320,
+      "admin1_target_admin1_code_mismatches": 0,
+      "admin1_self_reference_candidates": 0,
+      "admin2_resolved_composite_key_references": 20445,
+      "admin2_unresolved_key_or_context_cases": 240,
+      "admin2_identity_matches": 6977,
+      "admin2_distinct_candidate_targets": 13468,
+      "admin2_target_admin1_code_matches": 20445,
+      "admin2_target_admin2_code_matches": 20445,
+      "admin2_complete_composite_key_matches": 20445,
+      "admin2_complete_composite_key_mismatches": 0,
+      "admin2_self_reference_candidates": 0,
+      "total_identity_matches": 7102,
+      "total_self_reference_candidates": 0,
+      "other_candidate_presence_mismatches": 0,
+      "resolved_key_code_field_matches": 43765,
+      "resolved_key_code_field_mismatches": 0,
+      "distinct_admin1_candidate_feature_code_rows": 23195,
+      "distinct_admin2_candidate_feature_code_rows": 13468,
+      "distinct_candidate_feature_codes_by_level_and_country": {
+        "admin1": {
+          "BR": {
+            "ADM1": 5860
+          },
+          "GB": {
+            "ADM1": 12088
+          },
+          "JP": {
+            "ADM1": 2689
+          },
+          "KE": {
+            "ADM1": 2558
+          }
+        },
+        "admin2": {
+          "BR": {
+            "ADM2": 285
+          },
+          "GB": {
+            "ADM2": 11819
+          },
+          "JP": {
+            "ADM2": 1364
+          }
+        }
+      },
+      "candidate_key_code_consistency_by_level_and_country": {
+        "admin1": {
+          "BR": {
+            "target_admin1_code_matches": 5887,
+            "target_admin1_code_mismatches": 0,
+            "target_admin_rows_checked": 5887
+          },
+          "GB": {
+            "target_admin1_code_matches": 12092,
+            "target_admin1_code_mismatches": 0,
+            "target_admin_rows_checked": 12092
+          },
+          "JP": {
+            "target_admin1_code_matches": 2736,
+            "target_admin1_code_mismatches": 0,
+            "target_admin_rows_checked": 2736
+          },
+          "KE": {
+            "target_admin1_code_matches": 2605,
+            "target_admin1_code_mismatches": 0,
+            "target_admin_rows_checked": 2605
+          }
+        },
+        "admin2": {
+          "BR": {
+            "complete_composite_key_matches": 5855,
+            "complete_composite_key_mismatches": 0,
+            "target_admin1_code_matches": 5855,
+            "target_admin1_code_mismatches": 0,
+            "target_admin2_code_matches": 5855,
+            "target_admin2_code_mismatches": 0,
+            "target_admin_rows_checked": 5855
+          },
+          "GB": {
+            "complete_composite_key_matches": 12004,
+            "complete_composite_key_mismatches": 0,
+            "target_admin1_code_matches": 12004,
+            "target_admin1_code_mismatches": 0,
+            "target_admin2_code_matches": 12004,
+            "target_admin2_code_mismatches": 0,
+            "target_admin_rows_checked": 12004
+          },
+          "JP": {
+            "complete_composite_key_matches": 2554,
+            "complete_composite_key_mismatches": 0,
+            "target_admin1_code_matches": 2554,
+            "target_admin1_code_mismatches": 0,
+            "target_admin2_code_matches": 2554,
+            "target_admin2_code_mismatches": 0,
+            "target_admin_rows_checked": 2554
+          },
+          "KE": {
+            "complete_composite_key_matches": 32,
+            "complete_composite_key_mismatches": 0,
+            "target_admin1_code_matches": 32,
+            "target_admin1_code_mismatches": 0,
+            "target_admin2_code_matches": 32,
+            "target_admin2_code_mismatches": 0,
+            "target_admin_rows_checked": 32
+          }
+        }
+      },
+      "parent_links_written": false,
+      "database_operations": false,
+      "source_files_modified": false
+    }
+  },
+  "total_metrics": {
+    "admin1_candidate_identity_match": 125,
+    "admin1_candidate_self_reference": 0,
+    "admin2_candidate_identity_match": 6977,
+    "admin2_candidate_self_reference": 0,
+    "admin1_crosswalk_target_admin1_code_mismatch": 0,
+    "admin2_crosswalk_target_admin1_code_mismatch": 0,
+    "admin2_crosswalk_target_admin2_code_mismatch": 0
+  },
+  "unresolved_reference_triage": {
+    "generated_on_utc_date": "2026-10-11",
+    "source_export_paths": [
+      "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+      "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+    ],
+    "interpretation_reference": {
+      "title": "GeoNames Feature Codes",
+      "url": "https://www.geonames.org/export/codes.html",
+      "retrieved_on_utc_date": "2026-10-11",
+      "confirmed_definitions": {
+        "ADM1H": "historical first-order administrative division",
+        "ADM2H": "historical second-order administrative division",
+        "ADM3H": "historical third-order administrative division",
+        "ADM4H": "historical fourth-order administrative division",
+        "ADMD": "administrative division with level undifferentiated",
+        "ADMDH": "historical administrative division with level undifferentiated"
+      },
+      "limitation": "Feature-code descriptions provide context; they do not establish whether a specific row is current, invalid, selectable, or eligible for parent assignment."
+    },
+    "admin1": {
+      "unresolved_rows": 2333,
+      "classifications": {
+        "unresolved_placeholder_raw_code_00": 2284,
+        "unresolved_missing_or_version_dependent_nonzero_code": 49
+      },
+      "nonzero_unresolved_rows_by_country": {
+        "KE": 25,
+        "SG": 24
+      },
+      "nonzero_unresolved_feature_codes_by_country": {
+        "KE": {
+          "ADMD": 10,
+          "ADM1H": 7,
+          "ADM2H": 6,
+          "ADM3": 2
+        },
+        "SG": {
+          "PPL": 22,
+          "PPLX": 2
+        }
+      },
+      "all_unresolved_rows_by_feature_code": {
+        "ADMD": 1104,
+        "ADM4H": 678,
+        "ADM2H": 171,
+        "ADM4": 126,
+        "ADM3H": 89,
+        "PPLX": 81,
+        "PPL": 54,
+        "ADMDH": 7,
+        "ADM1H": 7,
+        "PCLI": 5,
+        "PPLL": 4,
+        "ZN": 3,
+        "ADM3": 2,
+        "PPLH": 2
+      },
+      "review_rule": "Do not normalize raw 00 or infer active administrative parents from feature-code names. Review the raw code, country, feature code, source version, and approved country-specific hierarchy policy."
+    },
+    "admin2": {
+      "unresolved_rows": 240,
+      "classifications": {
+        "unresolved_placeholder_raw_code_00": 2,
+        "unresolved_missing_or_version_dependent_code": 237,
+        "unresolved_missing_admin1_context": 1
+      },
+      "rows_by_feature_code": {
+        "ADM2H": 220,
+        "ADM3H": 15,
+        "ADMD": 5
+      },
+      "rows_by_country_and_feature_code": {
+        "GB": {
+          "ADM2H": 27,
+          "ADMD": 2
+        },
+        "JP": {
+          "ADM2H": 188,
+          "ADM3H": 15,
+          "ADMD": 3
+        },
+        "KE": {
+          "ADM2H": 5
+        }
+      },
+      "review_rule": "Historical ADM2H/ADM3H features and undifferentiated ADMD features are not automatically invalid; preserve them as unresolved until inclusion, version, and parentage policies are approved."
+    },
+    "decision": {
+      "safe_automated_normalization": false,
+      "parent_ids_assigned": false,
+      "rows_rejected_as_invalid": 0,
+      "classification": "UNRESOLVED_REVIEW_REQUIRED",
+      "reason": "Feature-code patterns help prioritize manual policy review but do not authorize changing raw administrative codes, deleting rows, or inventing parent relationships."
+    },
+    "feature_code_cross_tab": {
+      "source_exports": [
+        "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+        "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+      ],
+      "official_feature_code_reference": {
+        "title": "GeoNames Feature Codes",
+        "url": "https://www.geonames.org/export/codes.html",
+        "checked_on_utc_date": "2026-10-11",
+        "definitions_used": {
+          "ADM1H": "historical first-order administrative division",
+          "ADM2H": "historical second-order administrative division",
+          "ADM3H": "historical third-order administrative division",
+          "ADM4H": "historical fourth-order administrative division",
+          "ADMD": "administrative division undifferentiated as to administrative level",
+          "ADMDH": "historical administrative division undifferentiated as to administrative level",
+          "PPLH": "historical populated place"
+        }
+      },
+      "admin1": {
+        "unresolved_rows": 2333,
+        "by_review_classification_and_feature_code": {
+          "UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE": {
+            "ADM1H": 7,
+            "ADM2H": 6,
+            "ADM3": 2,
+            "ADMD": 10,
+            "PPL": 22,
+            "PPLX": 2
+          },
+          "UNRESOLVED_PLACEHOLDER_CODE": {
+            "ADM2H": 165,
+            "ADM3H": 89,
+            "ADM4": 126,
+            "ADM4H": 678,
+            "ADMD": 1094,
+            "ADMDH": 7,
+            "PCLI": 5,
+            "PPL": 32,
+            "PPLH": 2,
+            "PPLL": 4,
+            "PPLX": 79,
+            "ZN": 3
+          }
+        },
+        "historical_administrative_feature_rows_by_feature_code": {
+          "ADM1H": 7,
+          "ADM2H": 171,
+          "ADM3H": 89,
+          "ADM4H": 678,
+          "ADMDH": 7
+        },
+        "historical_administrative_feature_rows_total": 952,
+        "historical_populated_place_rows_total": 2,
+        "decision": "Historical feature codes are descriptive evidence for review priority only; the raw admin1 reference remains unresolved."
+      },
+      "admin2": {
+        "unresolved_rows": 240,
+        "by_review_classification_and_feature_code": {
+          "UNRESOLVED_MISSING_ADMIN1_CONTEXT": {
+            "ADM2H": 1
+          },
+          "UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE": {
+            "ADM2H": 219,
+            "ADM3H": 15,
+            "ADMD": 3
+          },
+          "UNRESOLVED_PLACEHOLDER_CODE": {
+            "ADMD": 2
+          }
+        },
+        "historical_administrative_feature_rows_by_feature_code": {
+          "ADM2H": 220,
+          "ADM3H": 15
+        },
+        "historical_administrative_feature_rows_total": 235,
+        "undifferentiated_administrative_feature_rows_total": 5,
+        "decision": "Historical and undifferentiated feature types help prioritize review; the raw admin2 key/context remains unresolved."
+      },
+      "governance": {
+        "source_ids_preserved": true,
+        "raw_codes_preserved": true,
+        "parent_ids_assigned": false,
+        "rows_rejected_as_invalid": 0,
+        "automatic_code_normalization": false
+      }
+    }
+  },
+  "distinct_candidate_feature_codes_by_level_and_country": {
+    "admin1": {
+      "BR": {
+        "ADM1": 5860
+      },
+      "GB": {
+        "ADM1": 12088
+      },
+      "JP": {
+        "ADM1": 2689
+      },
+      "KE": {
+        "ADM1": 2558
+      }
+    },
+    "admin2": {
+      "BR": {
+        "ADM2": 285
+      },
+      "GB": {
+        "ADM2": 11819
+      },
+      "JP": {
+        "ADM2": 1364
+      }
+    }
+  },
+  "hierarchy_candidate_feature_level_profile": {
+    "status": "PASS_OBSERVED_EXPECTED_ADMIN_LEVEL_FEATURE_CODES",
+    "source": "Current repository audit script, executed locally against the exact hashed sample and crosswalk files in input_manifest",
+    "script_sha256": "04762896cae8fd9e861d4b52d209eb0fb238ae3ffcbba4ac5a1c657ba22a9909",
+    "repository_script_blob_sha1": "1ca2aafb61acc231d8b0d17b547933b6c11e2fec",
+    "execution_time_utc": "2026-10-10T22:21:39.784548+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:21:39.784548+03:00",
+    "admin1": {
+      "distinct_same_country_admin_candidate_rows": 23195,
+      "observed_feature_code_counts_by_country": {
+        "BR": {
+          "ADM1": 5860
+        },
+        "GB": {
+          "ADM1": 12088
+        },
+        "JP": {
+          "ADM1": 2689
+        },
+        "KE": {
+          "ADM1": 2558
+        }
+      },
+      "unexpected_feature_code_rows_against_observed_ADM1_level": 0
+    },
+    "admin2": {
+      "distinct_same_country_admin_candidate_rows": 13468,
+      "observed_feature_code_counts_by_country": {
+        "BR": {
+          "ADM2": 285
+        },
+        "GB": {
+          "ADM2": 11819
+        },
+        "JP": {
+          "ADM2": 1364
+        }
+      },
+      "unexpected_feature_code_rows_against_observed_ADM2_level": 0
+    },
+    "excluded_identity_matches": {
+      "admin1": 125,
+      "admin2": 6977,
+      "note": "Identity matches are not parent candidates and are excluded from the distinct candidate feature-code profile."
+    },
+    "interpretation": "Every distinct same-country administrative candidate ID observed in this sample uses the expected level-specific feature code: ADM1 for admin1 crosswalk candidates and ADM2 for admin2 crosswalk candidates. This is a measured feature-level consistency result only. It does not confirm that each candidate is the semantically correct parent for each child record and does not approve any parent links.",
+    "official_feature_code_reference": "https://www.geonames.org/export/codes.html",
+    "catalog_acceptance": "BLOCKED"
+  },
+  "candidate_key_code_consistency_by_level_and_country": {
+    "admin1": {
+      "BR": {
+        "target_admin1_code_matches": 5887,
+        "target_admin1_code_mismatches": 0,
+        "target_admin_rows_checked": 5887
+      },
+      "GB": {
+        "target_admin1_code_matches": 12092,
+        "target_admin1_code_mismatches": 0,
+        "target_admin_rows_checked": 12092
+      },
+      "JP": {
+        "target_admin1_code_matches": 2736,
+        "target_admin1_code_mismatches": 0,
+        "target_admin_rows_checked": 2736
+      },
+      "KE": {
+        "target_admin1_code_matches": 2605,
+        "target_admin1_code_mismatches": 0,
+        "target_admin_rows_checked": 2605
+      }
+    },
+    "admin2": {
+      "BR": {
+        "complete_composite_key_matches": 5855,
+        "complete_composite_key_mismatches": 0,
+        "target_admin1_code_matches": 5855,
+        "target_admin1_code_mismatches": 0,
+        "target_admin2_code_matches": 5855,
+        "target_admin2_code_mismatches": 0,
+        "target_admin_rows_checked": 5855
+      },
+      "GB": {
+        "complete_composite_key_matches": 12004,
+        "complete_composite_key_mismatches": 0,
+        "target_admin1_code_matches": 12004,
+        "target_admin1_code_mismatches": 0,
+        "target_admin2_code_matches": 12004,
+        "target_admin2_code_mismatches": 0,
+        "target_admin_rows_checked": 12004
+      },
+      "JP": {
+        "complete_composite_key_matches": 2554,
+        "complete_composite_key_mismatches": 0,
+        "target_admin1_code_matches": 2554,
+        "target_admin1_code_mismatches": 0,
+        "target_admin2_code_matches": 2554,
+        "target_admin2_code_mismatches": 0,
+        "target_admin_rows_checked": 2554
+      },
+      "KE": {
+        "complete_composite_key_matches": 32,
+        "complete_composite_key_mismatches": 0,
+        "target_admin1_code_matches": 32,
+        "target_admin1_code_mismatches": 0,
+        "target_admin2_code_matches": 32,
+        "target_admin2_code_mismatches": 0,
+        "target_admin_rows_checked": 32
+      }
+    }
+  },
+  "candidate_key_code_consistency": {
+    "status": "PASS_ALL_RESOLVED_CANDIDATE_TARGET_CODES_MATCH_CROSSWALK_KEYS",
+    "admin1": {
+      "crosswalk_key_references_with_target_rows_checked": 23320,
+      "target_admin1_code_matches": 23320,
+      "target_admin1_code_mismatches": 0,
+      "mismatch_rate": 0
+    },
+    "admin2": {
+      "crosswalk_key_references_with_target_rows_checked": 20445,
+      "target_admin1_code_matches": 20445,
+      "target_admin1_code_mismatches": 0,
+      "target_admin2_code_matches": 20445,
+      "target_admin2_code_mismatches": 0,
+      "complete_composite_key_matches": 20445,
+      "complete_composite_key_mismatches": 0,
+      "mismatch_rate": 0
+    },
+    "source": "Local execution of current repository audit against original source sample and full admin1/admin2 crosswalk files; same input fingerprints as previous audit.",
+    "execution_time_utc": "2026-10-10T22:21:39.784548+00:00",
+    "execution_time_africa_nairobi": "2026-10-11T01:21:39.784548+03:00",
+    "script_sha256": "04762896cae8fd9e861d4b52d209eb0fb238ae3ffcbba4ac5a1c657ba22a9909",
+    "repository_script_blob_sha1": "1ca2aafb61acc231d8b0d17b547933b6c11e2fec",
+    "interpretation": "Every crosswalk candidate ID present in the selected sample has its own raw administrative code fields matching the key that resolved it. This confirms source-key consistency in the measured sample, not semantic parentage or a complete hierarchy path. No parent links were created.",
+    "catalog_acceptance": "BLOCKED"
+  },
+  "owner_policy_decision": {
+    "decision": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
+    "decision_date": "2026-10-11",
+    "scope": [
+      "Preserve every source GeoNames ID, entity record, feature code, and raw administrative code.",
+      "Leave raw 00 values unresolved; do not normalize or invent a hierarchy parent.",
+      "Leave unmatched nonzero codes unresolved until source/version evidence establishes an interpretation.",
+      "Preserve historical administrative identities; do not use historical features as current administrative parents or current selector options by default.",
+      "Keep ADMD/ADMDH level unresolved until country/source evidence establishes its level.",
+      "Preserve populated-place identity independently from unresolved administrative association.",
+      "Keep same-name records with different IDs distinct unless an authority-backed crosswalk establishes identity.",
+      "Exclude unresolved, historical, and undifferentiated rows from current administrative selectors by default while retaining the records and their referenceability.",
+      "Five PCLI country-level entities have an approved COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED disposition; their raw source fields remain unchanged.",
+      "128 current ADM3/ADM4 records remain excluded from current administrative selectors until a source-pinned country-specific ancestor path is verified."
+    ],
+    "explicit_non_authorizations": [
+      "No individual unresolved reference is thereby resolved or declared invalid.",
+      "No parent link or parent ID is approved or assigned by this decision.",
+      "No schema, migration, seed, import, database, production, deployment, Cloudflare, secret, or backup/recovery change is authorized.",
+      "No paid ISO subscription is authorized.",
+      "The current ISO comparison, source-origin/retrieval evidence, and worldwide completeness remain unverified."
+    ],
+    "policy_document": "docs/geonames-feature-selectability-policy-proposal-2026-10-11.md",
+    "approved_exception_disposition_audit": {
+      "report_path": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-disposition-summary.json",
+      "row_export_path": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv",
+      "generator_path": "scripts/geonames-approved-exception-dispositions.mjs",
+      "report_version": "1.0",
+      "decision_status": "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
+      "source_exception_exports_unchanged": true,
+      "source_raw_codes_preserved": true,
+      "raw_reference_counts": {
+        "admin1": 2333,
+        "admin2": 240,
+        "total": 2573
+      },
+      "overlap_ids_between_levels": 157,
+      "unique_affected_ids": 2416,
+      "unique_record_dispositions": {
+        "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED": 5,
+        "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED": 128,
+        "PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR": 1030,
+        "PRESERVE_HISTORICAL_PLACE_ASSOCIATION_UNRESOLVED": 2,
+        "PRESERVE_NONADMIN_ENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 3,
+        "PRESERVE_PLACE_IDENTITY_ADMIN_ASSOCIATION_UNRESOLVED": 139,
+        "PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR": 1109
+      },
+      "country_level_records_no_admin_parent_required": 5,
+      "current_admin_features_requiring_country_specific_parent_path": 128,
+      "current_admin_feature_codes": {
+        "ADM3": 2,
+        "ADM4": 126
+      },
+      "parent_links_or_ids_assigned": 0,
+      "all_parent_paths_verified": false
+    }
+  },
+  "current_admin_parent_path_audit_status_refinement": {
+    "as_of_utc": "2026-10-11",
+    "run_url": "https://github.com/job-grid/job-grid/actions/runs/38098277223",
+    "artifact_url": "https://github.com/job-grid/job-grid/actions/runs/38098277223/artifacts/11686253623",
+    "raw_admin1_00_semantics_reference": "https://download.geonames.org/export/dump/readme.txt",
+    "status_counts": {
+      "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED": 126,
+      "BLOCKED_PARENT_KEY_NOT_FOUND": 2
+    },
+    "candidate_paths_found_requiring_owner_approval": 0,
+    "explicit_hierarchy_paths_found_requiring_owner_approval": 0,
+    "targets_with_direct_adm_hierarchy_edges": 0,
+    "unresolved_or_blocked_targets": 128,
+    "operational_parent_links_created": 0,
+    "interpretation": "GeoNames documents admin code 00 as a general feature for which no specific admin1 code is defined. Raw values are preserved; this does not create or infer a parent."
+  },
+  "kenya_external_county_ancestor_evidence": {
+    "status": "CANDIDATES_FOUND_FOR_OWNER_REVIEW__IMMEDIATE_PARENT_PATHS_UNRESOLVED",
+    "evidence_dossier": "docs/geonames-kenya-external-ancestor-evidence-2026-10-11.md",
+    "machine_readable_review": "docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json",
+    "operational_parent_links_created": 0,
+    "parent_path_complete": false,
+    "owner_approval_required": true,
+    "candidates": [
+      {
+        "target_geonames_id": "192705",
+        "target_name": "Kiambururu Sub-Location",
+        "raw_admin1_code_preserved": "01",
+        "candidate_county_ancestor_geonames_id": "8693007",
+        "candidate_county_ancestor_name": "Kiambu County",
+        "candidate_county_feature_code": "ADM2",
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__ADMIN_LEVEL_CONFLICT"
+      },
+      {
+        "target_geonames_id": "7800132",
+        "target_name": "Imenti Central",
+        "raw_admin1_code_preserved": "03",
+        "candidate_county_ancestor_geonames_id": "8693009",
+        "candidate_county_ancestor_name": "Meru County",
+        "candidate_county_feature_code": "ADM2",
+        "status": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__NAME_VARIANT_AND_IMMEDIATE_PATH_UNVERIFIED"
+      }
+    ],
+    "interpretation": "External Kenyan government source evidence supports county-level ancestry candidates; it does not establish a full immediate-parent path or a direct source-ID crosswalk. Treat the candidate IDs as evidence for owner review only.",
+    "remaining_admin_parent_status_counts": {
+      "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED": 126,
+      "BLOCKED_PARENT_KEY_NOT_FOUND": 2,
+      "county_ancestor_candidates_available_for_owner_review": 2
+    }
+  }
+}

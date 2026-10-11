@@ -1,0 +1,471 @@
+{
+  "report_version": "2.0",
+  "generated_on_utc_date": "2026-10-10",
+  "pr": 27,
+  "status": {
+    "five_country_sample_record_comparison": "PASS",
+    "administrative_crosswalk_reconciliation": "PARTIAL_MEASURED_UNRESOLVED_REFERENCES",
+    "catalog_acceptance": "BLOCKED",
+    "full_worldwide_scan_reproduction": "PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE; SOURCE_ORIGIN_AND_SAMPLE_SELECTION_ALGORITHM_REMAIN_UNVERIFIED",
+    "current_approved_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "scope": {
+    "input_directory": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
+    "input_provenance": "Owner-downloaded archives at listed official GeoNames URLs. Sizes, hashes, ZIP integrity, source counts and comparisons were measured on the connected Windows computer. Exact remote retrieval timestamps and HTTP Last-Modified headers were not captured.",
+    "sample_file": "sample-output-20261010-163234/geonames_places_sample.tsv",
+    "sample_rows": 25685,
+    "comparison_method": "Parse each country's ZIP data member as UTF-8 tab-separated rows; require 19 fields; match by GeoNames ID; compare all 19 original fields as exact decoded strings.",
+    "allCountries_zip_opened_or_parsed_for_this_task": false,
+    "worldwide_archive_download_started": false
+  },
+  "source_archives": [
+    {
+      "file": "KE.zip",
+      "url": "https://download.geonames.org/export/dump/KE.zip",
+      "owner_local_bytes": 859668,
+      "sha256": "d7335182356ab6609f93c1f66527195acd75bf72a841915b337858d65a172f43",
+      "zip_integrity": "PASS",
+      "zip_members": [
+        "readme.txt",
+        "KE.txt"
+      ],
+      "source_records_parsed": 31490,
+      "malformed_19_field_rows": 0,
+      "unique_source_ids": 31490,
+      "duplicate_source_id_groups": 0,
+      "sample_records_for_country": 2631,
+      "sample_ids_found": 2631,
+      "exact_matches_across_all_19_original_fields": 2631,
+      "missing_sample_ids": 0,
+      "conflicting_sample_records": 0,
+      "ambiguous_source_id_matches": 0,
+      "source_retrieval_timestamp_utc": null,
+      "remote_last_modified_header_captured": false
+    },
+    {
+      "file": "GB.zip",
+      "url": "https://download.geonames.org/export/dump/GB.zip",
+      "owner_local_bytes": 3639180,
+      "sha256": "eefc08df408aa4c3218151b5d9ca73768555fafac676a2ce5d612e2007c1f32a",
+      "zip_integrity": "PASS",
+      "zip_members": [
+        "readme.txt",
+        "GB.txt"
+      ],
+      "source_records_parsed": 109181,
+      "malformed_19_field_rows": 0,
+      "unique_source_ids": 109181,
+      "duplicate_source_id_groups": 0,
+      "sample_records_for_country": 12096,
+      "sample_ids_found": 12096,
+      "exact_matches_across_all_19_original_fields": 12096,
+      "missing_sample_ids": 0,
+      "conflicting_sample_records": 0,
+      "ambiguous_source_id_matches": 0,
+      "source_retrieval_timestamp_utc": null,
+      "remote_last_modified_header_captured": false
+    },
+    {
+      "file": "JP.zip",
+      "url": "https://download.geonames.org/export/dump/JP.zip",
+      "owner_local_bytes": 4959247,
+      "sha256": "f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58",
+      "zip_integrity": "PASS",
+      "zip_members": [
+        "readme.txt",
+        "JP.txt"
+      ],
+      "source_records_parsed": 103762,
+      "malformed_19_field_rows": 0,
+      "unique_source_ids": 103762,
+      "duplicate_source_id_groups": 0,
+      "sample_records_for_country": 4899,
+      "sample_ids_found": 4899,
+      "exact_matches_across_all_19_original_fields": 4899,
+      "missing_sample_ids": 0,
+      "conflicting_sample_records": 0,
+      "ambiguous_source_id_matches": 0,
+      "source_retrieval_timestamp_utc": null,
+      "remote_last_modified_header_captured": false
+    },
+    {
+      "file": "BR.zip",
+      "url": "https://download.geonames.org/export/dump/BR.zip",
+      "owner_local_bytes": 7177385,
+      "sha256": "4a9ddffb465ccad219127146f0678087cfece414ca0240bee53a5ea6750eebd8",
+      "zip_integrity": "PASS",
+      "zip_members": [
+        "readme.txt",
+        "BR.txt"
+      ],
+      "source_records_parsed": 235530,
+      "malformed_19_field_rows": 0,
+      "unique_source_ids": 235530,
+      "duplicate_source_id_groups": 0,
+      "sample_records_for_country": 5888,
+      "sample_ids_found": 5888,
+      "exact_matches_across_all_19_original_fields": 5888,
+      "missing_sample_ids": 0,
+      "conflicting_sample_records": 0,
+      "ambiguous_source_id_matches": 0,
+      "source_retrieval_timestamp_utc": null,
+      "remote_last_modified_header_captured": false
+    },
+    {
+      "file": "SG.zip",
+      "url": "https://download.geonames.org/export/dump/SG.zip",
+      "owner_local_bytes": 69019,
+      "sha256": "7e18942c0241144089da0b9bea659c96fadc201573be9d25a02442eb7b7f09d8",
+      "zip_integrity": "PASS",
+      "zip_members": [
+        "readme.txt",
+        "SG.txt"
+      ],
+      "source_records_parsed": 1979,
+      "malformed_19_field_rows": 0,
+      "unique_source_ids": 1979,
+      "duplicate_source_id_groups": 0,
+      "sample_records_for_country": 171,
+      "sample_ids_found": 171,
+      "exact_matches_across_all_19_original_fields": 171,
+      "missing_sample_ids": 0,
+      "conflicting_sample_records": 0,
+      "ambiguous_source_id_matches": 0,
+      "source_retrieval_timestamp_utc": null,
+      "remote_last_modified_header_captured": false
+    }
+  ],
+  "totals": {
+    "source_records_parsed": 481942,
+    "sample_records": 25685,
+    "sample_ids_matched": 25685,
+    "exact_19_field_matches": 25685,
+    "missing_sample_ids": 0,
+    "conflicting_records": 0,
+    "ambiguous_matches": 0,
+    "source_rows_with_invalid_19_field_shape": 0,
+    "duplicate_source_ids": 0
+  },
+  "duplicate_download": {
+    "file": "JP (1).zip",
+    "byte_size": 4959247,
+    "sha256": "f0e39e6f0df79934c69adc9e8ade4ab415f16d3e57840ea8580c3b9d32adfd58",
+    "identical_to": "JP.zip",
+    "conclusion": "Same byte size and SHA-256; identical copy."
+  },
+  "crosswalk_reconciliation": {
+    "method": "Exact-key lookup of each non-empty raw admin1/admin2 code on each sample row against the owner-computer full crosswalk files. The sample includes administrative features and populated-place/locality rows. This is a reference-key existence check, not authoritative interpretation of code meaning or proof of the complete parent graph.",
+    "crosswalk_files": {
+      "admin1CodesASCII_txt_unique_code_keys": 3865,
+      "admin2Codes_txt_unique_code_keys": 47642
+    },
+    "aggregate": {
+      "sample_rows": 25685,
+      "admin1_nonblank_code_rows": 25653,
+      "admin1_exact_key_matches": 23320,
+      "admin1_unmatched_code_rows": 2333,
+      "admin2_nonblank_code_rows": 20685,
+      "admin2_exact_key_matches": 20445,
+      "admin2_unmatched_code_rows": 240,
+      "resolved_admin2_keys_whose_admin1_key_was_missing": 0,
+      "row_level_exception_export_persisted": true,
+      "admin1_exception_rows": 2333,
+      "admin2_exception_rows": 240,
+      "admin1_admin2_record_overlap": 157,
+      "union_unique_affected_records": 2416
+    },
+    "per_country": [
+      {
+        "country": "KE",
+        "sample_rows": 2631,
+        "admin1_code_present": 2631,
+        "admin1_resolved": 2605,
+        "admin1_unmatched": 26,
+        "admin1_unmatched_by_raw_code": {
+          "00": 1,
+          "01": 2,
+          "02": 8,
+          "03": 4,
+          "06": 1,
+          "07": 2,
+          "08": 6,
+          "09": 2
+        },
+        "admin2_code_present": 37,
+        "admin2_resolved": 32,
+        "admin2_unmatched": 5,
+        "resolved_admin2_keys_whose_admin1_key_was_missing": 0
+      },
+      {
+        "country": "GB",
+        "sample_rows": 12096,
+        "admin1_code_present": 12095,
+        "admin1_resolved": 12092,
+        "admin1_unmatched": 3,
+        "admin1_unmatched_by_raw_code": {
+          "00": 3
+        },
+        "admin2_code_present": 12033,
+        "admin2_resolved": 12004,
+        "admin2_unmatched": 29,
+        "resolved_admin2_keys_whose_admin1_key_was_missing": 0
+      },
+      {
+        "country": "JP",
+        "sample_rows": 4899,
+        "admin1_code_present": 4897,
+        "admin1_resolved": 2736,
+        "admin1_unmatched": 2161,
+        "admin1_unmatched_by_raw_code": {
+          "00": 2161
+        },
+        "admin2_code_present": 2760,
+        "admin2_resolved": 2554,
+        "admin2_unmatched": 206,
+        "resolved_admin2_keys_whose_admin1_key_was_missing": 0
+      },
+      {
+        "country": "BR",
+        "sample_rows": 5888,
+        "admin1_code_present": 5888,
+        "admin1_resolved": 5887,
+        "admin1_unmatched": 1,
+        "admin1_unmatched_by_raw_code": {
+          "00": 1
+        },
+        "admin2_code_present": 5855,
+        "admin2_resolved": 5855,
+        "admin2_unmatched": 0,
+        "resolved_admin2_keys_whose_admin1_key_was_missing": 0
+      },
+      {
+        "country": "SG",
+        "sample_rows": 171,
+        "admin1_code_present": 142,
+        "admin1_resolved": 0,
+        "admin1_unmatched": 142,
+        "admin1_unmatched_by_raw_code": {
+          "00": 118,
+          "01": 4,
+          "02": 7,
+          "03": 7,
+          "04": 3,
+          "05": 3
+        },
+        "admin2_code_present": 0,
+        "admin2_resolved": 0,
+        "admin2_unmatched": 0,
+        "resolved_admin2_keys_whose_admin1_key_was_missing": 0
+      }
+    ],
+    "policy_notes": [
+      "Preserve all original raw admin codes. A raw value such as 00 is an unresolved placeholder/nonstandard-code candidate until an owner-approved interpretation rule exists; do not automatically reject the associated record.",
+      "Unmatched nonzero codes are missing-reference or possible legacy/version-dependent candidates. Their history has not been established; do not label them legacy as a fact.",
+      "Existing sample exceptions.csv has 24 SG admin1_crosswalk_not_found rows. The full exact-key lookup flagged 142 SG sample rows with nonblank admin1 codes missing from the full crosswalk, including 118 raw 00 values and 24 nonzero-code rows. Individual-ID overlap with the prior exception set has not been compared; do not assume the sets are identical.",
+      "Zero resolved admin2 keys with absent admin1 keys is limited to rows whose admin2 key resolved; it is not proof of complete geographic parentage.",
+      "A durable per-record crosswalk-exception CSV/JSON has not yet been persisted; summary counts were computed by iterating every sample row."
+    ]
+  },
+  "kenya_candidate_checks": {
+    "Nairobi": {
+      "geonames_id": "184745",
+      "source_record_exact_match_to_KE_zip": true,
+      "feature_code": "PPLC",
+      "admin1_code": "05",
+      "sample_crosswalk_candidate": "Nairobi County GeoNames ID 184742",
+      "note": "Source row confirmed; full administrative-parent policy review still required."
+    },
+    "Kisumu": {
+      "geonames_id": "191245",
+      "source_record_exact_match_to_KE_zip": true,
+      "feature_code": "PPLA",
+      "admin1_code": "26",
+      "sample_crosswalk_candidate": "Kisumu County GeoNames ID 191242",
+      "note": "Source row confirmed; full administrative-parent policy review still required."
+    },
+    "Mombasa_candidate": {
+      "geonames_id": "186301",
+      "source_record_exact_match_to_KE_zip": true,
+      "feature_code": "PPLA",
+      "admin1_code": "37",
+      "sample_crosswalk_candidate": "Mombasa County GeoNames ID 186298",
+      "note": "Keep distinct from same-name alternatives; full hierarchy review required."
+    },
+    "Mombasa_same_name_alternative": {
+      "geonames_id": "186300",
+      "source_record_exact_match_to_KE_zip": true,
+      "feature_code": "PPL",
+      "admin1_code": "27",
+      "handling": "Keep distinct; do not collapse by name alone."
+    }
+  },
+  "singapore_exceptions": {
+    "previously_recorded_exception_rows": 24,
+    "reason": "admin1_crosswalk_not_found",
+    "country": "SG",
+    "classification": "UNRESOLVED_NOT_AUTOMATIC_INVALID_RECORD",
+    "still_unresolved": true,
+    "note": "Exact GeoNames-ID reconciliation establishes that all 24 prior exception IDs overlap with the wider 142; 118 IDs are additional and no prior-only IDs exist. All remain unresolved pending owner approval.",
+    "broader_admin1_crosswalk_misses": 142,
+    "prior_exception_exact_id_overlap": 24,
+    "prior_exception_only_ids": 0,
+    "broader_set_additional_ids": 118
+  },
+  "manifest_timestamp_semantics": {
+    "owner_sample_manifest_original_field": "last_modified_utc",
+    "actual_semantics": "Local filesystem path.stat().st_mtime converted to UTC; not an HTTP Last-Modified header.",
+    "correct_field": "local_file_mtime_utc",
+    "http_last_modified_utc": null,
+    "original_evidence_zip_mutated": false
+  },
+  "remaining_acceptance_gates": [
+    "Review persisted row-level exception exports and approve code interpretation, Singapore representation, feature policy, and parent-hierarchy rules.",
+    "Owner must approve interpretation rules for raw 00 and other unmatched codes; preserve raw values and do not automatically reject records.",
+    "Obtain an owner-approved authoritative or alternative representation for Singapore's missing admin1 crosswalk; keep parent links unresolved until supported.",
+    "The separately implemented PowerShell/.NET scan now reproduces the 13,472,324-row count and confirms 25,685 exact sample-row matches against the full local archive. Official URL/source-origin and HTTP retrieval metadata remain unverified, and the sample-selection algorithm itself was not separately reimplemented.",
+    "Obtain and compare a current owner-approved ISO authority snapshot.",
+    "Approve feature-code inclusion/selectability and global hierarchy/exception policies."
+  ],
+  "governance": {
+    "pr_merged": false,
+    "database_migrations": false,
+    "seeds": false,
+    "database_imports": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "secrets_changes": false,
+    "backup_recovery_changes": false
+  },
+  "crosswalk_exception_reconciliation": {
+    "status": "ROW_LEVEL_EXPORTS_PERSISTED_PENDING_OWNER_REVIEW",
+    "counts": {
+      "sample_records": 25685,
+      "admin1_crosswalk_keys": 3865,
+      "admin2_crosswalk_keys": 47642,
+      "admin1_unmatched_references": 2333,
+      "admin2_unmatched_references": 240,
+      "records_in_both_exception_categories": 157,
+      "unique_records_in_either_exception_category": 2416
+    },
+    "singapore": {
+      "prior_exception_count": 24,
+      "broader_admin1_miss_count": 142,
+      "exact_id_overlap_count": 24,
+      "prior_only_count": 0,
+      "broader_only_count": 118,
+      "raw_admin1_code_counts": {
+        "00": 118,
+        "01": 4,
+        "02": 7,
+        "03": 7,
+        "04": 3,
+        "05": 3
+      }
+    },
+    "global_gates": {
+      "full_worldwide_scan_reproduction": "PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE; SOURCE_ORIGIN_AND_SAMPLE_SELECTION_ALGORITHM_REMAIN_UNVERIFIED",
+      "current_owner_approved_iso_comparison": "UNVERIFIED",
+      "worldwide_completeness": "UNVERIFIED",
+      "catalog_acceptance": "BLOCKED",
+      "phase_4c_recovery_readiness": "BLOCKED"
+    },
+    "files": {
+      "summary": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/summary.json",
+      "admin1_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.csv",
+      "admin1_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json",
+      "admin2_csv": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.csv",
+      "admin2_json": "docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json"
+    },
+    "policy": {
+      "raw_00": "UNRESOLVED_PLACEHOLDER_CODE",
+      "unmatched_nonzero": "UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE",
+      "missing_crosswalk": "REVIEW_EXCEPTION_NOT_AUTOMATIC_INVALID_RECORD",
+      "parent_links": "DO_NOT_SYNTHESIZE",
+      "same_name_entities": "PRESERVE_DISTINCT_SOURCE_IDS"
+    }
+  },
+  "recommendation": {
+    "crosswalk_exports": "GENERATED_FOR_OWNER_REVIEW",
+    "catalog_acceptance": "BLOCKED"
+  },
+  "manifest_timestamp_field_correction": {
+    "original_field": "last_modified_utc",
+    "actual_semantics": "local filesystem path.stat().st_mtime converted to UTC; not HTTP Last-Modified",
+    "corrected_field": "local_file_mtime_utc",
+    "http_last_modified_utc": null,
+    "exact_remote_retrieval_timestamp_utc": null,
+    "original_evidence_archive_mutated": false
+  },
+  "gaps_to_close": [
+    "Owner approval of placeholder/nonstandard-code handling and unresolved parent-link policy.",
+    "Current owner-approved ISO authority comparison remains outstanding. The separate implementation scan has passed, but official source-origin/retrieval proof and independent recreation of the sample-selection algorithm are still not measured."
+  ],
+  "owner_computer_worldwide_scan_repeat_run": {
+    "status": "COMPLETED_SAME_MACHINE_SAME_SCRIPT",
+    "completed_at_utc": "2026-10-10T18:23:24.870125Z",
+    "worldwide_records_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "selected_place_rows": 25685,
+    "same_counters_as_previous_owner_run": true,
+    "sample_payload_byte_for_byte_comparison": "MEASURED_IN_LATER_SEPARATE_VERIFIER: 7_OF_7_OUTPUT_AND_ATTRIBUTION_FILES_BYTE_IDENTICAL",
+    "independent_implementation_reproduction": "PASS_SEPARATE_POWERSHELL_DOTNET_SCAN_OF_FULL_LOCAL_ARCHIVE; OFFICIAL_SOURCE_ORIGIN_UNVERIFIED",
+    "allCountries_zip": {
+      "bytes": 422010093,
+      "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15"
+    },
+    "other_source_sha256s": {
+      "countryInfo": {
+        "bytes": 31680,
+        "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974"
+      },
+      "admin1": {
+        "bytes": 151583,
+        "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a"
+      },
+      "admin2": {
+        "bytes": 2366368,
+        "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3"
+      },
+      "readme": {
+        "bytes": 8843,
+        "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5"
+      }
+    },
+    "timestamp_semantics": "Source manifest last_modified_utc is local filesystem st_mtime, not HTTP Last-Modified. Interpret as local_file_mtime_utc; http_last_modified_utc is null absent a real response header.",
+    "independent_sample_selection_algorithm_recreated": false
+  },
+  "iso_authority_candidate": {
+    "proposed_source": "ISO Online Browsing Platform (OBP) / ISO 3166 Maintenance Agency",
+    "official_current_list_page": "https://committee.iso.org/iso-3166-country-codes.html",
+    "standard_page": "https://www.iso.org/standard/72482.html",
+    "source_note": "ISO states the OBP is always up to date. ISO's ISO 3166-1:2020 page says it was reviewed and confirmed in 2025 and remains current.",
+    "snapshot_downloaded_and_hashed": false,
+    "owner_approval_received": true,
+    "comparison_completed": false,
+    "status": "OWNER_APPROVED_SNAPSHOT_NOT_CAPTURED_OR_COMPARED"
+  },
+  "independent_worldwide_verification": {
+    "report_json": "docs/geonames-worldwide-independent-verification-2026-10-10.json",
+    "report_markdown": "docs/geonames-worldwide-independent-verification-2026-10-10.md",
+    "implementation": "Separately authored PowerShell/.NET stream scan",
+    "worldwide_rows_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "source_records_across_five_countries": 481942,
+    "sample_records": 25685,
+    "source_ids_found": 25685,
+    "exact_matches_all_19_fields": 25685,
+    "missing_sample_ids": 0,
+    "field_conflicts": 0,
+    "duplicate_source_hits": 0,
+    "local_source_hashes_recomputed_and_matching_prior_manifest": true,
+    "official_source_urls_refetched": false,
+    "origin_and_remote_retrieval_metadata": "UNVERIFIED",
+    "seven_output_files_compared_byte_for_byte": true,
+    "seven_output_files_identical": 7,
+    "sample_selection_algorithm_independently_reimplemented": false,
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED"
+  }
+}

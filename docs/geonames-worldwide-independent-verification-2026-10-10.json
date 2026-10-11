@@ -1,0 +1,203 @@
+{
+  "report_version": "1.0",
+  "generated_at_utc": "2026-10-10T19:05:49.6197576Z",
+  "pr": 27,
+  "status": {
+    "independent_worldwide_scan": "PASS_SEPARATE_POWERSHELL_DOTNET_IMPLEMENTATION",
+    "source_hashes_recalculated_locally": "PASS_MATCH_PREVIOUS_MANIFEST",
+    "existing_sample_vs_worldwide_archive": "PASS_25685_OF_25685_EXACT_19_FIELD_MATCHES",
+    "repeat_output_byte_comparison": "PASS_7_OF_7_FILES_IDENTICAL",
+    "official_source_retrieval_and_http_metadata": "UNVERIFIED",
+    "independent_sample_selection_algorithm_regeneration": "NOT_PERFORMED",
+    "current_iso_authority_comparison": "UNVERIFIED",
+    "worldwide_completeness": "UNVERIFIED",
+    "catalog_acceptance": "BLOCKED",
+    "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "provenance": {
+    "implementation": "Separately authored PowerShell/.NET streaming verifier; not prepare_sample.py",
+    "machine": "Owner-connected Windows computer EMPIRE",
+    "input_files": "Existing local GeoNames archives and original/repeat output directories",
+    "source_files_modified": false,
+    "database_operations": false,
+    "production_or_deployment_changes": false,
+    "official_urls_refetched_for_this_verification": false,
+    "source_origin_or_retrieval_timestamp_independently_verified": false,
+    "timestamp_policy": "Local filesystem modification time is not HTTP Last-Modified; http_last_modified_utc remains null absent a captured response header."
+  },
+  "source_manifest": [
+    {
+      "key": "allCountries",
+      "filename": "allCountries.zip",
+      "bytes": 422010093,
+      "sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+      "hash_method": "PowerShell Get-FileHash SHA256; independently recalculated"
+    },
+    {
+      "key": "countryInfo",
+      "filename": "countryInfo.txt.txt",
+      "bytes": 31680,
+      "sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+      "hash_method": "PowerShell Get-FileHash SHA256; independently recalculated"
+    },
+    {
+      "key": "admin1",
+      "filename": "admin1CodesASCII.txt",
+      "bytes": 151583,
+      "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "hash_method": "PowerShell Get-FileHash SHA256; independently recalculated"
+    },
+    {
+      "key": "admin2",
+      "filename": "admin2Codes.txt",
+      "bytes": 2366368,
+      "sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3",
+      "hash_method": "PowerShell Get-FileHash SHA256; independently recalculated"
+    },
+    {
+      "key": "readme",
+      "filename": "readme.txt",
+      "bytes": 8843,
+      "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "hash_method": "PowerShell Get-FileHash SHA256; independently recalculated"
+    }
+  ],
+  "worldwide_scan": {
+    "member": "allCountries.txt",
+    "records_scanned": 13472324,
+    "malformed_worldwide_rows": 0,
+    "selected_country_records": 481942,
+    "duplicate_ids_across_selected_countries": 0,
+    "invalid_coordinates_in_selected_countries": 0,
+    "elapsed_seconds": 142.65
+  },
+  "sample_reconciliation": {
+    "sample_filename": "geonames_places_sample.tsv",
+    "sample_rows": 25685,
+    "source_ids_found": 25685,
+    "source_ids_missing": 0,
+    "exact_matches_across_all_19_original_fields": 25685,
+    "records_with_field_conflicts": 0,
+    "source_duplicate_hits_for_sample_ids": 0,
+    "duplicate_sample_id_groups_found_in_source": 0,
+    "sample_tsv_bytes": 4626293,
+    "sample_tsv_sha256": "1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad",
+    "exact_comparison_method": "Join on GeoNames ID then compare all 19 decoded source fields ordinally against the full allCountries.txt member."
+  },
+  "per_country": {
+    "KE": {
+      "source_rows": 31490,
+      "administrative_features": 2424,
+      "populated_places": 6957,
+      "other_features": 22109,
+      "sample_rows": 2631,
+      "sample_rows_found_in_worldwide_source": 2631,
+      "exact_19_field_matches": 2631
+    },
+    "GB": {
+      "source_rows": 109181,
+      "administrative_features": 11895,
+      "populated_places": 43712,
+      "other_features": 53574,
+      "sample_rows": 12096,
+      "sample_rows_found_in_worldwide_source": 12096,
+      "exact_19_field_matches": 12096
+    },
+    "JP": {
+      "source_rows": 103762,
+      "administrative_features": 4697,
+      "populated_places": 50801,
+      "other_features": 48264,
+      "sample_rows": 4899,
+      "sample_rows_found_in_worldwide_source": 4899,
+      "exact_19_field_matches": 4899
+    },
+    "BR": {
+      "source_rows": 235530,
+      "administrative_features": 5676,
+      "populated_places": 72392,
+      "other_features": 157462,
+      "sample_rows": 5888,
+      "sample_rows_found_in_worldwide_source": 5888,
+      "exact_19_field_matches": 5888
+    },
+    "SG": {
+      "source_rows": 1979,
+      "administrative_features": 1,
+      "populated_places": 387,
+      "other_features": 1591,
+      "sample_rows": 171,
+      "sample_rows_found_in_worldwide_source": 171,
+      "exact_19_field_matches": 171
+    }
+  },
+  "prior_same_script_output_comparison": [
+    {
+      "file": "geonames_places_sample.tsv",
+      "bytes": 4626293,
+      "sha256_first_run": "1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad",
+      "sha256_repeat_run": "1932181885967f3079dfefd5d16b4df4c00b6e62e4213bede7aa49bfc44ab9ad",
+      "byte_identical": true
+    },
+    {
+      "file": "countryInfo_sample.tsv",
+      "bytes": 1008,
+      "sha256_first_run": "8e7628dfa838afc74f93483dbb8b9c281e2fa77b3129367a8096e6ac130e8dd2",
+      "sha256_repeat_run": "8e7628dfa838afc74f93483dbb8b9c281e2fa77b3129367a8096e6ac130e8dd2",
+      "byte_identical": true
+    },
+    {
+      "file": "admin1CodesASCII_sample.txt",
+      "bytes": 4507,
+      "sha256_first_run": "3a0aa67fc25787dd97216b4ca64089d0c887127f5db45affae59508dba5ca5d0",
+      "sha256_repeat_run": "3a0aa67fc25787dd97216b4ca64089d0c887127f5db45affae59508dba5ca5d0",
+      "byte_identical": true
+    },
+    {
+      "file": "admin2Codes_sample.txt",
+      "bytes": 338166,
+      "sha256_first_run": "6d735fcb9f9d245f3236964794b60c66f17c49b50279493266d49653d2fa8504",
+      "sha256_repeat_run": "6d735fcb9f9d245f3236964794b60c66f17c49b50279493266d49653d2fa8504",
+      "byte_identical": true
+    },
+    {
+      "file": "exceptions.csv",
+      "bytes": 1690,
+      "sha256_first_run": "59ff1367c89c90c032b0fe1e447149d51de3a3ff95ec67e3ab76ad1c63970018",
+      "sha256_repeat_run": "59ff1367c89c90c032b0fe1e447149d51de3a3ff95ec67e3ab76ad1c63970018",
+      "byte_identical": true
+    },
+    {
+      "file": "ATTRIBUTION.txt",
+      "bytes": 387,
+      "sha256_first_run": "545396a1d12390886a242d8e2a19415da92e261ada3b5cc34c14d07446488a16",
+      "sha256_repeat_run": "545396a1d12390886a242d8e2a19415da92e261ada3b5cc34c14d07446488a16",
+      "byte_identical": true
+    },
+    {
+      "file": "geonames_readme_source.txt",
+      "bytes": 8843,
+      "sha256_first_run": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "sha256_repeat_run": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "byte_identical": true
+    }
+  ],
+  "limitations": [
+    "A separately authored PowerShell/.NET implementation reproduced the worldwide row count and independently compared each row in the existing sample against allCountries.txt; this is independent implementation/runtime evidence on the same owner computer.",
+    "Input byte sizes and SHA-256 digests were recomputed and match the pre-existing manifest, but the official GeoNames URLs were not refetched in this verification and no HTTP Last-Modified headers or exact remote retrieval timestamps were captured.",
+    "The owner sample-selection algorithm was not reimplemented independently; byte identity was measured by comparing the first and repeat outputs produced by the same prepare_sample.py implementation.",
+    "World-wide scan row counts and exact sample matches do not prove that GeoNames is geographically complete or that every parent relationship is correct.",
+    "ISO snapshot capture/comparison and catalog feature/hierarchy approval remain outstanding."
+  ],
+  "governance": {
+    "pr_merged": false,
+    "database_migrations": false,
+    "seeds": false,
+    "database_imports": false,
+    "production_changes": false,
+    "cloudflare_changes": false,
+    "secrets_changes": false,
+    "deployment": false,
+    "backup_recovery_changes": false
+  }
+}

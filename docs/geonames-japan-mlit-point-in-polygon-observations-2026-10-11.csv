@@ -1,0 +1,13 @@
+geonames_id,geonames_name,geonames_latitude,geonames_longitude,raw_admin1_code,raw_admin2_code,snapshot_date,snapshot_prefecture_code,containing_area_code,containing_prefecture_name,containing_district_name,containing_municipality_name,point_relation,candidate_code_match,archive_filename,operational_parent_link_created
+1851030,Takaoka-chō,35.18333,138.65,00,,1995-10-01,22,22210,静岡県,,富士市,INSIDE,False,N03-951001_22_GML.zip,false
+1851031,Takaoka-chō,35.03333,137.08333,00,,1995-10-01,23,23211,愛知県,,豊田市,INSIDE,False,N03-951001_23_GML.zip,false
+1859673,Kawanishi-machi,36.1412,136.14017,00,,1995-10-01,18,18201,福井県,,福井市,INSIDE,False,N03-951001_18_GML.zip,false
+1865064,Asahi-mura,37.21667,138.38333,00,,1965-10-01,15,15544,新潟県,中頸城郡,吉川町,INSIDE,False,N03-651001_15_GML.zip,false
+1865064,Asahi-mura,37.21667,138.38333,00,,1970-10-01,15,15544,新潟県,中頸城郡,吉川町,INSIDE,False,N03-701001_15_GML.zip,false
+1865064,Asahi-mura,37.21667,138.38333,00,,1975-10-01,15,15544,新潟県,中頸城郡,吉川町,INSIDE,False,N03-751001_15_GML.zip,false
+1865064,Asahi-mura,37.21667,138.38333,00,,1995-10-01,15,15544,新潟県,中頸城郡,吉川町,INSIDE,False,N03-951001_15_GML.zip,false
+1865066,Asahi-mura,35.96667,139.88333,00,,1995-10-01,12,12208,千葉県,,野田市,INSIDE,False,N03-951001_12_GML.zip,false
+1865067,Asahi-mura,35.96667,138.0,00,,1965-10-01,20,20382,長野県,上伊那郡,辰野町,INSIDE,False,N03-651001_20_GML.zip,false
+1865067,Asahi-mura,35.96667,138.0,00,,1970-10-01,20,20382,長野県,上伊那郡,辰野町,INSIDE,False,N03-701001_20_GML.zip,false
+1865067,Asahi-mura,35.96667,138.0,00,,1975-10-01,20,20382,長野県,上伊那郡,辰野町,INSIDE,False,N03-751001_20_GML.zip,false
+1865067,Asahi-mura,35.96667,138.0,00,,1995-10-01,20,20382,長野県,上伊那郡,辰野町,INSIDE,False,N03-951001_20_GML.zip,false

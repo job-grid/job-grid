@@ -1,0 +1,300 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const source = await readFile(new URL("../scripts/geonames-sample-validate.mjs", import.meta.url), "utf8");
+
+test("GeoNames preflight is source-pinned and explicit about its limited scope", () => {
+  for (const name of ["KE.zip", "GB.zip", "JP.zip", "BR.zip", "SG.zip", "countryInfo.txt", "admin1CodesASCII.txt", "admin2Codes.txt", "readme.txt"]) {
+    assert.ok(source.includes(name), `expected source ${name}`);
+  }
+  assert.match(source, /expected_sha256/);
+  assert.match(source, /SHA256_MISMATCH/);
+  assert.match(source, /BLOCK_SOURCE_MISSING/);
+  assert.match(source, /no_database_operations/);
+});
+
+test("ISO numeric values are preserved as strings, including Brazil 076", () => {
+  assert.match(source, /BR: \["BR", "BRA", "076"\]/);
+  assert.match(source, /candidate_numeric_text/);
+  assert.doesNotMatch(source, /parseInt\([^\n]*numeric/);
+});
+
+test("unmeasured validation counts are null, not fabricated zeros", () => {
+  assert.match(source, /source_records_read: null/);
+  assert.match(source, /accepted: null/);
+  assert.match(source, /rejected: null/);
+  assert.match(source, /quarantined: null/);
+  assert.match(source, /Null means not measured/);
+});
+
+test("the owner-laptop five-country comparison passes while global source and ISO gates remain incomplete", () => {
+  assert.match(source, /status: "BLOCKED"/);
+  assert.match(source, /approved_iso_authority_verified: false/);
+  assert.match(source, /process.exitCode = 2/);
+});
+
+
+test("documentation keeps owner-laptop sample evidence distinct from builder retrieval failures", async () => {
+  const readme = await readFile(new URL("../docs/geonames-sample-validation/README.md", import.meta.url), "utf8");
+  const report = await readFile(new URL("../docs/geonames-sample-validation-report-2026-10-10.json", import.meta.url), "utf8");
+  const design = await readFile(new URL("../docs/country-catalog-database-foundation.md", import.meta.url), "utf8");
+  const sourceManifest = await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8");
+  const builderReport = await readFile(new URL("../docs/geonames-sample-validation/results/validation-report.json", import.meta.url), "utf8");
+  const stageCReport = await readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.md", import.meta.url), "utf8");
+  const stageCJson = await readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.json", import.meta.url), "utf8");
+
+  for (const document of [readme, report, sourceManifest, builderReport]) {
+    assert.match(document, /13472324|13,472,324/);
+    assert.match(document, /independently reproduced|independently_reproduced|not independently reproduced|builder did not/i);
+  }
+  assert.match(readme, /catalog acceptance.*BLOCKED|BLOCKED.*catalog acceptance/i);
+  assert.match(report, /catalog_acceptance.*BLOCKED/);
+  assert.match(sourceManifest, /stage_b_independent_source_pinned_reproducibility/);
+  assert.match(builderReport, /Stage A|stage_a_owner_laptop_sample_generation_and_artifact_inspection/);
+  assert.match(design, /## 5C\. Reconciled evidence status/);
+  assert.match(design, /13,472,324/);
+  assert.match(design, /Stage A.*Stage B/s);
+  assert.match(readme, /last_modified_utc/);
+  assert.match(readme, /Singapore/);
+  assert.match(readme, /not automatic invalid/i);
+  assert.match(builderReport, /does not describe or negate the separate owner-laptop sample generation/i);
+  assert.match(report, /admin1_crosswalk_not_found/);
+  assert.match(report, /original-source SHA-256|original source bytes/i);
+  assert.match(stageCReport, /Stage C sample-record comparison: PASS/);
+  assert.match(stageCReport, /25,685/);
+  assert.match(stageCReport, /all 19 original fields/);
+  assert.match(stageCReport, /admin1CodesASCII.txt.*3,865/s);
+  assert.match(stageCReport, /admin2Codes.txt.*47,642/s);
+  assert.match(stageCReport, /24 Singapore/);
+  assert.match(stageCReport, /catalog acceptance remains .*BLOCKED/i);
+  assert.match(stageCJson, /"five_country_sample_record_comparison": "PASS"/);
+  assert.match(stageCJson, /"sample_ids_matched": 25685/);
+  assert.match(stageCJson, /"missing_sample_ids": 0/);
+  assert.match(stageCJson, /"admin1_unmatched": 2161/);
+  assert.match(stageCJson, /"source_record_exact_match_to_KE_zip": true/);
+  assert.match(sourceManifest, /owner_laptop_five_country_archive_comparison/);
+});
+
+ 
+test("crosswalk exports have deterministic schemas, sorting, and measured aggregate counts", async () => {
+ const fs = await import("node:fs/promises");
+ const a1 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json", import.meta.url), "utf8"));
+ const a2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
+ const summary = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-independent-source-verification-2026-10-10.json", import.meta.url), "utf8")).crosswalk_exception_reconciliation;
+ const sourceSummary = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/summary.json", import.meta.url), "utf8"));
+ const keys = ["geonames_id","name","country_code","feature_code","raw_admin1_code","raw_admin2_code","missing_reference_category","proposed_review_classification","crosswalk_lookup_key","raw_missing_code"];
+ for (const rows of [a1,a2]) {
+  for (const row of rows) assert.deepEqual(Object.keys(row), keys);
+  const compareRows = (a,b) => {
+    for (const key of ["country_code","geonames_id","raw_admin1_code","raw_admin2_code","feature_code","name"]) {
+      if (a[key] < b[key]) return -1;
+      if (a[key] > b[key]) return 1;
+    }
+    return 0;
+  };
+  assert.deepEqual(rows, [...rows].sort(compareRows));
+  assert.ok(rows.every(r => !("parent_id" in r) && !("proposed_parent_id" in r)));
+ }
+ assert.equal(a1.length,2333); assert.equal(new Set(a1.map(r=>r.geonames_id)).size,2333);
+ assert.equal(a2.length,240); assert.equal(new Set(a2.map(r=>r.geonames_id)).size,240);
+ assert.equal(summary.counts.records_in_both_exception_categories,157);
+ assert.equal(summary.counts.unique_records_in_either_exception_category,2416);
+ assert.equal(summary.singapore.prior_exception_count,24);
+ assert.equal(summary.singapore.broader_admin1_miss_count,142);
+ assert.equal(summary.singapore.exact_id_overlap_count,24);
+ assert.equal(summary.singapore.prior_only_count,0);
+ assert.equal(summary.singapore.broader_only_count,118);
+ assert.equal(summary.singapore.raw_admin1_code_counts["00"],118);
+ assert.equal(sourceSummary.prior_sg_exception_ids,24);
+ assert.equal(sourceSummary.broader_sg_admin1_misses,142);
+ assert.equal(sourceSummary.sg_prior_exception_ids_overlap,24);
+ assert.deepEqual(sourceSummary.sg_prior_only_ids,[]);
+ assert.equal(sourceSummary.sg_broader_only_ids.length,118);
+ const sgIds = a1.filter(r=>r.country_code==="SG").map(r=>r.geonames_id).sort();
+ assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_exact_overlap_ids.includes(id)), [...sourceSummary.sg_exact_overlap_ids].sort());
+ assert.deepEqual(sgIds.filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), [...sourceSummary.sg_broader_only_ids].sort());
+ assert.deepEqual([...sourceSummary.sg_exact_overlap_ids].sort().filter(id=>sourceSummary.sg_broader_only_ids.includes(id)), []);
+ assert.match(summary.global_gates.full_worldwide_scan_reproduction,/PASS_SEPARATE_IMPLEMENTATION_LOCAL_ARCHIVE/);
+ assert.equal(sourceSummary.owner_review.catalog_acceptance,"BLOCKED");
+ assert.equal(summary.global_gates.current_owner_approved_iso_comparison,"UNVERIFIED");
+});
+
+test("unmatched codes remain unresolved and exports prohibit fabricated parent links", async () => {
+ const fs = await import("node:fs/promises");
+ const rows = [
+  ...JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin1_references.json", import.meta.url), "utf8")),
+  ...JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"))
+ ];
+ for (const row of rows) {
+  assert.ok(row.missing_reference_category);
+  assert.ok(row.proposed_review_classification.startsWith("UNRESOLVED_"));
+  assert.ok(!("parent_id" in row) && !("proposed_parent_id" in row));
+  if (!row.raw_admin1_code && row.raw_admin2_code) {
+   assert.equal(row.missing_reference_category,"ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT");
+   assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_ADMIN1_CONTEXT");
+   assert.equal(row.crosswalk_lookup_key,null);
+  } else if (row.raw_missing_code === "00") assert.equal(row.proposed_review_classification,"UNRESOLVED_PLACEHOLDER_CODE");
+  else assert.equal(row.proposed_review_classification,"UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE");
+ }
+});
+
+
+test("row-level CSV files mirror the JSON counts and expected field schema", async () => {
+  const dir = new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/", import.meta.url);
+  const admin1Csv = await readFile(new URL("unmatched_admin1_references.csv", dir), "utf8");
+  const admin2Csv = await readFile(new URL("unmatched_admin2_references.csv", dir), "utf8");
+  const expectedHeader = "geonames_id,name,country_code,feature_code,raw_admin1_code,raw_admin2_code,missing_reference_category,proposed_review_classification,crosswalk_lookup_key,raw_missing_code";
+  const admin1Lines = admin1Csv.split("\n").map(line => line.replace(/\r$/, "")).filter(Boolean);
+  const admin2Lines = admin2Csv.split("\n").map(line => line.replace(/\r$/, "")).filter(Boolean);
+  assert.equal(admin1Lines[0], expectedHeader);
+  assert.equal(admin2Lines[0], expectedHeader);
+  assert.equal(admin1Lines.length - 1, 2333);
+  assert.equal(admin2Lines.length - 1, 240);
+  assert.ok(admin2Lines.some(line => line.startsWith("1861823,Ika-gun,JP,ADM2H,,1861823,ADMIN2_LOOKUP_UNCHECKABLE_MISSING_ADMIN1_CONTEXT,UNRESOLVED_MISSING_ADMIN1_CONTEXT,,")));
+});
+
+
+test("GeoNames validator unpacks all 19 source fields, including cc2 at column 10", async () => {
+  const validator = await readFile(new URL("../scripts/geonames-sample-validator.py", import.meta.url), "utf8");
+  const tuple = "gid,nm,ascii_name,alt,lat,lon,fc,ft,country,cc2,a1,a2,a3,a4,pop,elev,dem,tz,mod";
+  assert.ok(validator.includes(`${tuple}=f`), "the source row must unpack the corrected 19-field tuple");
+  const fields = tuple.split(",");
+  assert.equal(fields.length, 19);
+  assert.equal(fields[8], "country");
+  assert.equal(fields[9], "cc2");
+  assert.equal(fields[10], "a1");
+  assert.equal(fields[18], "mod");
+});
+
+
+test("worldwide verification records separate implementation evidence without overstating completeness", async () => {
+  const scan = JSON.parse(await readFile(new URL("../docs/geonames-worldwide-scan-reproduction-2026-10-10.json", import.meta.url), "utf8"));
+  const independent = JSON.parse(await readFile(new URL("../docs/geonames-worldwide-independent-verification-2026-10-10.json", import.meta.url), "utf8"));
+  const manifest = JSON.parse(await readFile(new URL("../docs/geonames-sample-validation/source-manifest.json", import.meta.url), "utf8"));
+
+  assert.equal(scan.results.worldwide_records_scanned, 13472324);
+  assert.equal(scan.results.malformed_worldwide_rows, 0);
+  assert.equal(scan.results.selected_place_rows, 25685);
+  assert.equal(scan.comparison_with_prior_owner_run.worldwide_records_scanned_both_runs, 13472324);
+  assert.match(scan.comparison_with_prior_owner_run.sample_payload_byte_for_byte_comparison, /7_OF_7/);
+  assert.equal(scan.limitations.full_worldwide_scan_independently_reproduced, true);
+  assert.equal(scan.limitations.current_approved_iso_authority_comparison, "UNVERIFIED");
+  assert.equal(scan.iso_authority_candidate.owner_approval_received, true);
+  assert.equal(scan.iso_authority_candidate.snapshot_downloaded_and_hashed, false);
+  assert.equal(scan.input_sources.find(source => source.key === "allCountries").sha256, "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15");
+
+  assert.equal(independent.status.independent_worldwide_scan, "PASS_SEPARATE_POWERSHELL_DOTNET_IMPLEMENTATION");
+  assert.equal(independent.worldwide_scan.records_scanned, 13472324);
+  assert.equal(independent.worldwide_scan.malformed_worldwide_rows, 0);
+  assert.equal(independent.sample_reconciliation.exact_matches_across_all_19_original_fields, 25685);
+  assert.equal(independent.sample_reconciliation.source_ids_missing, 0);
+  assert.equal(independent.sample_reconciliation.records_with_field_conflicts, 0);
+  assert.equal(independent.prior_same_script_output_comparison.length, 7);
+  assert.ok(independent.prior_same_script_output_comparison.every(file => file.byte_identical === true));
+  assert.equal(independent.provenance.official_urls_refetched_for_this_verification, false);
+  assert.equal(independent.status.official_source_retrieval_and_http_metadata, "UNVERIFIED");
+  assert.equal(independent.status.independent_sample_selection_algorithm_regeneration, "NOT_PERFORMED");
+  assert.equal(independent.status.current_iso_authority_comparison, "UNVERIFIED");
+  assert.equal(independent.status.worldwide_completeness, "UNVERIFIED");
+  assert.equal(independent.status.catalog_acceptance, "BLOCKED");
+
+  assert.equal(manifest.latest_independent_worldwide_verification.worldwide_rows_scanned, 13472324);
+  assert.equal(manifest.latest_independent_worldwide_verification.sample_output_files_byte_identical, 7);
+  assert.equal(manifest.latest_independent_worldwide_verification.official_source_origin_verified, false);
+  assert.equal(manifest.latest_independent_worldwide_verification.current_iso_authority_comparison, "UNVERIFIED");
+});
+ 
+test("hierarchy candidate audit verifies crosswalk IDs without creating parent links", async () => {
+  const fs = await import("node:fs/promises");
+  const audit = JSON.parse(await fs.readFile(new URL("../docs/geonames-hierarchy-candidate-presence-audit-2026-10-10.json", import.meta.url), "utf8"));
+  const admin2 = JSON.parse(await fs.readFile(new URL("../docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/unmatched_admin2_references.json", import.meta.url), "utf8"));
+  assert.equal(audit.input_integrity.sample_rows, 25685);
+  assert.equal(audit.input_integrity.unique_sample_ids, 25685);
+  assert.equal(audit.input_integrity.admin1_unique_keys, 3865);
+  assert.equal(audit.input_integrity.admin2_unique_keys, 47642);
+  assert.equal(audit.admin1.code_references_with_exact_crosswalk_key, 23320);
+  assert.equal(audit.admin1.code_references_without_exact_key, 2333);
+  assert.equal(audit.admin1.raw_00_placeholder_candidates, 2284);
+  assert.equal(audit.admin1.unmatched_nonzero_code_references, 49);
+  assert.equal(audit.status.local_crosswalk_candidate_presence, "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED");
+  assert.equal(audit.admin1.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 23195);
+  assert.equal(audit.admin1.candidate_identity_matches, 125);
+  assert.equal(audit.admin1.candidate_self_references, 0);
+  assert.equal(audit.admin1.candidate_presence_issues, 0);
+  assert.equal(audit.admin1.candidate_presence_mismatches_other_than_self_reference, 0);
+  assert.equal(audit.admin2.references_with_exact_composite_crosswalk_key, 20445);
+  assert.equal(audit.admin2.references_missing_composite_crosswalk_key, 239);
+  assert.equal(audit.admin2.references_uncheckable_due_to_blank_admin1_context, 1);
+  assert.equal(audit.admin2.total_unresolved_admin2_rows_in_export, 240);
+  assert.equal(audit.admin2.resolved_references_whose_candidate_id_is_present_as_same_country_administrative_feature, 13468);
+  assert.equal(audit.admin2.candidate_identity_matches, 6977);
+  assert.equal(audit.admin2.candidate_self_references, 0);
+  assert.equal(audit.admin2.candidate_presence_issues, 0);
+  assert.equal(audit.admin2.candidate_presence_mismatches_other_than_self_reference, 0);
+  assert.equal(audit.outcome.crosswalk_identity_match_cases, 7102);
+  assert.equal(audit.outcome.true_self_reference_cases, 0);
+  assert.equal(audit.outcome.other_candidate_presence_mismatches, 0);
+  assert.equal(audit.outcome.catalog_acceptance, "BLOCKED");
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.status, "PASS_OBSERVED_EXPECTED_ADMIN_LEVEL_FEATURE_CODES");
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin1.distinct_same_country_admin_candidate_rows, 23195);
+  assert.deepEqual(audit.hierarchy_candidate_feature_level_profile.admin1.observed_feature_code_counts_by_country, { BR: { ADM1: 5860 }, GB: { ADM1: 12088 }, JP: { ADM1: 2689 }, KE: { ADM1: 2558 } });
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin1.unexpected_feature_code_rows_against_observed_ADM1_level, 0);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin2.distinct_same_country_admin_candidate_rows, 13468);
+  assert.deepEqual(audit.hierarchy_candidate_feature_level_profile.admin2.observed_feature_code_counts_by_country, { BR: { ADM2: 285 }, GB: { ADM2: 11819 }, JP: { ADM2: 1364 } });
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.admin2.unexpected_feature_code_rows_against_observed_ADM2_level, 0);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.excluded_identity_matches.admin1, 125);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.excluded_identity_matches.admin2, 6977);
+  assert.equal(audit.hierarchy_candidate_feature_level_profile.catalog_acceptance, "BLOCKED");
+  assert.equal(audit.candidate_key_code_consistency.status, "PASS_ALL_RESOLVED_CANDIDATE_TARGET_CODES_MATCH_CROSSWALK_KEYS");
+  assert.equal(audit.candidate_key_code_consistency.admin1.crosswalk_key_references_with_target_rows_checked, 23320);
+  assert.equal(audit.candidate_key_code_consistency.admin1.target_admin1_code_matches, 23320);
+  assert.equal(audit.candidate_key_code_consistency.admin1.target_admin1_code_mismatches, 0);
+  assert.equal(audit.candidate_key_code_consistency.admin2.crosswalk_key_references_with_target_rows_checked, 20445);
+  assert.equal(audit.candidate_key_code_consistency.admin2.complete_composite_key_matches, 20445);
+  assert.equal(audit.candidate_key_code_consistency.admin2.complete_composite_key_mismatches, 0);
+  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin1.KE, { target_admin1_code_matches: 2605, target_admin1_code_mismatches: 0, target_admin_rows_checked: 2605 });
+  assert.deepEqual(audit.candidate_key_code_consistency_by_level_and_country.admin2.KE, { complete_composite_key_matches: 32, complete_composite_key_mismatches: 0, target_admin1_code_matches: 32, target_admin1_code_mismatches: 0, target_admin2_code_matches: 32, target_admin2_code_mismatches: 0, target_admin_rows_checked: 32 });
+  assert.equal(audit.candidate_key_code_consistency.catalog_acceptance, "BLOCKED");
+  assert.equal(audit.unresolved_reference_triage.admin1.unresolved_rows, 2333);
+  assert.equal(audit.unresolved_reference_triage.admin1.classifications.unresolved_placeholder_raw_code_00, 2284);
+  assert.equal(audit.unresolved_reference_triage.admin1.classifications.unresolved_missing_or_version_dependent_nonzero_code, 49);
+  assert.deepEqual(audit.unresolved_reference_triage.admin1.nonzero_unresolved_rows_by_country, { KE: 25, SG: 24 });
+  assert.equal(audit.unresolved_reference_triage.admin1.all_unresolved_rows_by_feature_code.ADM4H, 678);
+  assert.equal(audit.unresolved_reference_triage.admin1.all_unresolved_rows_by_feature_code.ADMD, 1104);
+  assert.equal(audit.unresolved_reference_triage.admin2.unresolved_rows, 240);
+  assert.equal(audit.unresolved_reference_triage.admin2.classifications.unresolved_placeholder_raw_code_00, 2);
+  assert.equal(audit.unresolved_reference_triage.admin2.classifications.unresolved_missing_or_version_dependent_code, 237);
+  assert.equal(audit.unresolved_reference_triage.admin2.classifications.unresolved_missing_admin1_context, 1);
+  assert.deepEqual(audit.unresolved_reference_triage.admin2.rows_by_feature_code, { ADM2H: 220, ADM3H: 15, ADMD: 5 });
+  assert.equal(audit.unresolved_reference_triage.decision.safe_automated_normalization, false);
+  assert.equal(audit.unresolved_reference_triage.decision.parent_ids_assigned, false);
+  const crossTab = audit.unresolved_reference_triage.feature_code_cross_tab;
+  assert.equal(crossTab.admin1.unresolved_rows, 2333);
+  assert.equal(crossTab.admin1.historical_administrative_feature_rows_total, 952);
+  assert.equal(crossTab.admin1.historical_populated_place_rows_total, 2);
+  assert.equal(crossTab.admin1.by_review_classification_and_feature_code.UNRESOLVED_PLACEHOLDER_CODE.ADM4H, 678);
+  assert.equal(crossTab.admin1.by_review_classification_and_feature_code.UNRESOLVED_PLACEHOLDER_CODE.ADMD, 1094);
+  assert.equal(crossTab.admin1.by_review_classification_and_feature_code.UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE.PPL, 22);
+  assert.equal(crossTab.admin2.unresolved_rows, 240);
+  assert.equal(crossTab.admin2.historical_administrative_feature_rows_total, 235);
+  assert.equal(crossTab.admin2.undifferentiated_administrative_feature_rows_total, 5);
+  assert.equal(crossTab.admin2.by_review_classification_and_feature_code.UNRESOLVED_MISSING_OR_VERSION_DEPENDENT_REFERENCE.ADM2H, 219);
+  assert.equal(crossTab.admin2.by_review_classification_and_feature_code.UNRESOLVED_MISSING_ADMIN1_CONTEXT.ADM2H, 1);
+  assert.equal(crossTab.governance.parent_ids_assigned, false);
+  assert.equal(crossTab.governance.automatic_code_normalization, false);
+  assert.match(audit.audit_script.executed_copy_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(audit.audit_script.current_repository_script_reexecuted_against_source_data_after_hardening, true);
+  assert.equal(audit.latest_execution.status, "PASS_CANDIDATE_PRESENCE_ONLY_NO_PARENT_LINKS_APPROVED");
+  assert.equal(audit.latest_execution.exit_code, 0);
+  assert.equal(audit.latest_execution.result.total_identity_matches, 7102);
+  assert.equal(audit.latest_execution.result.total_self_reference_candidates, 0);
+  assert.equal(audit.latest_execution.result.parent_links_written, false);
+  assert.equal(audit.audit_script.current_repository_script_is_covered_by_synthetic_tests, true);
+  assert.equal(audit.scope.parent_links_written, false);
+  assert.equal(audit.admin1.candidate_identity_matches + audit.admin2.candidate_identity_matches, 7102);
+  const contextCase = admin2.find(row => row.proposed_review_classification === "UNRESOLVED_MISSING_ADMIN1_CONTEXT");
+  assert.ok(contextCase);
+  assert.equal(contextCase.raw_admin1_code, "");
+  assert.equal(contextCase.crosswalk_lookup_key, null);
+});
