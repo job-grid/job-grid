@@ -392,6 +392,7 @@ jobs:
             "$work/japan-estat-evidence-audit" \
             "$work/geonames-source-manifest.json"
           python - "$work/japan-estat-evidence-audit.json" <<'PY'
+          import csv
           import json
           import sys
           from pathlib import Path
@@ -437,7 +438,7 @@ jobs:
               if target.get("operational_parent_link_created") is not False:
                   raise SystemExit(f"Japanese alternate-name target violates zero-parent-write rule: {target.get('geonames_id')}")
               for candidate in target.get("candidates", []):
-                  if not __import__("re").fullmatch(r"\\d{5}", str(candidate.get("area_code", ""))):
+                  if not __import__("re").fullmatch(r"\d{5}", str(candidate.get("area_code", ""))):
                       raise SystemExit(f"Japanese alternate-name candidate has invalid area code for {target.get('geonames_id')}")
                   if candidate.get("operational_parent_link_created") is not False:
                       raise SystemExit(f"Japanese alternate-name candidate violates zero-parent-write rule for {target.get('geonames_id')}")
@@ -450,7 +451,7 @@ jobs:
               raise SystemExit("Japanese alternate-name CSV must retain every English-unmatched target.")
           if any(str(row.get("operational_parent_link_created", "")).lower() != "false" for row in alt_csv_rows):
               raise SystemExit("Japanese alternate-name CSV violates zero-parent-write rule.")
-          if any(row.get("candidate_area_code") and not __import__("re").fullmatch(r"\\d{5}", row["candidate_area_code"]) for row in alt_csv_rows):
+          if any(row.get("candidate_area_code") and not __import__("re").fullmatch(r"\d{5}", row["candidate_area_code"]) for row in alt_csv_rows):
               raise SystemExit("Japanese alternate-name CSV contains an invalid area code.")
           print("Japan candidate audit complete: all 126 target identities and raw codes are source-verified; no parent links were written.")
           PY
