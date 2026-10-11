@@ -6,13 +6,16 @@ import {
   ESTAT_SPARQL_ENDPOINT,
   SPARQL_QUERY,
   buildCandidateAudit,
+  buildJapaneseAlternateNameCandidateAudit,
   buildCatalogQuery,
   buildDetailsQuery,
   fetchEstatSnapshot,
   normalizeExactLabel,
+  normalizeJapaneseLabel,
   parseEstatBindings,
   parseGeoNamesSourceRow,
   renderCandidateCsv,
+  renderJapaneseAlternateNameCandidateCsv,
   selectJapanTargets,
   verifyTargetSourceRows,
 } from "../scripts/geonames-japan-estat-evidence-audit.mjs";
@@ -55,7 +58,7 @@ function makeTargets() {
 
 function sourceGeoRow(target) {
   const fields = [
-    target.geonames_id, target.name, target.name, "", target.latitude ?? "35.0000", target.longitude ?? "139.0000",
+    target.geonames_id, target.name, target.name, target.alternate_names_raw ?? (target.source_alternate_names ?? []).join(","), target.latitude ?? "35.0000", target.longitude ?? "139.0000",
     target.feature_class ?? "A", target.feature_code, target.country_code, "",
     target.raw_admin1_code, target.raw_admin2_code, "", "", "0", "", "", "Asia/Tokyo", "2020-06-11",
   ];
@@ -79,12 +82,14 @@ function sparqlResponse(bindings) {
   };
 }
 
-function catalogBinding(index, label = `Unrelated label ${index}`) {
-  return {
+function catalogBinding(index, label = `Unrelated label ${index}`, labelJa = "") {
+  const row = {
     PERIOD: { type: "uri", value: `http://data.e-stat.go.jp/lod/sac/C27100-${index}-19700401` },
     IDENTIFIER: { type: "literal", value: String(index).padStart(5, "0") },
     LABELEN: { type: "literal", value: label, "xml:lang": "en" },
   };
+  if (labelJa) row.LABELJA = { type: "literal", value: labelJa, "xml:lang": "ja" };
+  return row;
 }
 
 function detailBinding(uri, overrides = {}) {
@@ -112,6 +117,7 @@ test("catalog queries page complete source and do not request optional detail fi
   assert.match(SPARQL_QUERY, /LIMIT 4000/);
   assert.match(buildCatalogQuery(0), /OFFSET 0/);
   assert.match(buildCatalogQuery(4000), /OFFSET 4000/);
+  assert.match(buildCatalogQuery(0), /OPTIONAL\s*\{\s*\?period rdfs:label \?labelJa/);
   assert.throws(() => buildCatalogQuery(-1), /Invalid/);
   assert.throws(() => buildCatalogQuery(1.5), /Invalid/);
   assert.match(buildDetailsQuery(["http://data.e-stat.go.jp/lod/sac/C27100-19700401"]), /sacs:previousCode/);
