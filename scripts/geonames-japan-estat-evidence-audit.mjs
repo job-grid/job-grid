@@ -29,12 +29,16 @@ PREFIX sacs: <http://data.e-stat.go.jp/lod/terms/sacs#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-SELECT DISTINCT ?period ?identifier ?labelEn
+SELECT DISTINCT ?period ?identifier ?labelEn ?labelJa
 WHERE {
   ?period a sacs:StandardAreaCode ;
           dcterms:identifier ?identifier ;
           rdfs:label ?labelEn .
   FILTER(LANG(?labelEn) = "en")
+  OPTIONAL {
+    ?period rdfs:label ?labelJa .
+    FILTER(LANG(?labelJa) = "ja")
+  }
   FILTER(REGEX(STR(?identifier), "^(0[1-9]|[1-3][0-9]|4[0-7])[0-9]{3}$"))
 }
 ORDER BY STR(?identifier) ?period
@@ -611,8 +615,16 @@ async function requestEstatQuery(query, fetchImpl, now, { allowEmpty = false } =
  * truncates large results. Enrich only exact-label candidates with hierarchy
  * and historical properties; do not assume a returned label proves identity.
  */
-export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = () => new Date()) {
+export async function fetchEstatSnapshot(
+  targetNames,
+  fetchImpl = fetch,
+  now = () => new Date(),
+  targetJapaneseAlternateNames = [],
+) {
   const targetKeys = new Set(targetNames.map(normalizeExactLabel).filter(Boolean));
+  const alternateJapaneseKeys = new Set(
+    targetJapaneseAlternateNames.map(normalizeJapaneseLabel).filter(Boolean),
+  );
   const catalogPages = [];
   const catalogRows = [];
   for (let pageNumber = 0; pageNumber < MAX_CATALOG_PAGES; pageNumber += 1) {
@@ -643,7 +655,11 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
   if (catalogRows.length === 0) throw new Error("e-Stat catalog returned zero standard-area-code rows.");
 
   const initiallyMatchedRows = catalogRows.filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)));
-  const candidateAreaCodes = new Set(initiallyMatchedRows.map((row) => row.area_code));
+  const japaneseAlternateMatchedRows = catalogRows.filter((row) =>
+    alternateJapaneseKeys.has(normalizeJapaneseLabel(row.label_ja)));
+  const englishCandidateAreaCodes = new Set(initiallyMatchedRows.map((row) => row.area_code));
+  const japaneseAlternateCandidateAreaCodes = new Set(japaneseAlternateMatchedRows.map((row) => row.area_code));
+  const candidateAreaCodes = new Set([...englishCandidateAreaCodes, ...japaneseAlternateCandidateAreaCodes]);
   // Once an area code matches a target label, retrieve every period for that code
   // so the review report captures changes in name, dates, and parent over time.
   const candidateUris = [...new Set(catalogRows
@@ -681,7 +697,7 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     for (const detail of details) {
       sourceRows.push({
         ...row,
-        label_ja: detail?.label_ja ?? "",
+        label_ja: detail?.label_ja || row.label_ja || "",
         effective_from: detail?.effective_from ?? "",
         effective_until: detail?.effective_until ?? "",
         parent_uri: detail?.parent_uri ?? "",
@@ -731,7 +747,9 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     source_snapshot_sha256: combinedSourceHash,
     result_row_count: catalogRows.length,
     result_cap_per_page: CATALOG_PAGE_SIZE,
-    candidate_area_code_count: candidateAreaCodes.size,
+    candidate_area_code_count: englishCandidateAreaCodes.size,
+    candidate_area_code_count_including_japanese_alternate_names: candidateAreaCodes.size,
+    japanese_alternate_name_candidate_area_code_count: japaneseAlternateCandidateAreaCodes.size,
     candidate_history_period_uris_requested: candidateUris.length,
     license_note: "The official Statistical LOD SPARQL API page states that site content is licensed CC BY 4.0 except where otherwise noted; confirm applicable dataset terms before redistribution.",
     source_scope_note: "e-Stat documents standard-area-code and related municipality abolishment, absorption, name-change and hierarchy data from April 1970 onward. This is a candidate evidence source, not a GeoNames crosswalk.",
