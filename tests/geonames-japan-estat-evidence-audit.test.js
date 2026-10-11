@@ -452,7 +452,7 @@ test("fetches full code history for exact Japanese alternate-label candidates", 
     ["Yao-chō"],
     fakeFetch,
     () => new Date("2026-10-11T00:00:00.000Z"),
-    ["八尾町"],
+    [{ geonames_id: "1848001", target_name: "Yao-chō", alternate_names: ["八尾町"] }],
   );
   assert.equal(requests.length, 2);
   assert.equal(snapshot.manifest.candidate_area_code_count, 0);
