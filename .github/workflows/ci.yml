@@ -1037,6 +1037,67 @@ jobs:
           print("- Containing area codes are spatial-first candidates only; none is approved as a GeoNames entity or parent.")
           PY
 
+      - name: Retrieve official e-Stat period history and parents for spatial-first area codes
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-spatial-first-estat-detail-audit.test.js
+          node scripts/geonames-japan-spatial-first-estat-detail-audit.mjs \
+            "$work/japan-mlit-1995-all-126-spatial-first.json" \
+            "$work/japan-estat-evidence-audit.source-response.json" \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-1995-all-126-estat-details"
+          python - "$work/japan-mlit-1995-all-126-estat-details.json" "$work/japan-mlit-1995-all-126-estat-details.area-code-candidates.csv" "$work/japan-mlit-1995-all-126-estat-details.target-code-details.csv" "$work/japan-mlit-1995-all-126-estat-details.target-summary.csv" "$work/japan-mlit-1995-all-126-estat-details.area-code-period-history.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, codes_path, target_code_path, summary_path, history_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          with codes_path.open(encoding="utf-8", newline="") as stream:
+              code_rows = list(csv.DictReader(stream))
+          with target_code_path.open(encoding="utf-8", newline="") as stream:
+              target_code_rows = list(csv.DictReader(stream))
+          with summary_path.open(encoding="utf-8", newline="") as stream:
+              summaries = list(csv.DictReader(stream))
+          with history_path.open(encoding="utf-8", newline="") as stream:
+              history = list(csv.DictReader(stream))
+          if report.get("target_count") != 126 or len(summaries) != 126 or len({row["geonames_id"] for row in summaries}) != 126:
+              raise SystemExit("Spatial-first detail report must preserve all 126 unique target IDs.")
+          if report.get("distinct_spatial_area_codes") != 105 or len(code_rows) != 105:
+              raise SystemExit("Spatial-first detail report must preserve all 105 distinct area-code candidates.")
+          if report.get("target_to_spatial_area_code_associations") != len(target_code_rows):
+              raise SystemExit("Target/code association count does not reconcile with the generated CSV.")
+          if report.get("catalog_period_uris_requested") != report.get("detail_periods_reconciled"):
+              raise SystemExit("Not all requested e-Stat code-history period URIs were reconciled.");
+          if len(history) != report.get("detail_periods_reconciled"):
+              raise SystemExit("History CSV period row count does not reconcile with the detail report.")
+          if report.get("e_stat_catalog_row_count") != 14741:
+              raise SystemExit("Unexpected official e-Stat catalog source row count.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Spatial-first detail audit must not create operational parent links.")
+          for path in [codes_path, target_code_path, summary_path, history_path]:
+              with path.open(encoding="utf-8", newline="") as stream:
+                  for row in csv.DictReader(stream):
+                      if "operational_parent_link_created" in row and row["operational_parent_link_created"].lower() != "false":
+                          raise SystemExit(f"Parent-write boundary violated in {path.name}.")
+          if any(len(batch.get("response_sha256", "")) != 64 for batch in report.get("detail_batch_manifest", [])):
+              raise SystemExit("An e-Stat historical detail response lacks a SHA-256 fingerprint.")
+          print(
+              f"Validated spatial-first e-Stat detail audit: {report['target_count']} targets; "
+              f"{report['distinct_spatial_area_codes']} area-code candidates; "
+              f"{report['target_to_spatial_area_code_associations']} target/code associations; "
+              f"{report['detail_periods_reconciled']} e-Stat history periods; "
+              f"{report['detail_rows_received']} response rows; zero parent links."
+          )
+          print(f"- Area codes with a period covering the 1995 snapshot: {report['spatial_area_codes_with_period_covering_1995']}/105")
+          print(f"- Area codes without a recorded period covering 1995: {report['spatial_area_codes_without_period_covering_1995']}")
+          print(f"- Targets whose observed area code matches an earlier exact-English-name candidate: {report['spatial_targets_with_at_least_one_spatial_code_matching_prior_exact_name_candidate']}/126")
+          print("- Official parent references are retained as source evidence only; no GeoNames parent ID was selected.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -1062,6 +1123,13 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.target-summary.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.area-code-candidates.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.target-code-details.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.target-summary.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.area-code-period-history.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.source-response.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html

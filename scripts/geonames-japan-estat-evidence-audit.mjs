@@ -725,7 +725,7 @@ export function renderCandidateCsv(report) {
   return lines.join("\n") + "\n";
 }
 
-async function requestEstatQuery(query, fetchImpl, now, { allowEmpty = false } = {}) {
+export async function requestEstatQuery(query, fetchImpl, now, { allowEmpty = false } = {}) {
   const form = new URLSearchParams({ query });
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
