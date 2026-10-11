@@ -427,6 +427,7 @@ export async function runParentIdentityCandidateAudit({
   let parentReferences = buildOfficialParentReferenceIndex(detailReport);
   let targetCandidateExpansion = null;
   let targetCandidateParentQueue = null;
+  let targetCandidateQueueInputs = null;
   if (targetCandidateReport) {
     const supplemental = mergeExactLabelTargetCandidateParentReferences(parentReferences, targetCandidateReport);
     parentReferences = supplemental.parentReferences;
@@ -437,11 +438,7 @@ export async function runParentIdentityCandidateAudit({
       expanded_parent_reference_count: supplemental.expandedParentReferenceCount,
       report_sha256: sha256(targetCandidateReportBytes),
     };
-    targetCandidateParentQueue = buildTargetCandidateParentQueue(
-      targetCandidateReport,
-      parentReferences,
-      spatialPolygonReport,
-    );
+    targetCandidateQueueInputs = { targetCandidateReport, spatialPolygonReport };
   }
   const referencesByJapaneseLabel = new Map();
   for (const reference of parentReferences) {
@@ -517,6 +514,14 @@ export async function runParentIdentityCandidateAudit({
     } else {
       reference.candidate_status = "MULTIPLE_EXACT_GEONAMES_ADMIN_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION";
     }
+  }
+
+  if (targetCandidateQueueInputs) {
+    targetCandidateParentQueue = buildTargetCandidateParentQueue(
+      targetCandidateQueueInputs.targetCandidateReport,
+      parentReferences,
+      targetCandidateQueueInputs.spatialPolygonReport,
+    );
   }
 
   const allCandidateMatches = parentReferences.flatMap((reference) =>
