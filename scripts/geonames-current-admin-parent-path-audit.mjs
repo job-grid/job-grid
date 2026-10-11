@@ -532,6 +532,7 @@ export function buildAuditSummary(rows, sourceMetadata) {
     targets_with_any_direct_hierarchy_edges: rows.filter((row) => row.hierarchy_direct_edge_count > 0).length,
     unresolved_or_blocked_targets: rows.length - complete.length,
     statuses: counts(rows, "parent_path_audit_status"),
+    explicit_hierarchy_path_statuses: counts(rows, "hierarchy_path_audit_status"),
     by_country: Object.fromEntries([...new Set(rows.map((row) => row.country_code))].sort().map((country) => [
       country,
       {
