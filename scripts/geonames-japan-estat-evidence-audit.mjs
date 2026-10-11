@@ -770,7 +770,7 @@ export async function fetchEstatSnapshot(
   targetNames,
   fetchImpl = fetch,
   now = () => new Date(),
-  targetJapaneseAlternateNames = [],
+  targetJapaneseAlternateNameRecords = [],
 ) {
   const targetKeys = new Set(targetNames.map(normalizeExactLabel).filter(Boolean));
   const alternateJapaneseKeys = new Set(
@@ -806,6 +806,19 @@ export async function fetchEstatSnapshot(
   if (catalogRows.length === 0) throw new Error("e-Stat catalog returned zero standard-area-code rows.");
 
   const initiallyMatchedRows = catalogRows.filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)));
+  const englishMatchedTargetKeys = new Set(
+    initiallyMatchedRows.map((row) => normalizeExactLabel(row.label_en)),
+  );
+  const unmatchedTargetKeys = new Set(
+    [...targetKeys].filter((key) => !englishMatchedTargetKeys.has(key)),
+  );
+  const alternateJapaneseKeys = new Set(
+    targetJapaneseAlternateNameRecords
+      .filter((record) => unmatchedTargetKeys.has(normalizeExactLabel(record.target_name)))
+      .flatMap((record) => record.alternate_names ?? [])
+      .map(normalizeJapaneseLabel)
+      .filter(Boolean),
+  );
   const japaneseAlternateMatchedRows = catalogRows.filter((row) =>
     alternateJapaneseKeys.has(normalizeJapaneseLabel(row.label_ja)));
   const englishCandidateAreaCodes = new Set(initiallyMatchedRows.map((row) => row.area_code));
@@ -952,12 +965,16 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     source_identity_and_raw_codes_verified: true,
   }));
   const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
-  const japaneseAlternateNames = targets.flatMap((row) => row.source_alternate_names ?? []);
+  const japaneseAlternateNameRecords = targets.map((row) => ({
+    geonames_id: String(row.geonames_id),
+    target_name: row.name,
+    alternate_names: row.source_alternate_names ?? [],
+  }));
   const snapshot = await fetchEstatSnapshot(
     targets.map((row) => row.name),
     fetchImpl,
     now,
-    japaneseAlternateNames,
+    japaneseAlternateNameRecords,
   );
   const report = buildCandidateAudit(targets, snapshot.sourceRows, snapshot.manifest.source_snapshot_sha256);
   report.japanese_alternate_name_candidate_audit = buildJapaneseAlternateNameCandidateAudit(
