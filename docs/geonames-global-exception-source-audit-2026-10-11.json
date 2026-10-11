@@ -7,7 +7,7 @@
     "license": "CC BY 4.0; see official GeoNames readme/source terms",
     "filename": "allCountries.zip",
     "url": "https://download.geonames.org/export/dump/allCountries.zip",
-    "retrieved_at_utc": "2026-10-11T00:09:43Z",
+    "retrieved_at_utc": "2026-10-11T00:47:56Z",
     "http_status": 200,
     "http_last_modified_header": "Sat, 10 Oct 2026 01:58:39 GMT",
     "http_last_modified_utc": "2026-10-10T01:58:39Z",
@@ -41,8 +41,8 @@
     }
   },
   "validation": {
-    "test_count": 73,
-    "tests_passed": 73,
+    "test_count": 83,
+    "tests_passed": 83,
     "tests_failed": 0,
     "phase_0_ci": "PASS",
     "phase_4c_tooling_validation": "PASS",
@@ -54,5 +54,40 @@
     "The 128 current administrative parent paths remain blocked: 126 Japan records with raw admin1 00 and two Kenya records without an exact ADM1 composite-key match or direct ADM hierarchy edge.",
     "Current ISO authority comparison and product/worldwide geographic completeness remain unverified.",
     "No migrations, seeds, imports, database operations, production changes or deployments were performed."
-  ]
+  ],
+  "latest_verified_workflow": {
+    "name": "Phase 0 CI",
+    "run_number": 357,
+    "run_id": 38099570891,
+    "tested_commit": "3043d2e14747c0637b9533cf8005067f033d9667",
+    "phase_0_ci": "PASS",
+    "phase_4c_tooling_validation": "PASS",
+    "phase_4c_backup_executor_validation": "PASS"
+  },
+  "source_country_code_coverage": {
+    "scope": "GeoNames allCountries source snapshot only; not an ISO 3166 comparison or proof of Job Grid product coverage",
+    "source_rows_with_19_fields_and_nonempty_id": 13472324,
+    "malformed_or_wrong_shape_source_lines": 0,
+    "distinct_raw_country_code_buckets_including_blank": 254,
+    "distinct_nonblank_raw_country_code_buckets": 253,
+    "rows_with_blank_country_code": 7112,
+    "rows_with_nonstandard_country_code_format": 0,
+    "feature_class_record_counts": {
+      "(blank)": 5002,
+      "A": 543994,
+      "H": 2611651,
+      "L": 495399,
+      "P": 5231964,
+      "R": 58269,
+      "S": 2547222,
+      "T": 1839114,
+      "U": 15720,
+      "V": 123989
+    },
+    "limitations": [
+      "Raw GeoNames country-code buckets are not a current official ISO country-code list.",
+      "A two-uppercase-letter format does not prove that a code is currently assigned by ISO.",
+      "These figures describe the downloaded GeoNames source only; they do not certify global geographic completeness or Job Grid product coverage."
+    ]
+  }
 }
