@@ -244,10 +244,11 @@ test("maps uppercase JSON SPARQL bindings into evidence fields", () => {
   assert.equal(row.parent_area_code, "27000");
 });
 
-test("paged snapshot fetches candidate details and pins every response", async () => {
+test("paged snapshot fetches every history period for matched area codes and pins every response", async () => {
   const targetNames = ["Yao-chō"];
   const periodA = "http://data.e-stat.go.jp/lod/sac/C27100-19700401";
-  const periodB = "http://data.e-stat.go.jp/lod/sac/C27100-19900401";
+  const periodA2 = "http://data.e-stat.go.jp/lod/sac/C27100-19900401";
+  const periodB = "http://data.e-stat.go.jp/lod/sac/C27101-19700401";
   const requests = [];
   const fakeFetch = async (url, options) => {
     requests.push({ url, options });
@@ -255,14 +256,16 @@ test("paged snapshot fetches candidate details and pins every response", async (
     if (query.includes("VALUES ?period")) {
       return sparqlResponse([
         detailBinding(periodA, { ISSUED: { value: "1970-04-01" } }),
-        detailBinding(periodB, { ISSUED: { value: "1990-04-01" } }),
+        detailBinding(periodA2, { ISSUED: { value: "1990-04-01" } }),
+        detailBinding(periodB, { ISSUED: { value: "1970-04-01" } }),
       ]);
     }
-    const offset = Number(query.match(/OFFSET (\d+)/)?.[1] ?? "0");
+    const offset = Number(query.match(/OFFSET (\\d+)/)?.[1] ?? "0");
     return sparqlResponse(offset === 0 ? [
-      catalogBinding(27100, "Yao-cho"),
+      { ...catalogBinding(27100, "Yao-cho"), PERIOD: { type: "uri", value: periodA } },
+      { ...catalogBinding(27100, "Yao cho"), PERIOD: { type: "uri", value: periodA2 } },
       { ...catalogBinding(27101, "Yao cho"), PERIOD: { type: "uri", value: periodB } },
-    ].map((row, index) => ({ ...row, PERIOD: { type: "uri", value: index === 0 ? periodA : periodB } })) : []);
+    ] : []);
   };
   const snapshot = await fetchEstatSnapshot(targetNames, fakeFetch, () => new Date("2026-10-11T00:00:00.000Z"));
   assert.equal(requests.length, 2);
@@ -270,10 +273,13 @@ test("paged snapshot fetches candidate details and pins every response", async (
   assert.equal(requests[0].options.method, "POST");
   assert.match(requests[0].options.body, /query=/);
   assert.equal(snapshot.manifest.catalog_url, ESTAT_CATALOG_URL);
-  assert.equal(snapshot.manifest.catalog_result_row_count, 2);
+  assert.equal(snapshot.manifest.catalog_result_row_count, 3);
   assert.equal(snapshot.manifest.catalog_page_count, 1);
-  assert.equal(snapshot.manifest.candidate_detail_result_rows, 2);
-  assert.equal(snapshot.sourceRows.length, 2);
+  assert.equal(snapshot.manifest.candidate_area_code_count, 2);
+  assert.equal(snapshot.manifest.candidate_history_period_uris_requested, 3);
+  assert.equal(snapshot.manifest.candidate_detail_result_rows, 3);
+  assert.equal(snapshot.manifest.candidate_detail_batch_count, 1);
+  assert.equal(snapshot.sourceRows.length, 3);
   assert.equal(snapshot.sourceRows.every((row) => row.parent_area_code === "27000"), true);
   assert.match(snapshot.manifest.response_sha256, /^[a-f0-9]{64}$/);
   assert.match(snapshot.manifest.catalog_query_sha256, /^[a-f0-9]{64}$/);
