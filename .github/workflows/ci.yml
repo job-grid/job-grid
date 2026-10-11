@@ -860,6 +860,48 @@ jobs:
                       f"- GeoNames ID {row['geonames_id']} ({row['geonames_name']}) -> "
                       f"candidate area code {row['candidate_code']}; contained snapshot(s): {snapshots}"
                   )
+          print("## Official e-Stat period history for positive spatial associations (evidence only)")
+          estat_targets = {str(target["geonames_id"]): target for target in estat.get("target_results", [])}
+          for spatial_row in sorted(candidates, key=lambda item: (int(item["geonames_id"]), item["candidate_code"])):
+              snapshots = spatial_row.get("point_inside_candidate_polygon_snapshots", "")
+              if not snapshots:
+                  continue
+              target = estat_targets.get(str(spatial_row["geonames_id"]))
+              if target is None or target.get("source_identity_and_raw_codes_verified") is not True:
+                  raise SystemExit(f"Positive spatial row lacks source-verified e-Stat target {spatial_row['geonames_id']}.")
+              candidate = next(
+                  (item for item in target.get("candidates", [])
+                   if str(item.get("area_code", "")).zfill(5) == str(spatial_row["candidate_code"]).zfill(5)),
+                  None,
+              )
+              if candidate is None:
+                  raise SystemExit(
+                      f"Positive spatial row is not present in source candidate evidence: "
+                      f"{spatial_row['geonames_id']} / {spatial_row['candidate_code']}"
+                  )
+              detail = {
+                  "geonames_id": str(spatial_row["geonames_id"]),
+                  "geonames_name": spatial_row["geonames_name"],
+                  "candidate_area_code": spatial_row["candidate_code"],
+                  "point_inside_candidate_polygon_snapshots": snapshots,
+                  "candidate_exact_matching_period_count": candidate.get("exact_matching_period_count"),
+                  "candidate_history_period_count": candidate.get("history_period_count"),
+                  "periods": [
+                      {
+                          "effective_from": period.get("effective_from", ""),
+                          "effective_until": period.get("effective_until", ""),
+                          "label_en": period.get("label_en", ""),
+                          "label_ja": period.get("label_ja", ""),
+                          "matches_target_name": period.get("matches_target_name"),
+                          "parent_references": period.get("parent_references", []),
+                          "previous_period_uris": period.get("previous_period_uris", []),
+                          "succeeding_period_uris": period.get("succeeding_period_uris", []),
+                          "administrative_class_uris": period.get("administrative_class_uris", []),
+                      }
+                      for period in candidate.get("periods", [])
+                  ],
+              }
+              print(json.dumps(detail, ensure_ascii=False, sort_keys=True))
           print("## Targets without containing-polygon context (remain unresolved)")
           for row in sorted(target_summaries, key=lambda item: int(item["geonames_id"])):
               if row.get("polygon_context_status") != "CONTAINING_POLYGON_OBSERVED":
