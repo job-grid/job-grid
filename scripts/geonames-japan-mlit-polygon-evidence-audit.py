@@ -375,14 +375,14 @@ def archive_structure_diagnostic(zip_bytes: bytes) -> dict:
         for member in xml_members[:3]:
             raw = archive.read(member)
             decl = re.search(
-                br"<\\?xml[^>]*\\bencoding\\s*=\\s*['\"]([^'\"]+)['\"]",
+                br"<\?xml[^>]*\bencoding\s*=\s*['\"]([^'\"]+)['\"]",
                 raw[:2048],
                 re.IGNORECASE,
             )
             try:
                 normalized = normalize_xml_bytes_for_expat(raw)
                 tags = re.findall(
-                    rb"<(?:[A-Za-z0-9_.-]+:)?([A-Za-z][A-Za-z0-9_.-]*)\\b",
+                    rb"<(?:[A-Za-z0-9_.-]+:)?([A-Za-z][A-Za-z0-9_.-]*)\b",
                     normalized,
                 )
                 counts = Counter(tag.decode("ascii", errors="replace").lower() for tag in tags)
