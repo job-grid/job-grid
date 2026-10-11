@@ -141,3 +141,15 @@ The current run therefore independently reproduces the reported 13,472,324-line 
 The official source fingerprint and aggregate result are committed in [the machine-readable global audit summary](../geonames-global-exception-source-audit-2026-10-11.json). The full row-level CSV, detailed JSON and source retrieval manifest are in [the seven-day workflow artifact](https://github.com/job-grid/job-grid/actions/runs/38097453927/artifacts/11686636684) (expires 2026-10-18). The full 422 MB archive and its 1.79 GB extracted text were not committed and are not included in the artifact.
 
 **Still unverified:** independent reproduction of the algorithm that selected the separate 25,685-row sample; current ISO authority comparison; and product/worldwide geographic completeness. The current administrative hierarchy gate remains blocked: 126 Japan ADM4 records preserve raw admin1 `00`, and two Kenyan ADM3 records have neither an exact ADM1 composite-key match nor a direct `ADM` hierarchy edge. No parent links, schema/migration/seed/import, database, production or deployment changes were made.
+
+
+## Stage E — Kenya legacy admin1 key audit — 2026-10-11
+
+A separate read-only CI audit retrieved the current official GeoNames `admin1CodesASCII.txt` and checked the exact composite keys required by the two unresolved Kenya ADM3 records:
+
+- GeoNames ID 192705, Kiambururu Sub-Location: source raw admin1 remains `01`; key `KE.01` has zero rows in the current crosswalk.
+- GeoNames ID 7800132, Imenti Central: source raw admin1 remains `03`; key `KE.03` has zero rows in the current crosswalk.
+
+The audit parsed 3,865 rows with zero malformed rows and zero duplicate composite keys. HTTP retrieval metadata and the source hash are in the [machine-readable audit](../geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json); the [report](../geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.md) explains the evidence and limits. The source was retrieved at `2026-10-11T00:18:08Z` (HTTP 200; Last-Modified `2026-10-10T01:58:39Z`; SHA-256 `1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a`).
+
+GeoNames' current crosswalk also includes records such as `KE.22` and `KE.35`, but these were not inferred as replacements or assigned to the target rows. Historical forum guidance called KE.01/KE.03 obsolete but is not an authoritative replacement map. The two records remain valid source identities with unresolved parent associations. No names/proximity matching, parent IDs, operational links or production changes were used.
