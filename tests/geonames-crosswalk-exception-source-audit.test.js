@@ -59,11 +59,12 @@ test("deduplicates exception IDs while preserving level coverage and original ra
     exception({ id: "400", country: "KE", admin1: "01", admin2: "" }),
   ]);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].geonames_id, "300");
-  assert.equal(rows[0].reference_rows, 2);
-  assert.deepEqual(rows[0].reference_levels, ["admin1", "admin2"]);
-  assert.equal(rows[0].raw_admin1_code, "01");
-  assert.equal(rows[0].raw_admin2_code, "02");
+  const record300 = rows.find((row) => row.geonames_id === "300");
+  assert.ok(record300);
+  assert.equal(record300.reference_rows, 2);
+  assert.deepEqual(record300.reference_levels, ["admin1", "admin2"]);
+  assert.equal(record300.raw_admin1_code, "01");
+  assert.equal(record300.raw_admin2_code, "02");
 });
 
 test("fails closed if overlapping exception rows disagree on identity or raw codes", () => {
