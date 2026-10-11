@@ -166,6 +166,71 @@ class GmlAuditTests(unittest.TestCase):
             AUDIT.candidate_targets({"target_results": rows[:-1]})
 
 
+    def test_all_positive_candidate_mode_selects_source_verified_japan_targets(self):
+        rows = []
+        for geonames_id in sorted(AUDIT.EXPECTED_TARGET_IDS, key=int):
+            rows.append({
+                "geonames_id": geonames_id,
+                "geonames_name": "Collision target",
+                "country_code": "JP",
+                "feature_code": "ADM4",
+                "source_latitude": "35.0",
+                "source_longitude": "139.0",
+                "raw_admin1_code": "00",
+                "raw_admin2_code": "",
+                "source_identity_and_raw_codes_verified": True,
+                "candidates": [{"area_code": "06427"}],
+            })
+        rows.append({
+            "geonames_id": "1849807",
+            "geonames_name": "Toyotomi-mura",
+            "country_code": "JP",
+            "feature_code": "ADM4",
+            "source_latitude": "43.0",
+            "source_longitude": "141.0",
+            "raw_admin1_code": "00",
+            "raw_admin2_code": "",
+            "source_identity_and_raw_codes_verified": True,
+            "candidates": [{"area_code": "19328"}],
+        })
+        rows.append({
+            "geonames_id": "9999999",
+            "geonames_name": "No source candidate",
+            "country_code": "JP",
+            "feature_code": "ADM4",
+            "source_latitude": "35.0",
+            "source_longitude": "139.0",
+            "raw_admin1_code": "00",
+            "raw_admin2_code": "",
+            "source_identity_and_raw_codes_verified": True,
+            "candidates": [],
+        })
+        selected = AUDIT.candidate_targets(
+            {"target_results": rows},
+            include_all_positive=True,
+        )
+        self.assertEqual(len(selected), 7)
+        self.assertIn("1849807", {row["geonames_id"] for row in selected})
+        self.assertNotIn("9999999", {row["geonames_id"] for row in selected})
+        self.assertTrue(all(row["candidate_area_codes"] for row in selected))
+
+    def test_all_positive_candidate_mode_rejects_unverified_or_non_japan_targets(self):
+        unverified = {
+            "geonames_id": "1849807",
+            "geonames_name": "Toyotomi-mura",
+            "country_code": "JP",
+            "feature_code": "ADM4",
+            "source_latitude": "43.0",
+            "source_longitude": "141.0",
+            "raw_admin1_code": "00",
+            "raw_admin2_code": "",
+            "source_identity_and_raw_codes_verified": False,
+            "candidates": [{"area_code": "19328"}],
+        }
+        with self.assertRaises(RuntimeError):
+            AUDIT.candidate_targets({"target_results": [unverified]}, include_all_positive=True)
+
+
 class LinkResolverTests(unittest.TestCase):
     def test_download_link_must_be_resolved_from_official_table_row(self):
         html = b"""<table><tr><td>Yamagata</td><td>N03-651001_06_GML.zip</td>
