@@ -1,0 +1,58 @@
+{
+  "report_version": "1.0",
+  "audit_date_utc": "2026-10-11",
+  "status": "PASS_GLOBAL_SOURCE_SCAN_AND_EXCEPTION_IDENTITY_RECONCILIATION__CATALOG_ACCEPTANCE_BLOCKED",
+  "source": {
+    "owner": "GeoNames",
+    "license": "CC BY 4.0; see official GeoNames readme/source terms",
+    "filename": "allCountries.zip",
+    "url": "https://download.geonames.org/export/dump/allCountries.zip",
+    "retrieved_at_utc": "2026-10-11T00:09:43Z",
+    "http_status": 200,
+    "http_last_modified_header": "Sat, 10 Oct 2026 01:58:39 GMT",
+    "http_last_modified_utc": "2026-10-10T01:58:39Z",
+    "etag": "\"19275ced-65d72cdb3f7da\"",
+    "archive_size_bytes": 422010093,
+    "archive_sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+    "zip_crc_validation": "PASS",
+    "extracted_text_filename": "allCountries.txt",
+    "extracted_text_size_bytes": 1788663996,
+    "extracted_text_sha256": "e563a236d3fcbfb24414534b4fcc8feff4c4230fced91dbaf8d28a9be8242532",
+    "source_line_count": 13472324,
+    "malformed_or_wrong_shape_source_lines": 0
+  },
+  "exception_export": {
+    "filename": "owner-approved-dispositions.csv",
+    "sha256": "671dd8a432e7f1dc8e20a25413e5dac87882a08fa73583d05de2af019664ca25",
+    "reference_rows": 2573,
+    "unique_geo_names_ids": 2416,
+    "exact_source_identity_and_raw_admin_codes_match": 2416,
+    "missing_source_ids": 0,
+    "duplicate_source_ids": 0,
+    "identity_or_raw_code_drift": 0,
+    "raw_admin_codes_normalized": false,
+    "parent_ids_or_links_assigned": 0,
+    "per_country_unique_ids": {
+      "BR": 1,
+      "GB": 32,
+      "JP": 2215,
+      "KE": 26,
+      "SG": 142
+    }
+  },
+  "validation": {
+    "test_count": 73,
+    "tests_passed": 73,
+    "tests_failed": 0,
+    "phase_0_ci": "PASS",
+    "phase_4c_tooling_validation": "PASS",
+    "phase_4c_backup_executor_validation": "PASS"
+  },
+  "limitations": [
+    "This run independently scanned the full current allCountries archive and reproduced the 13,472,324 source-row count, but it did not reproduce the algorithm that selected the separate 25,685-row sample.",
+    "An exact source record match does not mean its crosswalk key is present or that parentage is resolved or approved.",
+    "The 128 current administrative parent paths remain blocked: 126 Japan records with raw admin1 00 and two Kenya records without an exact ADM1 composite-key match or direct ADM hierarchy edge.",
+    "Current ISO authority comparison and product/worldwide geographic completeness remain unverified.",
+    "No migrations, seeds, imports, database operations, production changes or deployments were performed."
+  ]
+}
