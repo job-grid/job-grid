@@ -213,7 +213,12 @@ async function auditSource(sourcePath, targets) {
   stream.on("data", (chunk) => hash.update(chunk));
   const input = createInterface({ input: stream, crlfDelay: Infinity });
   const sourceRowsById = new Map();
+  const countryCodeCounts = new Map();
+  const featureClassCounts = new Map();
   let sourceLineCount = 0;
+  let sourceRowsWithValidFieldCountAndId = 0;
+  let blankCountryCodeRows = 0;
+  let nonstandardCountryCodeRows = 0;
   let malformedRows = 0;
 
   for await (const line of input) {
@@ -224,6 +229,19 @@ async function auditSource(sourcePath, targets) {
       malformedRows += 1;
       continue;
     }
+
+    // This is a GeoNames source-footprint metric, not ISO validation or a
+    // claim that every country code is selectable in Job Grid.
+    sourceRowsWithValidFieldCountAndId += 1;
+    const countryCode = String(fields[8] ?? "").trim();
+    if (!countryCode) blankCountryCodeRows += 1;
+    else if (!/^[A-Z]{2}$/.test(countryCode)) nonstandardCountryCodeRows += 1;
+    const countryBucket = countryCode || "(blank)";
+    countryCodeCounts.set(countryBucket, (countryCodeCounts.get(countryBucket) ?? 0) + 1);
+
+    const featureClass = String(fields[6] ?? "").trim() || "(blank)";
+    featureClassCounts.set(featureClass, (featureClassCounts.get(featureClass) ?? 0) + 1);
+
     if (!targetIds.has(fields[0])) continue;
     let record;
     try {
@@ -237,9 +255,18 @@ async function auditSource(sourcePath, targets) {
     sourceRowsById.set(record.geonames_id, matches);
   }
 
+  const sortedCounts = (counts) => Object.fromEntries(
+    [...counts.entries()].sort(([left], [right]) => left.localeCompare(right)),
+  );
+
   return {
     sourceRowsById,
     sourceLineCount,
+    sourceRowsWithValidFieldCountAndId,
+    countryCodeRecordCounts: sortedCounts(countryCodeCounts),
+    featureClassRecordCounts: sortedCounts(featureClassCounts),
+    blankCountryCodeRows,
+    nonstandardCountryCodeRows,
     malformedRows,
     sha256: hash.digest("hex"),
   };
@@ -284,6 +311,16 @@ async function main() {
     source_manifest_filename: manifestPath ? basename(manifestPath) : null,
     remote_sources: sourceManifest?.remote_sources ?? [],
     remote_retrieval_metadata_verified: remoteVerified,
+    source_country_code_coverage: {
+      scope: "GeoNames allCountries source snapshot only; not an ISO 3166 comparison or proof of Job Grid product coverage",
+      rows_with_19_fields_and_nonempty_id: audit.sourceRowsWithValidFieldCountAndId,
+      malformed_or_wrong_shape_source_lines: audit.malformedRows,
+      distinct_raw_country_code_buckets: Object.keys(audit.countryCodeRecordCounts).length,
+      country_code_record_counts: audit.countryCodeRecordCounts,
+      feature_class_record_counts: audit.featureClassRecordCounts,
+      rows_with_blank_country_code: audit.blankCountryCodeRows,
+      rows_with_nonstandard_country_code_format: audit.nonstandardCountryCodeRows,
+    },
   };
   const summary = buildExceptionSourceAuditSummary(rows, input);
 
