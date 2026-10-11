@@ -16,8 +16,6 @@ import { parseCsv } from "./geonames-current-admin-parent-path-audit.mjs";
 export const ESTAT_SPARQL_ENDPOINT = "https://data.e-stat.go.jp/lod/sparql/alldata/query";
 export const ESTAT_CATALOG_URL = "https://data.e-stat.go.jp/lod/sac";
 export const EXPECTED_JAPAN_TARGETS = 126;
-export const QUERY_LIMIT = 20000;
-
 export const CATALOG_PAGE_SIZE = 4000;
 export const MAX_CATALOG_PAGES = 25;
 export const QUERY_LIMIT = 20000;
@@ -481,7 +479,7 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
   const combinedSourceHash = sha256([
     ...pageManifests.map((page) => `${page.offset}:${page.response_sha256}`),
     detailResult?.manifest.response_sha256 ?? "NO_CANDIDATE_DETAIL_QUERY",
-  ].join("\\n"));
+  ].join("\n"));
   const totalBytes = pageManifests.reduce((sum, page) => sum + page.response_bytes, 0) +
     (detailResult?.manifest.response_bytes ?? 0);
   const manifest = {
@@ -517,7 +515,7 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
   };
   return {
     sourceRows,
-    responseText: JSON.stringify(responsePayload, null, 2) + "\\n",
+    responseText: JSON.stringify(responsePayload, null, 2) + "\n",
     manifest,
   };
 }
