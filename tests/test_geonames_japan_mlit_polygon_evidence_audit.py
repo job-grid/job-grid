@@ -242,6 +242,56 @@ class GmlAuditTests(unittest.TestCase):
             AUDIT.candidate_targets({"target_results": [unverified]}, include_all_positive=True)
 
 
+    def test_select_all_japan_spatial_targets_requires_126_verified_ids(self):
+        rows = []
+        for index in range(126):
+            rows.append({
+                "geonames_id": str(1000000 + index),
+                "geonames_name": f"Target {index}",
+                "country_code": "JP",
+                "feature_code": "ADM4",
+                "source_latitude": "35.0",
+                "source_longitude": "139.0",
+                "raw_admin1_code": "00",
+                "raw_admin2_code": "",
+                "source_identity_and_raw_codes_verified": True,
+                "candidates": [],
+            })
+        selected = AUDIT.select_all_japan_spatial_targets({"target_results": rows})
+        self.assertEqual(len(selected), 126)
+        self.assertEqual(selected[0]["existing_exact_english_candidate_codes"], [])
+        rows[10]["raw_admin1_code"] = "01"
+        with self.assertRaises(RuntimeError):
+            AUDIT.select_all_japan_spatial_targets({"target_results": rows})
+
+    def test_estat_catalog_area_code_index_preserves_codes_labels_and_period_uris(self):
+        payload = {
+            "catalog_pages": [{
+                "offset": 0,
+                "row_count": 2,
+                "response": {"results": {"bindings": [
+                    {
+                        "PERIOD": {"value": "http://data.e-stat.go.jp/lod/sac/C01000-19700401"},
+                        "IDENTIFIER": {"value": "01000"},
+                        "LABELEN": {"value": "Hokkaido"},
+                        "LABELJA": {"value": "北海道"},
+                    },
+                    {
+                        "PERIOD": {"value": "http://data.e-stat.go.jp/lod/sac/C01000-20050401"},
+                        "IDENTIFIER": {"value": "01000"},
+                        "LABELEN": {"value": "Hokkaido"},
+                    },
+                ]}},
+            }],
+        }
+        index = AUDIT.build_estat_catalog_area_code_index(payload)
+        self.assertEqual(len(index["01000"]), 2)
+        self.assertEqual(index["01000"][0]["label_en"], "Hokkaido")
+        self.assertEqual(index["01000"][0]["label_ja"], "北海道")
+        with self.assertRaises(RuntimeError):
+            AUDIT.build_estat_catalog_area_code_index({"catalog_pages": []})
+
+
 class LinkResolverTests(unittest.TestCase):
     def test_download_link_must_be_resolved_from_official_table_row(self):
         html = b"""<table><tr><td>Yamagata</td><td>N03-651001_06_GML.zip</td>

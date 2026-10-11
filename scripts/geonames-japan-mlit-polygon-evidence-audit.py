@@ -678,6 +678,389 @@ def polygon_context_status(observations: list[dict]) -> str:
     )
 
 
+def select_all_japan_spatial_targets(audit: dict) -> list[dict]:
+    """Select all source-verified Japan ADM4/raw-admin1-00 targets, regardless of name candidates."""
+    targets = audit.get("target_results", [])
+    if len(targets) != 126:
+        raise RuntimeError(f"Expected 126 Japan targets from the source audit; got {len(targets)}.")
+    seen = set()
+    selected = []
+    for target in targets:
+        geonames_id = str(target.get("geonames_id", ""))
+        if (
+            target.get("country_code") != "JP"
+            or target.get("feature_code") != "ADM4"
+            or target.get("raw_admin1_code") != "00"
+            or target.get("source_identity_and_raw_codes_verified") is not True
+            or not re.fullmatch(r"\d+", geonames_id)
+        ):
+            raise RuntimeError(
+                f"All-Japan spatial review rejected unverified/non-target row {geonames_id!r}."
+            )
+        if geonames_id in seen:
+            raise RuntimeError(f"Duplicate GeoNames ID in all-Japan target list: {geonames_id}")
+        seen.add(geonames_id)
+        try:
+            latitude = float(target["source_latitude"])
+            longitude = float(target["source_longitude"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise RuntimeError(f"Missing/invalid coordinates for GeoNames ID {geonames_id}.") from error
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise RuntimeError(f"Coordinates out of valid geographic range for GeoNames ID {geonames_id}.")
+        candidate_codes = sorted({
+            str(candidate["area_code"]).zfill(5)
+            for candidate in target.get("candidates", [])
+            if re.fullmatch(r"\d{5}", str(candidate.get("area_code", "")))
+        })
+        selected.append({
+            "geonames_id": geonames_id,
+            "name": target["geonames_name"],
+            "latitude": latitude,
+            "longitude": longitude,
+            "raw_admin1_code": target["raw_admin1_code"],
+            "raw_admin2_code": target.get("raw_admin2_code", ""),
+            "existing_exact_english_candidate_codes": candidate_codes,
+        })
+    if seen != {str(target.get("geonames_id")) for target in targets}:
+        raise RuntimeError("All-Japan target identity set did not reconcile.")
+    return sorted(selected, key=lambda row: int(row["geonames_id"]))
+
+
+def build_estat_catalog_area_code_index(source_response: dict) -> dict[str, list[dict]]:
+    """Index all catalog-page code/label/period rows without inventing detail fields."""
+    pages = source_response.get("catalog_pages", [])
+    if not pages:
+        raise RuntimeError("e-Stat source-response payload contains no catalog pages.")
+    index: dict[str, list[dict]] = {}
+    total = 0
+    for page in pages:
+        response = page.get("response", {})
+        bindings = response.get("results", {}).get("bindings", [])
+        if int(page.get("row_count", -1)) != len(bindings):
+            raise RuntimeError(
+                f"e-Stat catalog page row count mismatch at offset {page.get('offset')}: "
+                f"manifest={page.get('row_count')} actual={len(bindings)}"
+            )
+        for binding in bindings:
+            code = binding_value(binding, "identifier").strip()
+            period_uri = binding_value(binding, "period").strip()
+            label_en = binding_value(binding, "labelEn").strip()
+            label_ja = binding_value(binding, "labelJa").strip()
+            if not re.fullmatch(r"\d{5}", code) or not period_uri or not label_en:
+                raise RuntimeError(f"e-Stat catalog row missing a valid code, URI or English label: {binding}")
+            index.setdefault(code, []).append({
+                "area_code": code,
+                "period_uri": period_uri,
+                "label_en": label_en,
+                "label_ja": label_ja,
+            })
+            total += 1
+    if total == 0:
+        raise RuntimeError("e-Stat source-response catalog pages contained zero rows.")
+    for code, records in index.items():
+        records.sort(key=lambda row: (row["period_uri"], row["label_en"], row["label_ja"]))
+    return index
+
+
+def perform_all_japan_1995_spatial_first_audit(
+    audit_path: Path,
+    e_stat_response_path: Path,
+    polygon_manifest_path: Path,
+    archive_root: Path,
+    output_prefix: Path,
+) -> dict:
+    """Spatial-first, 1995-only evidence for all 126 source-verified Japan targets.
+
+    This pass finds the official area polygon containing each source point, then
+    attaches labels/period URIs that were already present in the pinned e-Stat
+    catalog pages. It never creates a GeoNames crosswalk or parent link.
+    """
+    import csv
+
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    targets = select_all_japan_spatial_targets(audit)
+    e_stat_response = json.loads(e_stat_response_path.read_text(encoding="utf-8"))
+    catalog_index = build_estat_catalog_area_code_index(e_stat_response)
+    polygon_manifest = json.loads(polygon_manifest_path.read_text(encoding="utf-8"))
+    snapshots = [
+        item for item in polygon_manifest.get("source_snapshots", [])
+        if item.get("snapshot_date") == CONTEXT_SNAPSHOT[0]
+    ]
+    if len(snapshots) != 47:
+        raise RuntimeError(
+            f"Expected all 47 nationwide 1995 boundary archives in the pinned manifest; got {len(snapshots)}."
+        )
+    expected_prefectures = {f"{number:02d}" for number in range(1, 48)}
+    if {str(item.get("prefecture_code", "")) for item in snapshots} != expected_prefectures:
+        raise RuntimeError("Pinned 1995 boundary archive set does not cover prefecture codes 01–47 exactly.")
+
+    target_observations: dict[str, list[dict]] = {target["geonames_id"]: [] for target in targets}
+    archive_summaries = []
+    feature_total = 0
+    points = [(target["geonames_id"], (target["longitude"], target["latitude"])) for target in targets]
+
+    def polygon_bbox(polygon):
+        coords = [
+            coordinate
+            for ring in polygon
+            for coordinate in ring
+            if isinstance(coordinate, (list, tuple)) and len(coordinate) >= 2
+        ]
+        if not coords:
+            return None
+        xs = [float(point[0]) for point in coords]
+        ys = [float(point[1]) for point in coords]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    for snapshot in sorted(snapshots, key=lambda row: str(row["prefecture_code"])):
+        filename = str(snapshot["archive_filename"])
+        if not re.fullmatch(r"N03-951001_\d{2}_GML\.zip", filename):
+            raise RuntimeError(f"Unexpected archive filename in pinned manifest: {filename}")
+        archive_path = archive_root / CONTEXT_SNAPSHOT[0] / filename
+        archive_bytes = archive_path.read_bytes()
+        actual_hash = sha256(archive_bytes)
+        if (
+            actual_hash != snapshot.get("archive_sha256")
+            or len(archive_bytes) != int(snapshot.get("archive_bytes_size", -1))
+        ):
+            raise RuntimeError(f"Archive hash/size mismatch against pinned manifest: {filename}")
+        with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+            bad_member = archive.testzip()
+            if bad_member:
+                raise RuntimeError(f"CRC validation failed for {filename}/{bad_member}")
+        features, member_names = parse_gml_archive(archive_bytes, snapshot)
+        if not features:
+            raise RuntimeError(f"Zero boundary features parsed from pinned 1995 archive {filename}.")
+        feature_total += len(features)
+        feature_hits = 0
+        for feature in features:
+            code = str(feature.get("area_code", "")).strip()
+            if not re.fullmatch(r"\d{5}", code):
+                continue
+            for polygon in feature.get("polygons", []):
+                bbox = polygon_bbox(polygon)
+                if bbox is None:
+                    continue
+                xmin, ymin, xmax, ymax = bbox
+                for geonames_id, point in points:
+                    x, y = point
+                    if not (xmin - 1e-9 <= x <= xmax + 1e-9 and ymin - 1e-9 <= y <= ymax + 1e-9):
+                        continue
+                    relation = geometry_location(point, {"type": "Polygon", "coordinates": polygon})
+                    if relation not in {"INSIDE", "BOUNDARY"}:
+                        continue
+                    target = next(item for item in targets if item["geonames_id"] == geonames_id)
+                    catalog_records = catalog_index.get(code, [])
+                    english_labels = sorted({row["label_en"] for row in catalog_records if row["label_en"]})
+                    japanese_labels = sorted({row["label_ja"] for row in catalog_records if row["label_ja"]})
+                    period_uris = sorted({row["period_uri"] for row in catalog_records if row["period_uri"]})
+                    target_candidates = target["existing_exact_english_candidate_codes"]
+                    observation = {
+                        "geonames_id": geonames_id,
+                        "geonames_name": target["name"],
+                        "latitude": target["latitude"],
+                        "longitude": target["longitude"],
+                        "raw_admin1_code": target["raw_admin1_code"],
+                        "raw_admin2_code": target["raw_admin2_code"],
+                        "snapshot_date": CONTEXT_SNAPSHOT[0],
+                        "snapshot_prefecture_code": snapshot["prefecture_code"],
+                        "containing_area_code": code,
+                        "containing_prefecture_name": feature.get("prefecture_name", ""),
+                        "containing_district_name": feature.get("district_name", ""),
+                        "containing_municipality_name": feature.get("municipality_name", ""),
+                        "point_relation": relation,
+                        "archive_filename": filename,
+                        "archive_sha256": actual_hash,
+                        "dbf_text_encoding": feature.get("dbf_text_encoding", ""),
+                        "dbf_encoding_source_member": feature.get("dbf_encoding_source_member", ""),
+                        "estat_catalog_code_present": bool(catalog_records),
+                        "estat_catalog_english_labels": "; ".join(english_labels),
+                        "estat_catalog_japanese_labels_available": bool(japanese_labels),
+                        "estat_catalog_japanese_labels": "; ".join(japanese_labels),
+                        "estat_catalog_period_count": len(period_uris),
+                        "estat_catalog_period_uris": "; ".join(period_uris),
+                        "exact_english_name_candidate_codes": "; ".join(target_candidates),
+                        "containing_code_matches_existing_exact_name_candidate": code in target_candidates,
+                        "operational_parent_link_created": "false",
+                    }
+                    target_observations[geonames_id].append(observation)
+                    feature_hits += 1
+        archive_summaries.append({
+            "snapshot_date": CONTEXT_SNAPSHOT[0],
+            "prefecture_code": snapshot["prefecture_code"],
+            "archive_filename": filename,
+            "download_url": snapshot.get("download_url", ""),
+            "archive_sha256": actual_hash,
+            "archive_bytes_size": len(archive_bytes),
+            "parsed_boundary_feature_count": len(features),
+            "containing_feature_observation_count": feature_hits,
+            "source_member_names": member_names,
+        })
+
+    target_results = []
+    all_observations = []
+    for target in targets:
+        observations = sorted(
+            target_observations[target["geonames_id"]],
+            key=lambda row: (row["containing_area_code"], row["containing_municipality_name"]),
+        )
+        all_observations.extend(observations)
+        codes = sorted({row["containing_area_code"] for row in observations})
+        candidate_codes = target["existing_exact_english_candidate_codes"]
+        code_records = [
+            record for record in observations
+        ]
+        target_results.append({
+            **target,
+            "spatial_context_status": (
+                "CONTAINING_POLYGON_OBSERVED_IN_1995_SNAPSHOT"
+                if observations else "NO_CONTAINING_POLYGON_OBSERVED_IN_1995_SNAPSHOT"
+            ),
+            "containing_area_codes_1995": codes,
+            "containing_area_names_1995": sorted({
+                " ".join(
+                    part for part in (
+                        row["containing_prefecture_name"],
+                        row["containing_district_name"],
+                        row["containing_municipality_name"],
+                    ) if part
+                )
+                for row in observations
+            }),
+            "containing_area_code_count_1995": len(codes),
+            "observations": observations,
+            "existing_exact_name_candidate_codes": candidate_codes,
+            "spatial_code_matches_existing_exact_name_candidate": any(
+                row["containing_code_matches_existing_exact_name_candidate"] for row in code_records
+            ),
+            "operational_parent_link_created": False,
+        })
+
+    distinct_codes = sorted({row["containing_area_code"] for row in all_observations})
+    catalog_codes = {code for code in distinct_codes if code in catalog_index}
+    observed_target_ids = {row["geonames_id"] for row in all_observations}
+    targets_without_context = [
+        target["geonames_id"] for target in target_results
+        if target["spatial_context_status"] == "NO_CONTAINING_POLYGON_OBSERVED_IN_1995_SNAPSHOT"
+    ]
+    page_sources = [
+        {
+            "offset": page.get("offset"),
+            "row_count": page.get("row_count"),
+            "response_sha256": page.get("source", {}).get("response_sha256", ""),
+        }
+        for page in e_stat_response.get("catalog_pages", [])
+    ]
+    page_sources.sort(key=lambda row: int(row["offset"] or 0))
+    result = {
+        "report_version": 1,
+        "selection_mode": "ALL_126_SOURCE_VERIFIED_JAPAN_ADM4_ADMIN1_00_TARGETS; SPATIAL_FIRST_1995_ONLY",
+        "status": "PASS_PINNED_1995_BOUNDARY_SPATIAL_SCAN; AREA_CODE_CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "target_count": len(targets),
+        "target_source_identity_and_raw_code_matches": len(targets),
+        "target_rows_with_polygon_context": sum(bool(target["observations"]) for target in target_results),
+        "target_rows_without_polygon_context": len(targets_without_context),
+        "target_ids_without_polygon_context": targets_without_context,
+        "observation_count": len(all_observations),
+        "distinct_containing_area_codes": len(distinct_codes),
+        "containing_area_codes_present_in_e_stat_catalog": len(catalog_codes),
+        "containing_area_codes_missing_from_e_stat_catalog": sorted(set(distinct_codes) - catalog_codes),
+        "targets_whose_containing_area_code_matches_existing_exact_name_candidate": sum(
+            bool(target["spatial_code_matches_existing_exact_name_candidate"]) for target in target_results
+        ),
+        "e_stat_catalog_result_row_count": sum(int(page["row_count"]) for page in page_sources),
+        "e_stat_catalog_page_sources": page_sources,
+        "source_snapshot_archive_count": len(archive_summaries),
+        "source_snapshots": archive_summaries,
+        "target_results": target_results,
+        "operational_parent_links_created": 0,
+        "limitations": [
+            "The current 1995 area polygon containing a GeoNames point is only a spatial-first candidate; it does not prove the GeoNames feature is that administrative area.",
+            "The source location may be a historical or feature reference point; no containment in the selected 1995 snapshot does not prove invalidity.",
+            "The catalog page payload includes official English labels and period URIs; Japanese labels and parent references not present in the catalog page remain absent until a separate official detail query is made.",
+            "A containing-area code may be at a different administrative level than the GeoNames feature; do not use it as the immediate parent without exact entity/level review.",
+            "No names are used to derive containing polygons, and no operational parent links or raw code changes are performed.",
+        ],
+    }
+    prefix = output_prefix
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    (prefix.with_suffix(".json")).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    fields = [
+        "geonames_id", "geonames_name", "latitude", "longitude", "raw_admin1_code", "raw_admin2_code",
+        "snapshot_date", "snapshot_prefecture_code", "containing_area_code", "containing_prefecture_name",
+        "containing_district_name", "containing_municipality_name", "point_relation", "archive_filename",
+        "archive_sha256", "dbf_text_encoding", "dbf_encoding_source_member", "estat_catalog_code_present",
+        "estat_catalog_english_labels", "estat_catalog_japanese_labels_available", "estat_catalog_japanese_labels",
+        "estat_catalog_period_count", "estat_catalog_period_uris", "exact_english_name_candidate_codes",
+        "containing_code_matches_existing_exact_name_candidate", "operational_parent_link_created",
+    ]
+    with prefix.with_suffix(".csv").open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(all_observations)
+    summary_fields = [
+        "geonames_id", "name", "latitude", "longitude", "raw_admin1_code", "raw_admin2_code",
+        "existing_exact_english_candidate_codes", "spatial_context_status", "containing_area_codes_1995",
+        "containing_area_names_1995", "containing_area_code_count_1995",
+        "spatial_code_matches_existing_exact_name_candidate", "operational_parent_link_created",
+    ]
+    with prefix.with_suffix(".target-summary.csv").open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=summary_fields)
+        writer.writeheader()
+        for target in target_results:
+            writer.writerow({
+                "geonames_id": target["geonames_id"],
+                "name": target["name"],
+                "latitude": target["latitude"],
+                "longitude": target["longitude"],
+                "raw_admin1_code": target["raw_admin1_code"],
+                "raw_admin2_code": target["raw_admin2_code"],
+                "existing_exact_english_candidate_codes": ";".join(target["existing_exact_english_candidate_codes"]),
+                "spatial_context_status": target["spatial_context_status"],
+                "containing_area_codes_1995": ";".join(target["containing_area_codes_1995"]),
+                "containing_area_names_1995": ";".join(target["containing_area_names_1995"]),
+                "containing_area_code_count_1995": target["containing_area_code_count_1995"],
+                "spatial_code_matches_existing_exact_name_candidate": str(target["spatial_code_matches_existing_exact_name_candidate"]).lower(),
+                "operational_parent_link_created": "false",
+            })
+    (prefix.with_suffix(".manifest.json")).write_text(json.dumps({
+        "status": result["status"],
+        "generated_at_utc": result["generated_at_utc"],
+        "selection_mode": result["selection_mode"],
+        "e_stat_catalog_page_sources": page_sources,
+        "e_stat_catalog_result_row_count": result["e_stat_catalog_result_row_count"],
+        "source_snapshot_archive_count": len(archive_summaries),
+        "source_archive_hashes": [
+            {
+                "snapshot_date": item["snapshot_date"],
+                "prefecture_code": item["prefecture_code"],
+                "archive_filename": item["archive_filename"],
+                "download_url": item["download_url"],
+                "archive_sha256": item["archive_sha256"],
+                "archive_bytes_size": item["archive_bytes_size"],
+            }
+            for item in archive_summaries
+        ],
+        "operational_parent_links_created": 0,
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "status": result["status"],
+        "target_count": result["target_count"],
+        "source_snapshot_archive_count": result["source_snapshot_archive_count"],
+        "parsed_boundary_feature_count": feature_total,
+        "observation_count": result["observation_count"],
+        "target_rows_with_polygon_context": result["target_rows_with_polygon_context"],
+        "target_rows_without_polygon_context": result["target_rows_without_polygon_context"],
+        "target_ids_without_polygon_context": result["target_ids_without_polygon_context"],
+        "distinct_containing_area_codes": result["distinct_containing_area_codes"],
+        "containing_area_codes_present_in_e_stat_catalog": result["containing_area_codes_present_in_e_stat_catalog"],
+        "targets_whose_containing_area_code_matches_existing_exact_name_candidate": result["targets_whose_containing_area_code_matches_existing_exact_name_candidate"],
+        "operational_parent_links_created": 0,
+    }, ensure_ascii=False, indent=2))
+    return result
+
+
 def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_positive: bool = False) -> dict:
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     targets = candidate_targets(audit, include_all_positive=include_all_positive)
@@ -996,14 +1379,27 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) not in {2, 3} or (len(argv) == 3 and argv[2] != "--all-positive-candidates"):
-        sys.stderr.write(
-            "Usage: geonames-japan-mlit-polygon-evidence-audit.py "
-            "<japan-estat-evidence-audit.json> <output-prefix> [--all-positive-candidates]\n"
-        )
-        return 2
-    include_all_positive = len(argv) == 3
     try:
+        if argv and argv[0] == "--all-japan-1995-spatial-first":
+            if len(argv) != 6:
+                sys.stderr.write(
+                    "Usage: geonames-japan-mlit-polygon-evidence-audit.py "
+                    "--all-japan-1995-spatial-first <japan-estat-evidence-audit.json> "
+                    "<japan-estat-evidence-audit.source-response.json> "
+                    "<japan-mlit-polygon-audit.manifest.json> <polygon-source-archives-dir> <output-prefix>\n"
+                )
+                return 2
+            perform_all_japan_1995_spatial_first_audit(
+                Path(argv[1]), Path(argv[2]), Path(argv[3]), Path(argv[4]), Path(argv[5])
+            )
+            return 0
+        if len(argv) not in {2, 3} or (len(argv) == 3 and argv[2] != "--all-positive-candidates"):
+            sys.stderr.write(
+                "Usage: geonames-japan-mlit-polygon-evidence-audit.py "
+                "<japan-estat-evidence-audit.json> <output-prefix> [--all-positive-candidates]\n"
+            )
+            return 2
+        include_all_positive = len(argv) == 3
         perform_point_audit(Path(argv[0]), Path(argv[1]), include_all_positive=include_all_positive)
     except Exception as error:
         sys.stderr.write(f"MLIT polygon evidence audit failed closed: {type(error).__name__}: {error}\n")

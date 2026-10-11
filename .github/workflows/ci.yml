@@ -969,6 +969,74 @@ jobs:
           print("- Positive containment remains candidate evidence; missing context remains unresolved; no parent links approved.")
           PY
 
+      - name: Spatial-first 1995 audit of all 126 Japan targets (candidate evidence only)
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-japan-estat"
+          python -m py_compile scripts/geonames-japan-mlit-polygon-evidence-audit.py
+          python scripts/geonames-japan-mlit-polygon-evidence-audit.py \
+            --all-japan-1995-spatial-first \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-estat-evidence-audit.source-response.json" \
+            "$work/japan-mlit-polygon-audit.manifest.json" \
+            "$work/polygon-source-archives" \
+            "$work/japan-mlit-1995-all-126-spatial-first"
+          python -m json.tool "$work/japan-mlit-1995-all-126-spatial-first.json" >/dev/null
+          python -m json.tool "$work/japan-mlit-1995-all-126-spatial-first.manifest.json" >/dev/null
+          python - "$work/japan-estat-evidence-audit.json" "$work/japan-mlit-1995-all-126-spatial-first.json" "$work/japan-mlit-1995-all-126-spatial-first.csv" "$work/japan-mlit-1995-all-126-spatial-first.target-summary.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          audit_path, report_path, observations_path, summary_path = map(Path, sys.argv[1:])
+          audit = json.loads(audit_path.read_text(encoding="utf-8"))
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          with observations_path.open(encoding="utf-8", newline="") as stream:
+              observations = list(csv.DictReader(stream))
+          with summary_path.open(encoding="utf-8", newline="") as stream:
+              target_summary = list(csv.DictReader(stream))
+          expected_ids = {str(row["geonames_id"]) for row in audit["target_results"]}
+          actual_ids = {str(row["geonames_id"]) for row in report.get("target_results", [])}
+          if len(expected_ids) != 126 or actual_ids != expected_ids or report.get("target_count") != 126:
+              raise SystemExit("Spatial-first report does not preserve all 126 source-verified Japan targets.")
+          if report.get("source_snapshot_archive_count") != 47 or len(report.get("source_snapshots", [])) != 47:
+              raise SystemExit("Spatial-first report must include all 47 nationwide 1995 MLIT archives.")
+          if len(target_summary) != 126 or {row["geonames_id"] for row in target_summary} != expected_ids:
+              raise SystemExit("Spatial-first target-summary CSV must retain exactly all 126 target IDs.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in observations):
+              raise SystemExit("Spatial-first observations violate the no-parent-write boundary.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in target_summary):
+              raise SystemExit("Spatial-first target summary violates the no-parent-write boundary.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Spatial-first review must not create parent links.")
+          if any(len(item.get("archive_sha256", "")) != 64 for item in report["source_snapshots"]):
+              raise SystemExit("At least one nationwide 1995 archive lacks a SHA-256 fingerprint.")
+          for row in report["target_results"]:
+              for observation in row["observations"]:
+                  if observation["geonames_id"] != row["geonames_id"]:
+                      raise SystemExit("Target/observation GeoNames ID mismatch.")
+                  if not observation.get("estat_catalog_code_present"):
+                      raise SystemExit(
+                          f"Containing area code {observation['containing_area_code']} for {row['geonames_id']} "
+                          "was not found in the captured official e-Stat catalog; fail closed."
+                      )
+          print(
+              f"Validated 1995 spatial-first audit: {report['target_count']} targets; "
+              f"{report['source_snapshot_archive_count']} nationwide archives; "
+              f"{report['observation_count']} containing-polygon observations; "
+              f"{report['distinct_containing_area_codes']} distinct location-derived area-code candidates; "
+              f"{report['targets_whose_containing_area_code_matches_existing_exact_name_candidate']} code matches to prior name candidates; "
+              "zero parent links."
+          )
+          print(f"- Target points with containing-polygon context: {report['target_rows_with_polygon_context']}/126")
+          print(f"- Target points without context in the 1995 snapshot: {report['target_rows_without_polygon_context']}")
+          print("- Containing area codes are spatial-first candidates only; none is approved as a GeoNames entity or parent.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -991,6 +1059,10 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.target-summary.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.target-summary.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-spatial-first.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
             ${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
