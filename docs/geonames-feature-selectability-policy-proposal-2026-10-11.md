@@ -103,13 +103,20 @@ The owner approved the conservative defaults for the first six decisions below. 
 | Current official ISO snapshot | Obtain only from an approved, permitted source path; no paid acquisition without separate cost approval | **Unverified; separate source/cost gate** |
 | Worldwide completeness/source pinning | Requires reproducible source evidence beyond the selected sample | **Unverified** |
 
-## 7. Remaining acceptance blockers
+## 7. Additional owner instruction — exclude unresolved current administrative records — 2026-10-11
 
-The audit confirms candidate presence, feature-level consistency, and source-key consistency for the selected sample. The owner-approved disposition audit narrows the current administrative-selector parent-path review to 128 current `ADM3`/`ADM4` records (2 `ADM3`, 126 `ADM4`); other historical, undifferentiated and non-administrative records remain retained under the approved defaults. Catalog acceptance remains blocked pending:
+The owner has now explicitly instructed: **implement a permanent parent-path fix where evidence proves it; if no safe fix can be established, remove the record from the initial operational catalog.** The completed audits do not prove accepted immediate-parent paths for the bounded set of 128 current administrative records. Therefore, the initial operational administrative catalog must exclude all 128 instead of carrying them as unresolved operational nodes.
+
+The reproducible exclusion list is [initial-operational-admin-catalog-exclusions.csv](geonames-sample-validation/results/crosswalk-reconciliation-20261010/initial-operational-admin-catalog-exclusions.csv). It contains 126 Japan ADM4 records with raw admin1 `00` and two Kenya ADM3 records, GeoNames IDs `192705` and `7800132`. The generator and tests assert 128 exclusions, zero eligible records from this exception set, unchanged source IDs/raw codes, and zero created parent links.
+
+This decision **does not delete or alter the source evidence**. Original source and exception exports remain available for audit. The 128 entries must not be included as accepted operational admin nodes or in their seed/import candidate output. A later release can restore a particular record only after its row-level entity identity, level, applicable period and immediate-parent path are verified and reviewed. Raw codes are not rewritten and no synthetic parent is created.
+
+## 8. Remaining acceptance blockers
+
+The 128 parent-path targets have been removed from the initial operational administrative catalog scope; their individual parent-path investigations remain in the evidence backlog and are a condition for any later re-entry. The wider catalog acceptance is still blocked pending:
 
 - review/disposition of the 2,333 admin1 and 240 admin2 exception references (2,573 total). Five country-level `PCLI` records do not require an administrative parent under the approved disposition; the other 2,568 reference rows remain in hierarchy/association review, affecting 2,411 unique GeoNames IDs;
-- complete country-specific parent-hierarchy path validation and source-backed approval of individual parent links;
 - a current official ISO snapshot and deterministic comparison under permitted access terms; a paid subscription still requires separate cost authorization;
 - independent verification of source origin/retrieval metadata and worldwide completeness.
 
-**No database migration, seed, import, production deployment, Cloudflare change, or backup/recovery operation is authorized by this policy approval.** The policy defaults are approved; the catalog itself is not accepted, and parent links remain unassigned.
+**No database migration, seed, import, production deployment, Cloudflare change, or backup/recovery operation is authorized by this policy approval.** The default/exclusion decision is implemented in the repository's catalog design and reconciliation artifacts; it does not claim a production catalog has been deployed. Catalog acceptance remains blocked for the separate reasons above, and no parent links were assigned.
