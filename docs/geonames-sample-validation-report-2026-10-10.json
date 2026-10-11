@@ -1,5 +1,5 @@
 {
-  "report_version": "1.1",
+  "report_version": "1.2",
   "generated_utc": "2026-10-10",
   "input_artifact": {
     "filename": "JobGrid-GeoNames-Sample-20261010-163234.zip",
@@ -11,9 +11,10 @@
   },
   "disposition": {
     "stage_a_owner_laptop_sample_generation_and_artifact_inspection": "READY_FOR_OWNER_REVIEW_OF_SAMPLE_EVIDENCE",
-    "stage_b_independent_source_pinned_reproducibility": "PARTIAL_PASS_SEPARATE_IMPLEMENTATION_LOCAL_SCAN; SOURCE_ORIGIN_AND_SAMPLE_SELECTION_ALGORITHM_REMAIN_UNVERIFIED",
+    "stage_b_independent_source_pinned_reproducibility": "PASS_CURRENT_SOURCE_GLOBAL_SCAN_AND_EXCEPTION_IDS; SAMPLE_SELECTION_ALGORITHM_AND_ORIGINAL_SAMPLE_SOURCE_PINNING_UNVERIFIED",
     "catalog_acceptance": "BLOCKED",
-    "stage_c_five_country_archive_verification": "PASS_FIVE_COUNTRY_SAMPLE_RECORD_COMPARISON_HIERARCHY_RECONCILIATION_BLOCKED"
+    "stage_c_five_country_archive_verification": "PASS_FIVE_COUNTRY_SAMPLE_RECORD_COMPARISON_HIERARCHY_RECONCILIATION_BLOCKED",
+    "stage_d_live_global_source_audit": "PASS_13472324_SOURCE_ROWS_0_MALFORMED_2416_OF_2416_EXCEPTION_IDS_MATCH; CATALOG_ACCEPTANCE_BLOCKED"
   },
   "stage_a": {
     "worldwide_records_scanned_reported_by_owner_local_script": 13472324,
@@ -681,5 +682,37 @@
     "current_iso_authority_comparison": "UNVERIFIED",
     "worldwide_completeness": "UNVERIFIED",
     "catalog_acceptance": "BLOCKED"
+  },
+  "stage_d_live_global_source_audit": {
+    "status": "PASS_SOURCE_PINNED_SCAN_AND_EXCEPTION_IDENTITY_RECONCILIATION",
+    "run_url": "https://github.com/job-grid/job-grid/actions/runs/38097453927",
+    "retrieved_at_utc": "2026-10-11T00:09:43Z",
+    "archive_url": "https://download.geonames.org/export/dump/allCountries.zip",
+    "http_status": 200,
+    "http_last_modified_utc": "2026-10-10T01:58:39Z",
+    "etag": "\"19275ced-65d72cdb3f7da\"",
+    "archive_bytes": 422010093,
+    "archive_sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+    "zip_crc_validation": "PASS",
+    "extracted_text_bytes": 1788663996,
+    "extracted_text_sha256": "e563a236d3fcbfb24414534b4fcc8feff4c4230fced91dbaf8d28a9be8242532",
+    "global_rows_scanned": 13472324,
+    "malformed_or_wrong_shape_rows": 0,
+    "exception_export_sha256": "671dd8a432e7f1dc8e20a25413e5dac87882a08fa73583d05de2af019664ca25",
+    "unique_crosswalk_exception_ids": 2416,
+    "exact_source_identity_and_raw_admin_code_matches": 2416,
+    "missing_source_ids": 0,
+    "duplicate_source_ids": 0,
+    "identity_or_raw_code_drift": 0,
+    "per_country_unique_ids": {
+      "BR": 1,
+      "GB": 32,
+      "JP": 2215,
+      "KE": 26,
+      "SG": 142
+    },
+    "row_level_report": "https://github.com/job-grid/job-grid/actions/runs/38097453927/artifacts/11686636684",
+    "parent_ids_or_links_assigned": 0,
+    "limitation": "Current source global scan and exception identities were independently checked; reproduction of the separate 25,685-record sample selection, current ISO comparison and product/worldwide completeness remain unverified."
   }
 }
