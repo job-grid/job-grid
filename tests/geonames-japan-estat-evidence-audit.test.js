@@ -428,6 +428,41 @@ test("paged snapshot fetches every history period for matched area codes and pin
   assert.match(snapshot.responseText, /catalog_pages/);
 });
 
+test("fetches full code history for exact Japanese alternate-label candidates", async () => {
+  const matchingPeriod = "http://data.e-stat.go.jp/lod/sac/C27100-19700401";
+  const unrelatedPeriod = "http://data.e-stat.go.jp/lod/sac/C27102-19700401";
+  const requests = [];
+  const fakeFetch = async (_url, options) => {
+    requests.push(options);
+    const query = new URLSearchParams(options.body).get("query");
+    if (query.includes("VALUES ?period")) {
+      assert.match(query, /C27100-19700401/);
+      assert.doesNotMatch(query, /C27102-19700401/);
+      return sparqlResponse([
+        detailBinding(matchingPeriod, { LABELJA: { type: "literal", value: "八尾町", "xml:lang": "ja" } }),
+      ]);
+    }
+    const offset = Number(query.match(/OFFSET (\d+)/)?.[1] ?? "0");
+    return sparqlResponse(offset === 0 ? [
+      { ...catalogBinding(27100, "Unrelated English label A", "八尾町"), PERIOD: { type: "uri", value: matchingPeriod } },
+      { ...catalogBinding(27102, "Unrelated English label B", "八尾町村"), PERIOD: { type: "uri", value: unrelatedPeriod } },
+    ] : []);
+  };
+  const snapshot = await fetchEstatSnapshot(
+    ["Yao-chō"],
+    fakeFetch,
+    () => new Date("2026-10-11T00:00:00.000Z"),
+    ["八尾町"],
+  );
+  assert.equal(requests.length, 2);
+  assert.equal(snapshot.manifest.candidate_area_code_count, 0);
+  assert.equal(snapshot.manifest.japanese_alternate_name_candidate_area_code_count, 1);
+  assert.equal(snapshot.manifest.candidate_area_code_count_including_japanese_alternate_names, 1);
+  assert.equal(snapshot.manifest.candidate_history_period_uris_requested, 1);
+  assert.equal(snapshot.sourceRows.find((row) => row.period_uri === matchingPeriod).label_ja, "八尾町");
+  assert.equal(snapshot.sourceRows.find((row) => row.period_uri === unrelatedPeriod).label_ja, "八尾町村");
+});
+
 test("paginates when catalogue page reaches its size and fails closed for an empty first page", async () => {
   const requests = [];
   const fakeFetch = async (_url, options) => {
