@@ -81,3 +81,21 @@ These archives are the bytes fetched during this CI run, with real retrieval tim
 The audit's blocking reason/status was refined after checking the [official GeoNames README](https://download.geonames.org/export/dump/readme.txt), which states that admin code `00` denotes a general feature for which no specific admin1 code is defined. The 126 Japan targets now use the more precise row status `BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED` instead of the generic missing/placeholder status. The two Kenya targets remain `BLOCKED_PARENT_KEY_NOT_FOUND`.
 
 This is a **classification/reason correction only**. It does not normalize raw code `00`, declare those features invalid, make an ancestor up, or create parent links. All 128 targets remain blocked and no candidate paths were found in `allCountries` composite-code checks or in direct `ADM` hierarchy edges. Unit tests now assert the documented source semantics and the no-link safety boundary; the latest CI run remains in progress at the time of this doc update.
+
+
+## Refined status taxonomy rerun — 2026-10-11
+
+The read-only audit was rerun with the more precise GeoNames README interpretation of raw admin1 code `00`. Phase 0 CI run [38098277223](https://github.com/job-grid/job-grid/actions/runs/38098277223) passed the parent-path job and application validation (**79 tests, zero failures** at the tested code commit).
+
+| Parent-path result | Count |
+|---|---:|
+| Japan ADM4 with raw admin1 `00` — `BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED` | 126 |
+| Kenya ADM3 with absent current exact ADM1 key — `BLOCKED_PARENT_KEY_NOT_FOUND` | 2 |
+| Complete code-derived candidate paths | 0 |
+| Complete explicit type=`ADM` hierarchy paths | 0 |
+| Direct type=`ADM` hierarchy edges for targets | 0 |
+| Operational parent links written | 0 |
+
+The taxonomy now distinguishes a documented general-feature code from a genuinely absent crosswalk key. No source values changed; all 128 remain blocked. The Japan raw `00` fields remain untouched, and no parent was synthesized.
+
+The updated row-level CSV, JSON summary and source manifest are in the [seven-day CI artifact](https://github.com/job-grid/job-grid/actions/runs/38098277223/artifacts/11686253623), expiring 2026-10-18.
