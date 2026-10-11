@@ -354,7 +354,7 @@ function auditCurrentAdminParentsByCodes(targetRows, sourceRecords) {
 export function parseHierarchyLine(line) {
   if (!line.trim()) return null;
   const fields = line.split("\t");
-  if (fields.length !== 3 || fields.some((field) => field.length === 0)) {
+  if (fields.length !== 3 || !fields[0] || !fields[1]) {
     throw new Error("Invalid GeoNames hierarchy row: expected 3 non-empty tab-separated fields; count=" + fields.length + "; sample=" + JSON.stringify(line.slice(0, 160)));
   }
   return { parent_id: fields[0], child_id: fields[1], relation_type: fields[2] };
