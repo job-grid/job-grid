@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 function need(condition, message) { if (!condition) throw new Error(message); }
 function meta(audit) {
   const wrapper = audit.source ?? {};
-  const source = wrapper.manifest?.remote_source ?? wrapper.remote_source ?? wrapper;
+  const source = wrapper.manifest?.remote_source ?? wrapper.manifest ?? wrapper.remote_source ?? wrapper;
   const url = source.url ?? source.source_url;
   const hash = source.sha256 ?? wrapper.crosswalk_sha256;
   const status = Number(source.http_status ?? 0);
