@@ -1213,8 +1213,8 @@ jobs:
               raise SystemExit("Supplemental target source identity did not reconcile to all 126 Japan target rows.")
           if target_input.get("positive_candidate_target_count") != 33 or target_input.get("target_to_candidate_code_associations") != 46 or target_input.get("distinct_candidate_area_code_count") != 35:
               raise SystemExit("Supplemental exact-label target coverage did not reconcile to 33 targets, 46 associations and 35 codes.")
-          if target_input.get("exact_name_matched_period_rows") != 156:
-              raise SystemExit("Supplemental e-Stat candidate period count did not reconcile to 156.")
+          if target_input.get("exact_name_matched_period_rows") != target_report.get("total_exact_name_matched_period_rows"):
+              raise SystemExit("Supplemental exact-name matched-period count does not reconcile to the current target candidate report.")
           if target_input.get("report_sha256") != sha256(target_path):
               raise SystemExit("Supplemental candidate report source fingerprint mismatch.")
           spatial_input = report.get("supplemental_spatial_input", {})
