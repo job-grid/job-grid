@@ -258,7 +258,7 @@ jobs:
             "$RUNNER_TEMP_DIR/geonames-source/JP_KE_allCountries_subset.txt" \
             docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
             "$RUNNER_TEMP_DIR/current-admin-parent-path-audit" \
-            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" \\
+            "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" \
             "$RUNNER_TEMP_DIR/geonames-source/HIERARCHY/hierarchy.txt"
           cat "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
           python - "$RUNNER_TEMP_DIR/current-admin-parent-path-audit.json" <<'PY'
@@ -273,6 +273,10 @@ jobs:
               raise SystemExit("Official archive retrieval metadata did not validate.")
           if report.get("source", {}).get("sha256") is None:
               raise SystemExit("Combined source text SHA-256 is missing.")
+          if report.get("source", {}).get("hierarchy_text_sha256") is None:
+              raise SystemExit("Official hierarchy.txt SHA-256 is missing.")
+          if not report.get("source", {}).get("hierarchy_text_line_count"):
+              raise SystemExit("Official hierarchy.txt line count is missing.")
           if report.get("operational_parent_links_created") != 0:
               raise SystemExit("Safety boundary violation: operational parent links must remain zero.")
           print("Source-pinned audit preconditions verified; paths are candidates only, not approved parent links.")
