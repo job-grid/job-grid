@@ -7,6 +7,7 @@ import {
   SPARQL_QUERY,
   buildCandidateAudit,
   buildJapaneseAlternateNameCandidateAudit,
+  containsJapaneseOrHanScript,
   buildCatalogQuery,
   buildDetailsQuery,
   fetchEstatSnapshot,
@@ -311,7 +312,7 @@ test("matches Japanese alternate-name entries only by exact official Japanese la
   const targets = makeTargets().map((target, index) => ({
     ...target,
     source_identity_and_raw_codes_verified: true,
-    source_alternate_names: index === 0 ? ["八尾町", "Yaocho"] : [],
+    source_alternate_names: index === 0 ? ["八尾町", "Yaocho"] : index === 1 ? ["架空町"] : [],
   }));
   const sourceRows = [
     estatRow(501, {
@@ -335,7 +336,14 @@ test("matches Japanese alternate-name entries only by exact official Japanese la
   ];
   const english = buildCandidateAudit(targets, sourceRows, "a".repeat(64));
   const japanese = buildJapaneseAlternateNameCandidateAudit(targets, english, sourceRows);
+  assert.equal(containsJapaneseOrHanScript("八尾町"), true);
+  assert.equal(containsJapaneseOrHanScript("Yaocho"), false);
   assert.equal(japanese.target_count, 126);
+  assert.equal(japanese.targets_with_any_alternate_names, 2);
+  assert.equal(japanese.targets_with_japanese_or_han_script_alternate_names, 2);
+  assert.equal(japanese.targets_with_script_alternate_names_but_no_exact_candidate, 1);
+  assert.equal(japanese.alternate_name_tokens_total, 3);
+  assert.equal(japanese.alternate_name_tokens_with_japanese_or_han_script, 2);
   assert.equal(japanese.targets_with_japanese_alternate_label_candidates, 1);
   assert.equal(japanese.targets_without_japanese_alternate_label_candidates, 125);
   assert.equal(japanese.target_to_area_code_candidate_associations, 2);
