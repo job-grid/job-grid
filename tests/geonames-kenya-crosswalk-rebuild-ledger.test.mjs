@@ -17,7 +17,7 @@ async function fixtures() {
     new URL("geonames-kenya-current-unit-evidence-2026-10-12.json",docs),
     new URL("geonames-kenya-admin1-parent-override-2026-10-12.json",docs),
     new URL("initial-operational-admin-catalog-exclusions.csv",exclusionsDir),
-    new URL("../geonames-japan-parent-overrides-2026-10-12.json",docs)
+    new URL("geonames-japan-parent-overrides-2026-10-12.json",docs)
   ];
   const [a,b,c,d,e,f]=await Promise.all(urls.map(url=>readFile(url,"utf8")));
   return [JSON.parse(a),JSON.parse(b),JSON.parse(c),JSON.parse(d),e,JSON.parse(f)];
