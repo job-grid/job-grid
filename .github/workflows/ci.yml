@@ -396,7 +396,8 @@ jobs:
           import sys
           from pathlib import Path
 
-          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          report_path = Path(sys.argv[1])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
           if report.get("target_count") != 126:
               raise SystemExit(f"Expected 126 Japan targets, got {report.get('target_count')}")
           if report.get("target_source_identity_and_raw_code_matches") != 126:
@@ -410,9 +411,48 @@ jobs:
               raise SystemExit("Official e-Stat machine-readable response was not pinned.")
           if report.get("operational_parent_links_created") != 0:
               raise SystemExit("Safety boundary violation: parent links must remain zero.")
-          if len(report.get("target_results", [])) != 126:
+          english_targets = report.get("target_results", [])
+          if len(english_targets) != 126:
               raise SystemExit("Row-level evidence must include all 126 Japan targets.")
-          print("Japan candidate audit complete: every target is source-verified; e-Stat matches are candidates only; no parent links were written.")
+          ja_audit = report.get("japanese_alternate_name_candidate_audit", {})
+          expected_unmatched_ids = {
+              str(row["geonames_id"]) for row in english_targets
+              if row.get("exact_name_candidate_count") == 0
+          }
+          ja_rows = ja_audit.get("target_results", [])
+          actual_unmatched_ids = {str(row.get("geonames_id", "")) for row in ja_rows}
+          if ja_audit.get("target_count") != len(expected_unmatched_ids) or actual_unmatched_ids != expected_unmatched_ids:
+              raise SystemExit("Japanese alternate-name audit must include exactly the English-unmatched targets.")
+          if ja_audit.get("operational_parent_links_created") != 0:
+              raise SystemExit("Japanese alternate-name audit must not create parent links.")
+          if (
+              ja_audit.get("targets_with_japanese_alternate_label_candidates", 0)
+              + ja_audit.get("targets_without_japanese_alternate_label_candidates", 0)
+              != ja_audit.get("target_count")
+          ):
+              raise SystemExit("Japanese alternate-name target counts do not reconcile.")
+          for target in ja_rows:
+              if target.get("source_identity_and_raw_codes_verified") is not True:
+                  raise SystemExit(f"Japanese alternate-name target is not source-verified: {target.get('geonames_id')}")
+              if target.get("operational_parent_link_created") is not False:
+                  raise SystemExit(f"Japanese alternate-name target violates zero-parent-write rule: {target.get('geonames_id')}")
+              for candidate in target.get("candidates", []):
+                  if not __import__("re").fullmatch(r"\\d{5}", str(candidate.get("area_code", ""))):
+                      raise SystemExit(f"Japanese alternate-name candidate has invalid area code for {target.get('geonames_id')}")
+                  if candidate.get("operational_parent_link_created") is not False:
+                      raise SystemExit(f"Japanese alternate-name candidate violates zero-parent-write rule for {target.get('geonames_id')}")
+          alt_csv_path = report_path.with_name("japan-estat-evidence-audit.japanese-alternate-name-candidates.csv")
+          if not alt_csv_path.is_file():
+              raise SystemExit("Japanese alternate-name candidate CSV was not written.")
+          with alt_csv_path.open(encoding="utf-8", newline="") as stream:
+              alt_csv_rows = list(csv.DictReader(stream))
+          if {str(row.get("geonames_id", "")) for row in alt_csv_rows} != expected_unmatched_ids:
+              raise SystemExit("Japanese alternate-name CSV must retain every English-unmatched target.")
+          if any(str(row.get("operational_parent_link_created", "")).lower() != "false" for row in alt_csv_rows):
+              raise SystemExit("Japanese alternate-name CSV violates zero-parent-write rule.")
+          if any(row.get("candidate_area_code") and not __import__("re").fullmatch(r"\\d{5}", row["candidate_area_code"]) for row in alt_csv_rows):
+              raise SystemExit("Japanese alternate-name CSV contains an invalid area code.")
+          print("Japan candidate audit complete: all 126 target identities and raw codes are source-verified; no parent links were written.")
           PY
           python - "$work/japan-estat-evidence-audit.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import json
@@ -426,9 +466,28 @@ jobs:
           print(f"- Targets with one distinct area-code candidate: {r['targets_with_one_exact_area_code_candidate']}")
           print(f"- Targets with multiple distinct area-code candidates: {r['targets_with_multiple_exact_area_code_candidates']}")
           print(f"- Targets with no exact label candidate: {r['targets_without_exact_label_candidates']}")
-          print("- Complete historical period and parent-reference evidence is retained per candidate area code.")
+          print("- Complete English-label historical period and parent-reference evidence is retained per candidate area code.")
+          ja = r["japanese_alternate_name_candidate_audit"]
+          print("## Exact Japanese alternate-name candidates for English-unmatched targets")
+          print(f"- English-unmatched targets reviewed: {ja['target_count']}")
+          print(f"- Targets with at least one exact Japanese alternate-name candidate: {ja['targets_with_japanese_alternate_label_candidates']}")
+          print(f"- Targets with no exact Japanese alternate-name candidate: {ja['targets_without_japanese_alternate_label_candidates']}")
+          print(f"- Target-to-area-code candidate associations: {ja['target_to_area_code_candidate_associations']}")
+          print(f"- Distinct candidate area codes: {ja['distinct_candidate_area_codes']}")
+          for target in ja["target_results"]:
+              for candidate in target["candidates"]:
+                  matched_labels = "; ".join(candidate["matched_official_japanese_labels"])
+                  period_count = candidate["exact_matching_japanese_label_period_count"]
+                  parent_codes = "; ".join(candidate["parent_area_codes_across_history"])
+                  print(
+                      f"- GeoNames ID {target['geonames_id']} ({target['geonames_name']}) -> "
+                      f"area code {candidate['area_code']}; exact Japanese label(s): {matched_labels}; "
+                      f"matching period(s): {period_count}; history periods: {candidate['history_period_count']}; "
+                      f"parent-code reference(s): {parent_codes}; review only"
+                  )
+          print("- Japanese alternate-name matching uses exact complete strings after Unicode NFC normalization and trimming only.")
           print("- Operational parent links created: 0")
-          print("- Every match requires separate GeoNames entity identity and administrative-chain review.")
+          print("- Every candidate requires separate GeoNames entity identity, period, administrative-level and complete-chain review.")
           PY
 
       - name: Retrieve and fingerprint official MLIT historical/current administrative-code tables
@@ -916,6 +975,7 @@ jobs:
           path: |
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.japanese-alternate-name-candidates.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
