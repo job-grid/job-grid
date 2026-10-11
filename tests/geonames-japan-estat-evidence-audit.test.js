@@ -145,6 +145,12 @@ test("fails closed on conflicting duplicate source identities in target export",
 test("parses a GeoNames row and preserves raw administrative codes exactly", () => {
   const target = japanTarget(1);
   const parsed = sourceGeoRow(target);
+  assert.equal(parsed.alternate_names_raw, "");
+  assert.deepEqual(parsed.alternate_names, []);
+  const alternateNameRow = sourceGeoRow(japanTarget(2, { alternate_names_raw: "八尾町,やおちょう" }));
+  assert.equal(alternateNameRow.alternate_names_raw, "八尾町,やおちょう");
+  assert.deepEqual(alternateNameRow.alternate_names, ["八尾町", "やおちょう"]);
+  assert.equal(normalizeJapaneseLabel(" 八尾町 "), "八尾町");
   assert.equal(parsed.geonames_id, target.geonames_id);
   assert.equal(parsed.feature_code, "ADM4");
   assert.equal(parsed.country_code, "JP");
@@ -299,6 +305,52 @@ test("identical GeoNames coordinates are flagged for manual review, not silently
   assert.ok(group);
   assert.equal(group.coordinate_collision, "EXACT_COORDINATE_COLLISION_REQUIRES_SOURCE_REVIEW");
   assert.equal(report.operational_parent_links_created, 0);
+});
+
+test("matches Japanese alternate-name entries only by exact official Japanese label equality", () => {
+  const targets = makeTargets().map((target, index) => ({
+    ...target,
+    source_identity_and_raw_codes_verified: true,
+    source_alternate_names: index === 0 ? ["八尾町", "Yaocho"] : [],
+  }));
+  const sourceRows = [
+    estatRow(501, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27100-19700401",
+      area_code: "27100",
+      label_en: "Unrelated official English label A",
+      label_ja: "八尾町",
+    }),
+    estatRow(502, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27101-19700401",
+      area_code: "27101",
+      label_en: "Unrelated official English label B",
+      label_ja: "八尾町",
+    }),
+    estatRow(503, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27102-19700401",
+      area_code: "27102",
+      label_en: "Unrelated official English label C",
+      label_ja: "八尾町村",
+    }),
+  ];
+  const english = buildCandidateAudit(targets, sourceRows, "a".repeat(64));
+  const japanese = buildJapaneseAlternateNameCandidateAudit(targets, english, sourceRows);
+  assert.equal(japanese.target_count, 126);
+  assert.equal(japanese.targets_with_japanese_alternate_label_candidates, 1);
+  assert.equal(japanese.targets_without_japanese_alternate_label_candidates, 125);
+  assert.equal(japanese.target_to_area_code_candidate_associations, 2);
+  assert.equal(japanese.distinct_candidate_area_codes, 2);
+  const yao = japanese.target_results.find((target) => target.geonames_id === String(targets[0].geonames_id));
+  assert.equal(yao.review_status, "MULTIPLE_JAPANESE_LABEL_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION");
+  assert.deepEqual(yao.candidates.map((candidate) => candidate.area_code), ["27100", "27101"]);
+  assert.equal(yao.candidates.every((candidate) =>
+    candidate.periods.some((period) => period.matches_target_japanese_alternate_name)), true);
+  assert.equal(japanese.operational_parent_links_created, 0);
+  const csv = renderJapaneseAlternateNameCandidateCsv(japanese, "b".repeat(64));
+  assert.match(csv, /27100/);
+  assert.match(csv, /八尾町/);
+  assert.doesNotMatch(csv, /27102/);
+  assert.match(csv, /NO_EXACT_JAPANESE_ALTERNATE_LABEL_MATCH/);
 });
 
 test("does not use fuzzy name matching, parent reference, or approximate labels", () => {
