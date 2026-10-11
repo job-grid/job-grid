@@ -134,7 +134,7 @@ function supplementalInputReports(jpText) {
       report_version: 1,
       target_count: 126,
       target_source_identity_and_raw_code_matches: 126,
-      total_exact_name_matched_period_rows: 156,
+      total_exact_name_matched_period_rows: 46,
       source_snapshot_sha256: "c".repeat(64),
       operational_parent_links_created: 0,
       input: {
