@@ -375,7 +375,7 @@ async function requestEstatQuery(query, fetchImpl, now, { allowEmpty = false } =
         manifest: {
           endpoint_url: ESTAT_SPARQL_ENDPOINT,
           query_sha256: sha256(query),
-          captured_at_utc: now().toISOString().replace(/\\.\\d{3}Z$/, "Z"),
+          captured_at_utc: now().toISOString().replace(/\.\d{3}Z$/, "Z"),
           http_status: response.status,
           http_date_header: response.headers.get("date"),
           http_last_modified_header: response.headers.get("last-modified"),
@@ -486,7 +486,7 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     source_name: "Japan Statistical LOD — Standard Area Code List",
     catalog_url: ESTAT_CATALOG_URL,
     endpoint_url: ESTAT_SPARQL_ENDPOINT,
-    captured_at_utc: now().toISOString().replace(/\\.\\d{3}Z$/, "Z"),
+    captured_at_utc: now().toISOString().replace(/\.\d{3}Z$/, "Z"),
     http_status: 200,
     catalog_query_sha256: sha256(SPARQL_QUERY),
     catalog_page_size: CATALOG_PAGE_SIZE,
