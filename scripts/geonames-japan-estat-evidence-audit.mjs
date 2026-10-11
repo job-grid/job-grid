@@ -396,6 +396,15 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
   }));
   const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
   const snapshot = await fetchEstatSnapshot(fetchImpl, now);
+  const missingRequiredBinding = snapshot.bindings.find((binding) =>
+    !bindingValue(binding, "period")?.length || !bindingValue(binding, "identifier")?.length
+  );
+  if (missingRequiredBinding) {
+    throw new Error(`e-Stat result variable mismatch or unbound key fields: ${JSON.stringify({
+      available_binding_keys: Object.keys(missingRequiredBinding),
+      first_binding: missingRequiredBinding,
+    })}`);
+  }
   const sourceRows = parseEstatBindings(snapshot.bindings);
   const report = buildCandidateAudit(targets, sourceRows, snapshot.manifest.response_sha256);
   report.generated_at_utc = now().toISOString().replace(/\.\d{3}Z$/, "Z");
