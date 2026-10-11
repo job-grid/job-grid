@@ -90,7 +90,7 @@ Do not duplicate currency names/rules across countries. A view can expose an app
 
 Use one reusable place table instead of rigid cities/towns tables:
 - id UUID; country_id UUID NOT NULL; parent_id UUID nullable.
-- geonames_id BIGINT nullable unique.
+- External identifiers (including GeoNames ID) are stored in a separate source-identifier/crosswalk relation; GeoNames ID is not the internal primary key and may be absent or unresolved.
 - place_type controlled internal type (administrative area, populated place, locality, postal area, etc.).
 - feature_class/feature_code preserving GeoNames classification.
 - raw admin1–admin4 codes for reconciliation; do not assume they are universal ISO subdivision codes.
@@ -103,6 +103,10 @@ Enforce a composite uniqueness key on (id, country_id), and a composite self-FK 
 World/catalog root → countries/areas → optional administrative divisions → populated places/localities → optional postal areas.
 
 Countries connect to source identifiers, name variants and effective-dated currency assignments. Each place has an owning country; if it has a parent, that parent must belong to the same country. The UI can remain Country → City → Town/Locality while the data model supports Country → County → Locality, Country → City, Country → Town or other evidenced structures.
+
+### Source-independent administrative hierarchy and crosswalk provenance
+
+The `geographic_places` sketch above is refined by the [source-independent administrative hierarchy and source crosswalk design](geographic-authority-hierarchy-and-source-crosswalk-design-2026-10-12.md). The implementation should keep source snapshots/raw records, external-ID crosswalk decisions, and internal hierarchy edges distinct. An approved national-authority hierarchy can be represented without fabricating a GeoNames ID or parent; uncertain crosswalks stay unresolved and are not selectable by default. This is a design proposal, not migration authorization.
 
 ## 5. Sample-country source preflight
 
