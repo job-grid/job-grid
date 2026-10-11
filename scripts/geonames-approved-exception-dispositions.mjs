@@ -86,6 +86,13 @@ export function buildDispositionRows(admin1Rows, admin2Rows) {
     const disposition = getDisposition(row.feature_code);
     Object.assign(row, disposition, {
       owner_policy_approval_date: OWNER_POLICY_APPROVAL_DATE,
+      // These 128 current ADM exceptions are not accepted operational catalog
+      // nodes until a verified country-specific immediate-parent path exists.
+      // Preserve the original exception row for audit; exclusion is a separate
+      // operational-catalog decision and does not mutate source identity/code.
+      initial_operational_admin_catalog_disposition: /^ADM[1-4]$/.test(row.feature_code)
+        ? "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH"
+        : "NOT_A_CURRENT_ADMIN_PARENT_PATH_TARGET",
       parent_link_created: false,
     });
   }
@@ -157,12 +164,19 @@ export function buildDispositionSummary(rows, sourceSummary) {
     unique_record_dispositions: countBy(uniqueRows, "owner_approved_disposition"),
     country_level_records_no_admin_parent_required: countryRecords,
     current_admin_features_requiring_country_specific_parent_path: currentAdminFeatures,
+    initial_operational_admin_catalog: {
+      source_exception_rows_preserved: true,
+      current_admin_records_excluded_for_unresolved_parent_path: currentAdminFeatures,
+      current_admin_records_eligible_from_this_exception_set: 0,
+      reentry_rule: "Re-admit only after row-level identity, administrative level, effective period where relevant, and immediate-parent path are verified and reviewed.",
+    },
     non_country_references_still_needing_hierarchy_or_association_review:
       rows.filter((row) => row.owner_approved_disposition !== "COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED").length,
     per_country: perCountry,
     limitations: [
       "These dispositions apply approved conservative policy to existing feature codes; they do not claim a missing crosswalk key was found.",
-      "Current ADM1-ADM4 features with unresolved hierarchy remain excluded from current administrative selectors until a source-pinned country-specific ancestor path is verified.",
+      "All current ADM1-ADM4 records in this unresolved-exception set are excluded from the initial operational administrative catalog, not only hidden from selectors; the original source rows remain in the audit exports.",
+      "An excluded current administrative record can re-enter a later catalog release only after row-level identity, administrative level, effective period where relevant, and the immediate-parent path are verified and reviewed.",
       "Historical and undifferentiated entities are retained, not declared invalid, and are not current administrative selector options by default.",
       "Country-level PCLI entities require no administrative parent; their raw source codes are still preserved unchanged.",
       "Place/non-admin entities are preserved; their administrative association can remain unresolved.",
@@ -176,7 +190,7 @@ const CSV_FIELDS = [
   "raw_admin1_code", "raw_admin2_code", "missing_reference_category",
   "proposed_review_classification", "crosswalk_lookup_key", "raw_missing_code",
   "owner_policy_approval_date", "owner_approved_disposition",
-  "current_admin_selector_treatment", "parent_link_created",
+  "current_admin_selector_treatment", "initial_operational_admin_catalog_disposition", "parent_link_created",
 ];
 
 function escapeCsv(value) {
@@ -218,6 +232,10 @@ async function main() {
     unique_affected_ids: summary.reconciliation.unique_affected_ids,
     current_admin_parent_path_blockers:
       summary.current_admin_features_requiring_country_specific_parent_path,
+    excluded_from_initial_operational_admin_catalog:
+      summary.initial_operational_admin_catalog.current_admin_records_excluded_for_unresolved_parent_path,
+    eligible_from_these_unresolved_current_admin_exceptions:
+      summary.initial_operational_admin_catalog.current_admin_records_eligible_from_this_exception_set,
     country_level_records_no_admin_parent_required:
       summary.country_level_records_no_admin_parent_required,
     parent_ids_or_links_assigned: summary.parent_ids_or_links_assigned,
