@@ -952,8 +952,19 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     source_identity_and_raw_codes_verified: true,
   }));
   const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
-  const snapshot = await fetchEstatSnapshot(targets.map((row) => row.name), fetchImpl, now);
+  const japaneseAlternateNames = targets.flatMap((row) => row.source_alternate_names ?? []);
+  const snapshot = await fetchEstatSnapshot(
+    targets.map((row) => row.name),
+    fetchImpl,
+    now,
+    japaneseAlternateNames,
+  );
   const report = buildCandidateAudit(targets, snapshot.sourceRows, snapshot.manifest.source_snapshot_sha256);
+  report.japanese_alternate_name_candidate_audit = buildJapaneseAlternateNameCandidateAudit(
+    targets,
+    report,
+    snapshot.sourceRows,
+  );
   report.generated_at_utc = now().toISOString().replace(/\.\d{3}Z$/, "Z");
   report.input = {
     target_export_path: targetsPath,
@@ -976,6 +987,14 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     writeFile(`${prefix}.csv`, renderCandidateCsv(report), "utf8"),
     writeFile(`${prefix}.manifest.json`, JSON.stringify(report.source, null, 2) + "\n", "utf8"),
     writeFile(`${prefix}.source-response.json`, snapshot.responseText, "utf8"),
+    writeFile(
+      `${prefix}.japanese-alternate-name-candidates.csv`,
+      renderJapaneseAlternateNameCandidateCsv(
+        report.japanese_alternate_name_candidate_audit,
+        snapshot.manifest.source_snapshot_sha256,
+      ),
+      "utf8",
+    ),
   ]);
   return report;
 }
@@ -990,6 +1009,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       .then((report) => {
         const summary = { ...report };
         delete summary.target_results;
+        if (summary.japanese_alternate_name_candidate_audit) {
+          const alternateSummary = { ...summary.japanese_alternate_name_candidate_audit };
+          delete alternateSummary.target_results;
+          summary.japanese_alternate_name_candidate_audit = alternateSummary;
+        }
         process.stdout.write(JSON.stringify(summary, null, 2) + "\n");
         if (report.operational_parent_links_created !== 0) {
           throw new Error("Safety boundary violation: audit may not create operational parent links.");
