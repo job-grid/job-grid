@@ -5,6 +5,7 @@ import {
   buildDispositionRows,
   buildDispositionSummary,
   toCsv,
+  toInitialAdminCatalogExclusionCsv,
 } from "../scripts/geonames-approved-exception-dispositions.mjs";
 
 const directory = new URL(
@@ -17,12 +18,13 @@ async function json(name) {
 }
 
 test("approved exception dispositions reproduce the committed row-level CSV exactly", async () => {
-  const [admin1, admin2, originalSummary, committedCsv, committedSummary] = await Promise.all([
+  const [admin1, admin2, originalSummary, committedCsv, committedSummary, committedExclusions] = await Promise.all([
     json("unmatched_admin1_references.json"),
     json("unmatched_admin2_references.json"),
     json("summary.json"),
     readFile(new URL("owner-approved-dispositions.csv", directory), "utf8"),
     json("owner-approved-disposition-summary.json"),
+    readFile(new URL("initial-operational-admin-catalog-exclusions.csv", directory), "utf8"),
   ]);
 
   const rows = buildDispositionRows(admin1, admin2);
@@ -31,6 +33,7 @@ test("approved exception dispositions reproduce the committed row-level CSV exac
   assert.equal(rows.length, 2573);
   assert.equal(new Set(rows.map((row) => row.geonames_id)).size, 2416);
   assert.equal(toCsv(rows), committedCsv);
+  assert.equal(toInitialAdminCatalogExclusionCsv(rows), committedExclusions);
   assert.deepEqual(summary, committedSummary);
   assert.equal(summary.reconciliation.overlap_ids_between_levels, 157);
   assert.equal(summary.reconciliation.original_summary_matches, true);
@@ -52,6 +55,17 @@ test("approved dispositions separate current hierarchy blockers from other entit
   assert.equal(summary.current_admin_features_requiring_country_specific_parent_path, 128);
   assert.equal(summary.unique_record_dispositions.COUNTRY_LEVEL_NO_ADMIN_PARENT_REQUIRED, 5);
   assert.equal(summary.unique_record_dispositions.PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED, 128);
+  assert.equal(summary.initial_operational_admin_catalog.current_admin_records_excluded_for_unresolved_parent_path, 128);
+  assert.equal(summary.initial_operational_admin_catalog.current_admin_records_eligible_from_this_exception_set, 0);
+  const currentAdminRows = rows.filter((row) => /^ADM[1-4]$/.test(row.feature_code));
+  assert.equal(new Set(currentAdminRows.map((row) => row.geonames_id)).size, 128);
+  assert.ok(currentAdminRows.every((row) =>
+    row.initial_operational_admin_catalog_disposition ===
+    "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH"));
+  assert.equal(
+    toInitialAdminCatalogExclusionCsv(rows).trim().split("\\n").length - 1,
+    128,
+  );
   assert.equal(summary.unique_record_dispositions.PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR, 1030);
   assert.equal(summary.unique_record_dispositions.PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR, 1109);
   assert.equal(summary.non_country_references_still_needing_hierarchy_or_association_review, 2568);
