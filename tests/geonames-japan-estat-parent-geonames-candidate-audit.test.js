@@ -1,10 +1,14 @@
 import test from "node:test";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   buildOfficialParentReferenceIndex,
+  buildTargetCandidateParentQueue,
+  mergeExactLabelTargetCandidateParentReferences,
+  validateExactLabelTargetCandidateReport,
   exactJapaneseLabelMatchFields,
   isEligibleGeoNamesParentFeature,
   normalizeExactJapaneseLabel,
@@ -41,6 +45,123 @@ function spatialDetailReport(parentHistory) {
     detail_periods_reconciled: parentHistory.length,
     area_code_period_history: parentHistory,
     operational_parent_links_created: 0,
+  };
+}
+
+function supplementalInputReports(jpText) {
+  const uniqueCodes = ["29363", ...Array.from({ length: 34 }, (_, index) => String(10000 + index).padStart(5, "0"))];
+  const associationCodes = [...uniqueCodes, ...uniqueCodes.slice(0, 11)];
+  const targetResults = [];
+  const spatialCandidates = [];
+  let associationIndex = 0;
+
+  for (let index = 0; index < 126; index += 1) {
+    const geonamesId = index === 0 ? "1850471" : String(3000000 + index);
+    const target = {
+      geonames_id: geonamesId,
+      geonames_name: "Example-machi",
+      country_code: "JP",
+      feature_code: "ADM4",
+      source_modification_date: "2026-10-10",
+      source_ascii_name: "Example-machi",
+      source_feature_class: "A",
+      source_latitude: "35.0",
+      source_longitude: "139.0",
+      source_timezone: "Asia/Tokyo",
+      raw_admin1_code: "00",
+      raw_admin2_code: "",
+      source_identity_and_raw_codes_verified: true,
+      candidates: [],
+      operational_parent_link_created: false,
+    };
+
+    if (index < 33) {
+      const candidateCount = index < 13 ? 2 : 1;
+      for (let j = 0; j < candidateCount; j += 1) {
+        const areaCode = associationCodes[associationIndex++];
+        const parentCode = areaCode === "29363"
+          ? "29360"
+          : String(20000 + Number(areaCode) - 10000).padStart(5, "0");
+        const parent = {
+          area_code: parentCode,
+          uri: `http://data.e-stat.go.jp/lod/sac/C${parentCode}-19700401`,
+          label_en: areaCode === "29363" ? "Shiki-gun" : `Parent-${parentCode}`,
+          label_ja: areaCode === "29363" ? "磯城郡" : `親地域${parentCode}`,
+        };
+        const period = {
+          period_uri: `http://data.e-stat.go.jp/lod/sac/C${areaCode}-19700401`,
+          area_code: areaCode,
+          label_en: "Example-machi",
+          label_ja: "例町",
+          effective_from: "1970-04-01",
+          effective_until: "",
+          matches_target_name: true,
+          parent_references: [parent],
+          previous_period_uris: [],
+          succeeding_period_uris: [],
+          administrative_class_uris: ["http://data.e-stat.go.jp/lod/terms/sacs#Town"],
+        };
+        target.candidates.push({
+          area_code: areaCode,
+          matched_labels_en: ["Example-machi"],
+          exact_matching_period_count: 1,
+          exact_matching_period_uris: [period.period_uri],
+          history_period_count: 1,
+          parent_area_codes_across_history: [parentCode],
+          parent_references_across_history: [parent],
+          periods: [period],
+        });
+        spatialCandidates.push({
+          geonames_id: geonamesId,
+          geonames_name: target.geonames_name,
+          candidate_code: areaCode,
+          source_snapshots_with_candidate_code: ["1965-10-01", "1970-10-01", "1975-10-01", "1995-10-01"],
+          point_inside_candidate_polygon_snapshots:
+            index === 0 && areaCode === "29363"
+              ? ["1970-10-01", "1975-10-01", "1995-10-01"]
+              : [],
+          disposition: "CANDIDATE_ONLY",
+          operational_parent_link_created: false,
+        });
+      }
+    }
+    targetResults.push(target);
+  }
+
+  const sourceTextSha256 = createHash("sha256").update(jpText).digest("hex");
+  return {
+    targetCandidateReport: {
+      report_version: 1,
+      target_count: 126,
+      target_source_identity_and_raw_code_matches: 126,
+      total_exact_name_matched_period_rows: 156,
+      source_snapshot_sha256: "c".repeat(64),
+      operational_parent_links_created: 0,
+      input: {
+        geonames_country_text_sha256: sourceTextSha256,
+        unique_japan_targets: 126,
+        source_identity_and_raw_code_matches: 126,
+      },
+      source: {
+        geoNames: {
+          archive_sha256: "a".repeat(64),
+        },
+      },
+      target_results: targetResults,
+    },
+    spatialPolygonReport: {
+      report_version: 2,
+      selection_mode: "ALL_POSITIVE_ESTAT_LABEL_CANDIDATE_TARGETS",
+      target_count: 33,
+      target_code_associations_tested: 46,
+      distinct_candidate_area_codes_tested: 35,
+      candidate_codes_tested: 46,
+      source_snapshot_archive_count: 122,
+      target_rows_with_polygon_context: 32,
+      target_rows_without_polygon_context: 1,
+      operational_parent_links_created: 0,
+      candidate_results: spatialCandidates,
+    },
   };
 }
 
@@ -122,6 +243,98 @@ test("conflicting parent Japanese labels are blocked instead of choosing one", (
   const [row] = buildOfficialParentReferenceIndex(detail);
   assert.equal(row.conflicting_parent_label_values, true);
   assert.equal(row.candidate_status, "BLOCKED_CONFLICTING_OFFICIAL_JAPANESE_PARENT_LABELS");
+});
+
+test("supplemental candidate-period audit joins parent labels to the exact target histories and aligned spatial evidence", async () => {
+  const root = await mkdtemp(join(tmpdir(), "job-grid-japan-parent-expansion-"));
+  try {
+    const jpText = [
+      geoRow({ id: "9001", name: "Shiki-gun", alternates: "磯城郡", featureCode: "ADM2" }),
+      geoRow({ id: "9002", name: "Shiki-district", alternates: "磯城郡", featureCode: "ADM2" }),
+    ].join("\n") + "\n";
+    const jpTextPath = join(root, "JP.txt");
+    const spatialDetailPath = join(root, "spatial-details.json");
+    const targetCandidatePath = join(root, "japan-estat-candidates.json");
+    const spatialPolygonPath = join(root, "polygon-audit.json");
+    const manifestPath = join(root, "manifest.json");
+    const prefix = join(root, "out", "expanded-parent-audit");
+    const parent = {
+      area_code: "29360",
+      uri: "http://data.e-stat.go.jp/lod/sac/C29360-19700401",
+      label_en: "Shiki-gun",
+      label_ja: "磯城郡",
+    };
+    await writeFile(jpTextPath, jpText, "utf8");
+    await writeFile(spatialDetailPath, JSON.stringify(spatialDetailReport([{
+      area_code: "29363",
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C29363-19700401",
+      parent_references: [parent],
+    }])), "utf8");
+    const inputs = supplementalInputReports(jpText);
+    await writeFile(targetCandidatePath, JSON.stringify(inputs.targetCandidateReport), "utf8");
+    await writeFile(spatialPolygonPath, JSON.stringify(inputs.spatialPolygonReport), "utf8");
+    await writeFile(manifestPath, JSON.stringify({
+      country_code: "JP",
+      archive_filename: "JP.zip",
+      source_url: "https://download.geonames.org/export/dump/JP.zip",
+      http_status: 200,
+      archive_sha256: "a".repeat(64),
+      archive_size_bytes: 1000,
+      retrieved_at_utc: "2026-10-11T10:00:00Z",
+    }), "utf8");
+
+    const validate = validateExactLabelTargetCandidateReport(inputs.targetCandidateReport);
+    assert.equal(validate.positive_candidate_target_count, 33);
+    assert.equal(validate.target_to_candidate_code_associations, 46);
+    assert.equal(validate.distinct_candidate_area_code_count, 35);
+
+    const report = await runParentIdentityCandidateAudit({
+      geonamesJapanTextPath: jpTextPath,
+      detailReportPath: spatialDetailPath,
+      geonamesSourceManifestPath: manifestPath,
+      outputPrefix: prefix,
+      targetCandidateReportPath: targetCandidatePath,
+      spatialPolygonReportPath: spatialPolygonPath,
+    });
+    assert.equal(report.report_version, 2);
+    assert.equal(report.audit_scope, "SPATIAL_FIRST_1995_HISTORY_PLUS_EXACT_ENGLISH_LABEL_TARGET_CANDIDATE_HISTORY");
+    assert.equal(report.operational_parent_links_created, 0);
+    assert.equal(report.supplemental_target_candidate_input.positive_candidate_target_count, 33);
+    assert.equal(report.supplemental_spatial_input.source_snapshot_archive_count, 122);
+    assert.equal(report.target_candidate_parent_queue_summary.queue_row_count, 46);
+    assert.equal(report.target_candidate_parent_queue_summary.queue_rows_with_spatial_hit, 1);
+    assert.equal(report.target_candidate_parent_queue_summary.queue_rows_with_period_aligned_spatial_hit, 1);
+
+    const shiki = report.parent_references.find((row) => row.parent_area_code === "29360");
+    assert.deepEqual(shiki.candidate_geonames_ids, ["9001", "9002"]);
+    assert.deepEqual(shiki.reference_source_kinds.sort(), [
+      "EXACT_ENGLISH_LABEL_TARGET_CANDIDATE_HISTORY",
+      "SPATIAL_FIRST_1995_HISTORY",
+    ]);
+    const firstQueueRow = report.target_candidate_parent_queue_summary.target_candidate_parent_queue_rows.find((row) =>
+      row.target_geonames_id === "1850471" && row.target_candidate_area_code === "29363");
+    assert.equal(firstQueueRow.parent_identity_candidate_status, "MULTIPLE_EXACT_GEONAMES_ADMIN_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION");
+    assert.equal(firstQueueRow.period_aligned_spatial_hit_snapshots, "1970-10-01;1975-10-01;1995-10-01");
+    assert.equal(firstQueueRow.operational_parent_link_created, "false");
+
+    const writtenSummary = JSON.parse(await readFile(prefix + ".json", "utf8"));
+    assert.equal(writtenSummary.operational_parent_links_created, 0);
+    const queueCsv = await readFile(prefix + ".target-candidate-parent-queue.csv", "utf8");
+    assert.match(queueCsv, /MULTIPLE_EXACT_GEONAMES_ADMIN_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION/);
+    assert.match(queueCsv, /SPATIAL_HIT_ALIGNS_WITH_EXACT_NAME_ESTAT_PERIOD/);
+    assert.match(queueCsv, /false/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("supplemental audit refuses a target report from a different GeoNames text snapshot", () => {
+  const { targetCandidateReport } = supplementalInputReports("some pinned source bytes");
+  targetCandidateReport.target_results[0].source_identity_and_raw_codes_verified = false;
+  assert.throws(
+    () => validateExactLabelTargetCandidateReport(targetCandidateReport),
+    /failed the exact Japan ADM4\/raw-admin1-00 source guard/,
+  );
 });
 
 test("integration audit retains no/one/multiple exact-name candidates and never writes parents", async () => {
