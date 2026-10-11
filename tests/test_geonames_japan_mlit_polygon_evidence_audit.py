@@ -46,6 +46,14 @@ class RingAndPolygonTests(unittest.TestCase):
 
 
 class GmlAuditTests(unittest.TestCase):
+    def test_declared_shift_jis_xml_is_transcoded_before_expat_parsing(self):
+        source = '<?xml version="1.0" encoding="Shift_JIS"?><root><label>山形</label></root>'
+        raw_xml = source.encode("shift_jis")
+        normalized = AUDIT.normalize_xml_bytes_for_expat(raw_xml)
+        self.assertIn(b'encoding="UTF-8"', normalized)
+        root = ET.fromstring(normalized)
+        self.assertEqual(root.findtext("label"), "山形")
+
     def fixture_zip(self):
         xml = b"""<?xml version="1.0" encoding="UTF-8"?>
         <gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml"
