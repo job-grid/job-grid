@@ -292,3 +292,144 @@ jobs:
             ${{ runner.temp }}/geonames-source/remote-source-manifest.json
           if-no-files-found: error
           retention-days: 7
+
+  geonames-crosswalk-exception-source-audit:
+    name: Phase 0 CI / Global source audit of crosswalk exceptions
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint official global GeoNames archive
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/allCountries.zip"
+          archive="$work/allCountries.zip"
+          headers="$work/allCountries.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$archive"
+          unzip -tq "$archive"
+
+          python - "$headers" "$archive" "$url" "$retrieved_at" "$status" "$work/source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, archive_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw_headers = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block = {}
+          current = {}
+          current_status = None
+          for line in raw_headers.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  pieces = line.split()
+                  current_status = pieces[1] if len(pieces) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+
+          archive = Path(archive_path)
+          last_modified_raw = last_block.get("last-modified")
+          last_modified_utc = None
+          if last_modified_raw:
+              try:
+                  dt = parsedate_to_datetime(last_modified_raw)
+                  if dt.tzinfo is not None:
+                      last_modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+
+          record = {
+              "country_code": "WORLD",
+              "archive_filename": archive.name,
+              "source_url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": last_modified_raw,
+              "http_last_modified_utc": last_modified_utc,
+              "etag": last_block.get("etag"),
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+              "archive_size_bytes": archive.stat().st_size,
+              "zip_crc_validation": "PASS",
+          }
+          Path(manifest_path).write_text(
+              json.dumps({"manifest_version": 1, "remote_sources": [record]}, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps({key: record[key] for key in [
+              "source_url", "retrieved_at_utc", "http_status",
+              "http_last_modified_utc", "etag", "archive_sha256",
+              "archive_size_bytes", "zip_crc_validation"
+          ]}))
+          PY
+
+          mkdir -p "$work/extracted"
+          unzip -oq "$archive" -d "$work/extracted"
+          test -s "$work/extracted/allCountries.txt"
+
+      - name: Compare all unique crosswalk exception IDs against the official global source
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          node scripts/geonames-crosswalk-exception-source-audit.mjs \
+            "$work/extracted/allCountries.txt" \
+            docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/owner-approved-dispositions.csv \
+            "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit" \
+            "$work/source-manifest.json"
+          cat "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/geonames-crosswalk-exception-source-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("unique_exception_ids") != 2416:
+              raise SystemExit("Expected 2,416 unique exception IDs, got " + str(report.get("unique_exception_ids")))
+          if report.get("input", {}).get("remote_retrieval_metadata_verified") is not True:
+              raise SystemExit("Official global-source retrieval metadata did not validate.")
+          if report.get("input", {}).get("malformed_or_wrong_shape_source_lines") != 0:
+              raise SystemExit("Global GeoNames source contained malformed/wrong-shape rows.")
+          if report.get("parent_ids_or_links_assigned") != 0:
+              raise SystemExit("Safety boundary violation: parent IDs or links must remain zero.")
+          accounted = report.get("source_identity_and_raw_codes_match", 0) + report.get("blocked_or_drifted_ids", 0)
+          if accounted != report.get("unique_exception_ids"):
+              raise SystemExit("Every unique exception ID must have a source audit disposition.")
+          print("Global source audit complete; all exceptions have a row-level disposition and no parent links were written.")
+          PY
+
+      - name: Upload row-level global source audit and retrieval manifest (no source archive)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-global-exception-source-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.csv
+            ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.json
+            ${{ runner.temp }}/geonames-world-source/source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
