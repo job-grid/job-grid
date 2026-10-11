@@ -10,7 +10,7 @@
  */
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
@@ -139,17 +139,24 @@ export function buildOfficialParentReferenceIndex(detailReport) {
     a.parent_uri.localeCompare(b.parent_uri));
 }
 
-function exactLabelFields(record, targetJapaneseLabel) {
+export function isEligibleGeoNamesParentFeature(record) {
+  return record?.country_code === EXPECTED_COUNTRY_CODE &&
+    record?.feature_class === "A" &&
+    PARENT_FEATURE_CODE.test(String(record?.feature_code ?? ""));
+}
+
+export function exactJapaneseLabelMatchFields(record, targetJapaneseLabel) {
   const target = normalizeExactJapaneseLabel(targetJapaneseLabel);
   if (!target) return [];
   const matches = [];
   if (normalizeExactJapaneseLabel(record.name) === target) matches.push("primary_name");
   if (normalizeExactJapaneseLabel(record.ascii_name) === target) matches.push("ascii_name");
-  if (record.alternate_names.some((value) => normalizeExactJapaneseLabel(value) === target)) {
+  if ((record.alternate_names ?? []).some((value) => normalizeExactJapaneseLabel(value) === target)) {
     matches.push("exact_alternate_name_entry");
   }
   return matches;
 }
+
 
 export async function runParentIdentityCandidateAudit({
   geonamesJapanTextPath,
@@ -195,9 +202,7 @@ export async function runParentIdentityCandidateAudit({
       malformedRows += 1;
       continue;
     }
-    if (record.country_code !== EXPECTED_COUNTRY_CODE ||
-        record.feature_class !== "A" ||
-        !PARENT_FEATURE_CODE.test(record.feature_code)) continue;
+    if (!isEligibleGeoNamesParentFeature(record)) continue;
     if (administrativeRowsById.has(record.geonames_id)) {
       duplicateAdministrativeIds += 1;
       continue;
@@ -206,7 +211,7 @@ export async function runParentIdentityCandidateAudit({
 
     const recordNames = new Map();
     for (const referenceLabel of referencesByJapaneseLabel.keys()) {
-      const matchFields = exactLabelFields(record, referenceLabel);
+      const matchFields = exactJapaneseLabelMatchFields(record, referenceLabel);
       if (matchFields.length) recordNames.set(referenceLabel, matchFields);
     }
     for (const [matchedLabel, matchFields] of recordNames.entries()) {
@@ -311,7 +316,6 @@ export async function runParentIdentityCandidateAudit({
   const jsonPath = prefix + ".json";
   const parentCsvPath = prefix + ".parent-references.csv";
   const candidateCsvPath = prefix + ".candidate-matches.csv";
-  await writeFile(dirname(jsonPath), "", "utf8").catch(() => {});
   const parentFields = [
     "parent_area_code", "parent_uri", "parent_label_en", "parent_label_ja",
     "parent_label_en_values", "parent_label_ja_values", "child_area_codes",
@@ -345,6 +349,7 @@ export async function runParentIdentityCandidateAudit({
     ...candidate,
     exact_match_fields: candidate.exact_match_fields.join(";"),
   }));
+  await mkdir(dirname(jsonPath), { recursive: true });
   await Promise.all([
     writeFile(jsonPath, JSON.stringify(summary, null, 2) + "\n", "utf8"),
     writeFile(parentCsvPath, renderCsv(parentFields, parentRows), "utf8"),
