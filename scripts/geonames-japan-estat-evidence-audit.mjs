@@ -188,7 +188,7 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
   const byLabel = new Map();
   for (const sourceRow of sourceRows) {
     if (!sourceRow.period_uri || !sourceRow.area_code) {
-      throw new Error("e-Stat row missing period URI or standard area code.");
+      throw new Error(`e-Stat row missing period URI or standard area code: ${JSON.stringify({ period_uri: sourceRow.period_uri, area_code: sourceRow.area_code, label_en: sourceRow.label_en })}`);
     }
     const key = normalizeExactLabel(sourceRow.label_en);
     if (!key) continue;
