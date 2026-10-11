@@ -119,6 +119,23 @@ class LinkResolverTests(unittest.TestCase):
         )
         self.assertEqual(details["catalog_rows_with_zip_links"], 1)
 
+    def test_filename_only_widget_link_is_not_mistaken_for_archive_download(self):
+        html = b"""<table><tr><td>N03-651001_06_GML.zip</td>
+          <td><a href="N03-651001_06_GML.zip">filename</a>
+          <button onclick="downloadFile('N03-651001_06_GML.zip')">download</button></td></tr></table>"""
+        links, _details = AUDIT.find_direct_links(html)
+        self.assertNotIn("N03-651001_06_GML.zip", links)
+
+    def test_exact_archive_path_wins_over_bare_filename_widget_link(self):
+        html = b"""<table><tr><td>N03-651001_06_GML.zip</td>
+          <td><a href="N03-651001_06_GML.zip">filename</a>
+          <a href="/ksj/gml/data/N03/N03-65/N03-651001_06_GML.zip">download</a></td></tr></table>"""
+        links, _details = AUDIT.find_direct_links(html)
+        self.assertEqual(
+            links["N03-651001_06_GML.zip"],
+            "https://nlftp.mlit.go.jp/ksj/gml/data/N03/N03-65/N03-651001_06_GML.zip",
+        )
+
     def test_no_guessed_url_is_returned_if_official_table_has_no_link(self):
         html = b"<table><tr><td>N03-651001_06_GML.zip</td></tr></table>"
         links, _details = AUDIT.find_direct_links(html)
