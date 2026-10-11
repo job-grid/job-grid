@@ -1,0 +1,98 @@
+{
+  "report_type": "geonames_local_input_current_official_source_recheck",
+  "generated_utc": "2026-10-11T14:59:32.9033860Z",
+  "result": "THREE_FULL_INPUT_HASHES_MATCH; ADMIN2_FULL_FILE_HAS_ONE_OUTSIDE_SAMPLE_ROW_CHANGE; FIVE_COUNTRY_ADMIN2_CONTENT_SEQUENCE_MATCHES",
+  "method": {
+    "download_tool": "Windows curl.exe",
+    "transport": "HTTPS",
+    "source_host": "download.geonames.org",
+    "downloaded_source_files_stored_outside_repository": true,
+    "original_local_inputs_modified": false,
+    "source_file_contents_committed": false
+  },
+  "original_local_hashes_were_recalculated": true,
+  "sources": [
+    {
+      "key": "countryInfo",
+      "source_url": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "retrieved_at_utc": "2026-10-11T14:58:07.8760111Z",
+      "http_status": 200,
+      "http_last_modified": "Sun, 11 Oct 2026 03:06:52 GMT",
+      "etag": "\"7bc0-65d87df9028a7\"",
+      "bytes": 31680,
+      "original_local_sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+      "current_official_sha256": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+      "current_bytes_match_original": true
+    },
+    {
+      "key": "admin1",
+      "source_url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "retrieved_at_utc": "2026-10-11T14:58:12.0659357Z",
+      "http_status": 200,
+      "http_last_modified": "Sun, 11 Oct 2026 03:00:13 GMT",
+      "etag": "\"2501f-65d87c7c1eca5\"",
+      "bytes": 151583,
+      "original_local_sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "current_official_sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "current_bytes_match_original": true
+    },
+    {
+      "key": "admin2",
+      "source_url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "retrieved_at_utc": "2026-10-11T14:58:13.5561823Z",
+      "http_status": 200,
+      "http_last_modified": "Sun, 11 Oct 2026 03:00:13 GMT",
+      "etag": "\"241ba2-65d87c7c1eca5\"",
+      "bytes": 2366370,
+      "original_local_bytes": 2366368,
+      "original_local_sha256": "e1b500f4f0e13b3119ff15df84ce3c28982e899bb4183ee033f802a280c377d3",
+      "current_official_sha256": "eb276b1e444d67f45a396217acc9473bd1685f82e575c34f13ba94e42701639f",
+      "current_bytes_match_original": false,
+      "current_rows": 47642,
+      "original_rows": 47642,
+      "added_distinct_rows": 1,
+      "removed_distinct_rows": 1,
+      "changed_row_country_code": "IR",
+      "selected_sample_country_rows": {
+        "total": 6977,
+        "per_country": {
+          "KE": 32,
+          "GB": 185,
+          "JP": 1190,
+          "BR": 5570,
+          "SG": 0
+        },
+        "line_content_and_order_match_original_sample_after_line_ending_normalization": true,
+        "content_differences_found": 0
+      },
+      "note": "One source row was replaced under IR. The country-scoped rows present in the 6,977-row original sample crosswalk match in line content and order. A helper file used LF line endings whereas the original Windows output used CRLF, so their raw SHA-256 values are not directly comparable; the line-by-line normalized comparison passed."
+    },
+    {
+      "key": "readme",
+      "source_url": "https://download.geonames.org/export/dump/readme.txt",
+      "retrieved_at_utc": "2026-10-11T14:58:17.1501909Z",
+      "http_status": 200,
+      "http_last_modified": "Sun, 11 Oct 2026 02:49:19 GMT",
+      "etag": "\"228b-65d87a0bff6d9\"",
+      "bytes": 8843,
+      "original_local_sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "current_official_sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "current_bytes_match_original": true
+    }
+  ],
+  "interpretation": [
+    "Three local input files are byte-identical to the bytes served at the official URL during this recheck.",
+    "The full admin2 crosswalk changed after the local snapshot: one IR row was removed/replaced, with unchanged total row count and a net file-size increase of two bytes.",
+    "The five-country selected admin2 crosswalk row sequence matches in content and order after normalizing line endings.",
+    "This current recheck captures actual current HTTP metadata but does not recover historical HTTP headers for the earlier local downloads.",
+    "The separate allCountries.zip input SHA-256 matches the official-source GitHub Actions audit.",
+    "No source contents were committed, and no source, database, migration, seed, import, or production files were modified."
+  ],
+  "governance": {
+    "database_operations": false,
+    "migrations_or_seeds": false,
+    "imports": false,
+    "production_or_deployment_changes": false,
+    "original_local_inputs_modified": false
+  }
+}
