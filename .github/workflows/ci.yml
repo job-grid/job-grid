@@ -1809,3 +1809,96 @@ jobs:
             docs/geonames-sample-validation/results/crosswalk-reconciliation-20261010/effective-initial-operational-admin-catalog-exclusions-2026-10-12.csv
           if-no-files-found: error
           retention-days: 7
+
+  country-area-code-crosswalk-audit:
+    name: Phase 0 CI / Country-area code crosswalk audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Retrieve and fingerprint official GeoNames and UN sources
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/country-area-code-audit"
+          mkdir -p "$work"
+          geo_url="https://download.geonames.org/export/dump/countryInfo.txt"
+          m49_url="https://unstats.un.org/unsd/methodology/m49/overview/"
+          geo="$work/countryInfo.txt"
+          m49="$work/un-m49-overview.html"
+          geo_headers="$work/countryInfo.headers"
+          m49_headers="$work/un-m49.headers"
+          geo_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          geo_status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors --dump-header "$geo_headers" --output "$geo" --write-out '%{http_code}' "$geo_url")"
+          test "$geo_status" = "200"
+          m49_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          m49_status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors --dump-header "$m49_headers" --output "$m49" --write-out '%{http_code}' "$m49_url")"
+          test "$m49_status" = "200"
+          test -s "$geo" && test -s "$m49"
+          python3 - "$geo" "$geo_headers" "$geo_url" "$geo_time" "$geo_status" "$m49" "$m49_headers" "$m49_url" "$m49_time" "$m49_status" "$work/source-manifest.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          def record(path_arg, headers_arg, url, retrieved, status, key):
+              p=Path(path_arg); raw=Path(headers_arg).read_text(encoding="iso-8859-1",errors="replace")
+              blocks=[]; current={}; code=None
+              for line in raw.replace("\r\n","\n").split("\n"):
+                  if line.startswith("HTTP/"):
+                      if code=="200": blocks.append(current)
+                      parts=line.split(); code=parts[1] if len(parts)>1 else None; current={}
+                  elif ":" in line and code:
+                      k,v=line.split(":",1); current[k.strip().lower()]=v.strip()
+              if code=="200": blocks.append(current)
+              h=blocks[-1] if blocks else {}; data=p.read_bytes()
+              return {"key":key,"source_url":url,"retrieved_at_utc":retrieved,"http_status":int(status),
+                  "http_last_modified_header":h.get("last-modified"),"etag":h.get("etag"),
+                  "size_bytes":len(data),"sha256":hashlib.sha256(data).hexdigest()}
+          entries=[
+              record(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],"geoNames_country_info"),
+              record(sys.argv[6],sys.argv[7],sys.argv[8],sys.argv[9],sys.argv[10],"un_m49_overview")]
+          Path(sys.argv[11]).write_text(json.dumps({"manifest_version":1,"sources":entries},indent=2)+"\n",encoding="utf-8")
+          print(json.dumps(entries,indent=2))
+          PY
+
+      - name: Unit test source parser and crosswalk rules
+        run: python3 -m unittest discover -s tests -p "test_geonames_un_m49_crosswalk_audit.py" -v
+
+      - name: Compare GeoNames codes with official UN M49 table
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/country-area-code-audit"
+          python3 scripts/geonames-un-m49-crosswalk-audit.py \
+            --country-info "$work/countryInfo.txt" \
+            --m49-html "$work/un-m49-overview.html" \
+            --source-manifest "$work/source-manifest.json" \
+            --output-dir "$work/output"
+          python3 - "$work/output/country-area-code-crosswalk-aggregate.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json,sys
+          from pathlib import Path
+          report=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print("## Country/area alpha-code cross-check")
+          print("- Status: "+report["status"])
+          for key,value in report["counts"].items(): print(f"- {key}: {value}")
+          print("- Direct ISO Country Codes Collection snapshot: not captured by this audit.")
+          print("- UN M49 numeric codes are not treated as ISO numeric-3 proof.")
+          print("- Automatic code replacement: not authorized.")
+          PY
+
+      - name: Upload country/area code crosswalk evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-un-m49-country-area-code-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/country-area-code-audit/source-manifest.json
+            ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-aggregate.json
+            ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.csv
+            ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.json
+          if-no-files-found: error
+          retention-days: 7
