@@ -99,12 +99,12 @@
   },
   "limitations": [
     "These dispositions apply approved conservative policy to existing feature codes; they do not claim a missing crosswalk key was found.",
+    "All current ADM1-ADM4 records in this unresolved-exception set are excluded from the initial operational administrative catalog, not only hidden from selectors; the original source rows remain in the audit exports.",
+    "An excluded current administrative record can re-enter a later catalog release only after row-level identity, administrative level, effective period where relevant, and the immediate-parent path are verified and reviewed.",
     "Historical and undifferentiated entities are retained, not declared invalid, and are not current administrative selector options by default.",
     "Country-level PCLI entities require no administrative parent; their raw source codes are still preserved unchanged.",
     "Place/non-admin entities are preserved; their administrative association can remain unresolved.",
-    "No parent IDs, migrations, seeds, imports, database, deployment or production changes are performed.",
-    "All current ADM1-ADM4 records in this unresolved-exception set are excluded from the initial operational administrative catalog, not only hidden from selectors; the original source rows remain in the audit exports.",
-    "An excluded current administrative record can re-enter a later catalog release only after row-level identity, administrative level, effective period where relevant, and the immediate-parent path are verified and reviewed."
+    "No parent IDs, migrations, seeds, imports, database, deployment or production changes are performed."
   ],
   "initial_operational_admin_catalog": {
     "source_exception_rows_preserved": true,
