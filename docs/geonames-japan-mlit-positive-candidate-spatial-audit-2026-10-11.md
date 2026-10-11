@@ -4,10 +4,10 @@
 
 ## Latest verification
 
-- [Phase 0 CI #427](https://github.com/job-grid/job-grid/actions/runs/38118581041) passed on the current code head.
-- Application tests: **98 passed, 0 failed**. All nine Phase 0 jobs passed, including database migration validation, repository integrity, dependency scanning, secret scanning, global source audit, Kenya legacy-key audit and the two Japan hierarchy-evidence audits.
-- Separate Phase 4C tooling validation [#397](https://github.com/job-grid/job-grid/actions/runs/38118581047) and backup-executor validation [#410](https://github.com/job-grid/job-grid/actions/runs/38118581077) passed. The separate backup/recovery readiness gate remains blocked.
-- The full row-level Japan audit artifact is [available here](https://github.com/job-grid/job-grid/actions/runs/38118581041/artifacts/11693823197) until **2026-10-18 06:40:50 UTC**. It includes the 33-row target-summary CSV, 116 containment observations, 46 target/code results, official source manifest, query-response snapshots and the 122 downloaded boundary archives with their per-archive hashes.
+- [Phase 0 CI #431](https://github.com/job-grid/job-grid/actions/runs/38120664025) passed on code head `12239f2a34cd2052458ceade57d79e2788ccf70a`: **98 tests passed, 0 failed**. All nine Phase 0 jobs passed.
+- The run printed the e-Stat historical periods for all 14 spatially supported associations, using only the current retrieved source-verified target/code records. The log enables a period-by-period comparison of exact English/Japanese labels, effective dates, parent references and predecessor/successor URIs.
+- Separate Phase 4C tooling validation [#401](https://github.com/job-grid/job-grid/actions/runs/38120664006) and backup-executor validation [#414](https://github.com/job-grid/job-grid/actions/runs/38120664002) passed. The separate backup/recovery readiness gate remains blocked.
+- The full row-level Japan audit artifact is [available here](https://github.com/job-grid/job-grid/actions/runs/38120664025/artifacts/11695675663) until **2026-10-18 07:17:18 UTC**. It includes the 33-row target summary, 116 containment observations, 46 candidate-code results, source manifest, query-response snapshots and 122 downloaded boundary archives with per-archive hashes.
 
 ## Scope and source fingerprints
 
@@ -51,9 +51,34 @@ The parent-area code shown here is the e-Stat candidate-history reference retain
 | `2112526` | Iwanuma-machi | `04381` | 1965, 1970 | 2 / 2 | `04380` |
 | `2113163` | Abiko-machi | `12304` | 1965 | 2 / 2 | `12300` |
 
-The codes `04381`, `11302`, `12304`, `17341` and `40502` are among the historical codes recovered from MLIT's 1965/1970 lists in the separate [administrative-code evidence report](https://github.com/job-grid/job-grid/blob/docs/country-catalog-foundation/docs/geonames-japan-mlit-candidate-code-evidence-2026-10-11.md). The 14 hits are geographically consistent with the candidate polygon in the listed snapshots; a hit in 1965 or 1970 must not be interpreted as validity across all later dates. In particular, the available snapshots are discrete samples and do not prove continuity throughout every e-Stat period.
+All 14 official e-Stat period histories report administrative class `Town` and their Japanese labels are consistent with the English candidate labels shown above. The code rows `04381`, `11302`, `12304`, `17341` and `40502` also appear in MLIT's 1965/1970 source lists, documented in the separate [administrative-code evidence report](https://github.com/job-grid/job-grid/blob/docs/country-catalog-foundation/docs/geonames-japan-mlit-candidate-code-evidence-2026-10-11.md).
 
-**Disposition for the next pass:** prioritize these 14 for comparison of exact official Japanese period labels, period start/end dates, administrative class, predecessor/successor links, candidate point location and official boundary coverage. Keep them as `SPATIALLY_SUPPORTED_CANDIDATE_REQUIRES_ENTITY_AND_PERIOD_REVIEW` until the evidence establishes the exact GeoNames entity and correct administrative level. No parent assignment is approved by this table.
+### Exact-name e-Stat period overlap with spatial observations
+
+CI #431 matched each of the 14 spatial association rows to the same source-verified GeoNames target and the same e-Stat area-code candidate, then returned every period record for that code. The cross-check below treats a spatial snapshot as temporally supported only if its date falls inside a period whose English label exactly matches the target name. The dates are source dates; a blank end date is kept as blank rather than invented.
+
+| GeoNames ID | Code | Official Japanese label | Exact-name period coverage in e-Stat | Spatial snapshots that overlap an exact-name period | Assessment |
+|---|---|---|---|---|---|
+| `1850471` | `29363` | 田原本町 | From 1970-04-01; end date blank | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1850496` | `20382` | 辰野町 | From 1970-04-01; end date blank | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1851931` | `12465` | 白浜町 | 1970-04-01 to 2006-03-20 (2 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1853828` | `16301` | 大沢野町 | 1970-04-01 to 2005-04-01 (5 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1854370` | `11302` | 桶川町 | 1970-04-01 to 1970-11-03 (2 period records) | 1970 | Spatial + period-supported candidate |
+| `1854628` | `40502` | 小郡町 | 1970-04-01 to 1972-04-01 (3 period records) | 1970 | Spatial + period-supported candidate |
+| `1854978` | `17344` | 野々市町 | 1970-04-01 to 2011-11-11 (9 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1857469` | `17341` | 松任町 | 1970-04-01 to 1970-10-10 (3 period records) | 1970-10-01 snapshot | Spatial + period-supported candidate |
+| `1858533` | `39404` | 窪川町 | 1970-04-01 to 2006-03-20 (2 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1860320` | `36441` | 鴨島町 | 1970-04-01 to 2004-10-01 (2 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1864261` | `25424` | 愛知川町 | 1970-04-01 to 2006-02-13 (8 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `1865498` | `31369` | 赤碕町 | 1970-04-01 to 2004-09-01 (2 period records) | 1970, 1975, 1995 | Spatial + period-supported candidate |
+| `2112526` | `04381` | 岩沼町 | 1970-04-01 to 1971-11-01 (2 period records) | 1970 | Spatial + period-supported candidate |
+| `2113163` | `12304` | 我孫子町 | 1970-04-01 to 1970-07-01 (2 period records) | None in an e-Stat-covered period; spatial hit is 1965 only | Historical-only spatial candidate; e-Stat-period overlap unresolved |
+
+**Result:** **13 of 14** spatial associations have at least one selected snapshot within an e-Stat exact-name period. The remaining association is GeoNames ID `2113163` (Abiko-machi): its boundary point hit is from 1965, while the captured e-Stat history for code `12304` begins on 1970-04-01 and ends 1970-07-01. This is a source-coverage boundary, not proof against the candidate; MLIT's 1965 code list independently records `千葉県東葛飾郡我孫子町` for code `12304`. The 1965 hits for the other 13 rows are likewise pre-e-Stat-history observations and are not counted as e-Stat period overlaps; their later snapshot overlaps are what support their period check.
+
+These are strong, source-backed **review candidates**, not accepted GeoNames entity crosswalks. Spatial containment plus matching English/Japanese administrative labels and a matching effective period reduces ambiguity, but does not independently prove that each GeoNames ID denotes that exact administrative unit or that the historical parent reference is the correct immediate GeoNames parent.
+
+**Next disposition:** retain 13 as `SPATIALLY_AND_TEMPORALLY_SUPPORTED_CANDIDATE_REQUIRES_OWNER_CROSSWALK_APPROVAL`; retain Abiko ID `2113163` as `HISTORICAL_SPATIAL_SUPPORT_PRE_ESTAT_PERIOD_REQUIRES_ENTITY_REVIEW`. Do not write parent links without explicit owner approval of the entity crosswalk and complete path.
 
 ## Spatial result and disposition
 
