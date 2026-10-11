@@ -153,3 +153,12 @@ A separate read-only CI audit retrieved the current official GeoNames `admin1Cod
 The audit parsed 3,865 rows with zero malformed rows and zero duplicate composite keys. HTTP retrieval metadata and the source hash are in the [machine-readable audit](../geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json); the [report](../geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.md) explains the evidence and limits. The source was retrieved at `2026-10-11T00:18:08Z` (HTTP 200; Last-Modified `2026-10-10T01:58:39Z`; SHA-256 `1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a`).
 
 GeoNames' current crosswalk also includes records such as `KE.22` and `KE.35`, but these were not inferred as replacements or assigned to the target rows. Historical forum guidance called KE.01/KE.03 obsolete but is not an authoritative replacement map. The two records remain valid source identities with unresolved parent associations. No names/proximity matching, parent IDs, operational links or production changes were used.
+
+
+## Stage F — Kenyan external county-ancestor evidence review — 2026-10-11
+
+The exact current admin1 keys `KE.01` and `KE.03` remain absent. Separate official sources now give county-level ancestry leads for the two affected records, but do not prove the exact GeoNames-ID lineage or immediate parent path:
+- `192705` Kiambururu Sub-Location: an IEBC Act schedule lists Kiambururu among sub-locations of Kiambu County; a 2024 Ministry of Interior Gazette lists Kiambururu as a Location under Githunguri Sub-County. Candidate county ancestor only: GeoNames Kiambu County ADM2 ID `8693007` (not related Kiambu ADM1 ID `192709`); level discrepancy remains.
+- `7800132` Imenti Central: Meru County Government lists Central Imenti as an administrative sub-county and constituency and uses “Imenti Central” in its administrator list; a 2022 Gazette places Central Imenti under Meru County. Candidate county ancestor only: GeoNames Meru County ADM2 ID `8693009` (not related Meru ADM1 ID `186824`).
+
+See the [Kenya external ancestor evidence review](../geonames-kenya-external-ancestor-evidence-2026-10-11.md) and its [machine-readable candidate list](../geonames-kenya-external-ancestor-evidence-2026-10-11.json). These are owner-review candidates only and have not been approved or written as parent links. Raw codes `01` and `03` remain unchanged.
