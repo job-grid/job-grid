@@ -1163,6 +1163,93 @@ jobs:
           print("Exact Japanese-label matches are candidate evidence only; no GeoNames parent IDs are approved.")
           PY
 
+      - name: Expand parent identity candidates to exact-label target periods
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-estat-parent-geonames-candidate-audit.test.js
+          node scripts/geonames-japan-estat-parent-geonames-candidate-audit.mjs \
+            "$work/extracted/JP.txt" \
+            "$work/japan-mlit-1995-all-126-estat-details.json" \
+            "$work/geonames-source-manifest.json" \
+            "$work/japan-estat-parent-geonames-candidate-expansion" \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-polygon-audit.json"
+          python - "$work/japan-estat-parent-geonames-candidate-expansion.json" \
+            "$work/japan-estat-parent-geonames-candidate-expansion.parent-references.csv" \
+            "$work/japan-estat-parent-geonames-candidate-expansion.candidate-matches.csv" \
+            "$work/japan-estat-parent-geonames-candidate-expansion.target-candidate-parent-queue.csv" \
+            "$work/japan-estat-evidence-audit.json" \
+            "$work/japan-mlit-polygon-audit.json" \
+            "$work/geonames-source-manifest.json" <<'PY'
+          import csv
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          report_path, parents_path, candidates_path, queue_path, target_path, spatial_path, manifest_path = map(Path, sys.argv[1:])
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          target_report = json.loads(target_path.read_text(encoding="utf-8"))
+          spatial_report = json.loads(spatial_path.read_text(encoding="utf-8"))
+          source_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+          def read_rows(path):
+              with path.open(encoding="utf-8", newline="") as stream:
+                  return list(csv.DictReader(stream))
+
+          parents = read_rows(parents_path)
+          candidates = read_rows(candidates_path)
+          queue = read_rows(queue_path)
+
+          sha256 = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+          if report.get("report_version") != 2 or report.get("audit_scope") != "SPATIAL_FIRST_1995_HISTORY_PLUS_EXACT_ENGLISH_LABEL_TARGET_CANDIDATE_HISTORY":
+              raise SystemExit("Expanded parent audit did not declare the expected combined source scope.")
+          if report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Expanded parent audit violated the no-parent-write boundary.")
+          target_input = report.get("supplemental_target_candidate_input", {})
+          if target_input.get("target_count") != 126 or target_input.get("target_source_identity_and_raw_code_matches") != 126:
+              raise SystemExit("Supplemental target source identity did not reconcile to all 126 Japan target rows.")
+          if target_input.get("positive_candidate_target_count") != 33 or target_input.get("target_to_candidate_code_associations") != 46 or target_input.get("distinct_candidate_area_code_count") != 35:
+              raise SystemExit("Supplemental exact-label target coverage did not reconcile to 33 targets, 46 associations and 35 codes.")
+          if target_input.get("exact_name_matched_period_rows") != 156:
+              raise SystemExit("Supplemental e-Stat candidate period count did not reconcile to 156.")
+          if target_input.get("report_sha256") != sha256(target_path):
+              raise SystemExit("Supplemental candidate report source fingerprint mismatch.")
+          spatial_input = report.get("supplemental_spatial_input", {})
+          if spatial_input.get("report_sha256") != sha256(spatial_path) or spatial_input.get("source_snapshot_archive_count") != 122:
+              raise SystemExit("Expanded spatial report fingerprint/coverage did not reconcile to the 122-archive input.")
+          if report.get("geonames_source", {}).get("archive_sha256") != source_manifest.get("archive_sha256"):
+              raise SystemExit("Expanded parent audit GeoNames archive hash differs from the source manifest.")
+          if report.get("geonames_source", {}).get("text_member_sha256") != target_report.get("input", {}).get("geonames_country_text_sha256"):
+              raise SystemExit("Expanded parent audit did not use the exact same JP.txt bytes as the target candidate report.")
+          if len(parents) != report.get("parent_reference_count") or len(candidates) != report.get("candidate_match_rows"):
+              raise SystemExit("Expanded parent reference/candidate CSV rows do not reconcile with JSON.")
+          queue_summary = report.get("target_candidate_parent_queue_summary", {})
+          if len(queue) != queue_summary.get("queue_row_count") or not queue:
+              raise SystemExit("The target-candidate parent queue row count does not reconcile, or the queue is empty.")
+          expected_pairs = {
+              (str(target["geonames_id"]), str(candidate["area_code"]))
+              for target in target_report.get("target_results", [])
+              for candidate in target.get("candidates", [])
+          }
+          if any((row.get("target_geonames_id"), row.get("target_candidate_area_code")) not in expected_pairs for row in queue):
+              raise SystemExit("Target-candidate parent queue contains an association absent from the pinned exact-label candidate report.")
+          if any(row.get("operational_parent_link_created", "").lower() != "false" for row in parents + candidates + queue):
+              raise SystemExit("Expanded parent report or queue violated the no-parent-write boundary.")
+          if any(row.get("parent_identity_crosswalk_status") != "NOT_VERIFIED_TO_GEONAMES_ID" for row in candidates):
+              raise SystemExit("An expanded GeoNames parent candidate was incorrectly marked as a confirmed crosswalk.")
+          if any(row.get("exact_target_name_match") != "true" for row in queue):
+              raise SystemExit("Queue includes a child-period row that was not an exact English-label candidate.")
+          print(
+              f"Validated expanded exact-label parent audit: {report['parent_reference_count']} parent references; "
+              f"{report['candidate_match_rows']} GeoNames candidate rows; {len(queue)} target-period-parent rows; "
+              f"{queue_summary.get('queue_rows_with_period_aligned_spatial_hit', 0)} rows with spatial evidence in the exact e-Stat period; zero parent links."
+          )
+          print("- Parent label candidates remain unverified identities; no parent ID or operational edge was approved.")
+          PY
+
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
         uses: actions/upload-artifact@v4
         with:
@@ -1172,6 +1259,10 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.json
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.japanese-alternate-name-candidates.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.parent-references.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.candidate-matches.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidate-expansion.target-candidate-parent-queue.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-evidence-audit.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/geonames-source-manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-code-evidence.json
