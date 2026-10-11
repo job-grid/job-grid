@@ -456,6 +456,9 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
         raise RuntimeError("Could not derive a safe prefecture archive set from the candidate codes.")
 
     catalog_bytes, catalog_response = read_bytes(MLIT_HISTORIC_CATALOG)
+    output_prefix.parent.mkdir(parents=True, exist_ok=True)
+    catalog_snapshot_path = output_prefix.parent / "mlit-n03-v2_2-download-index.html"
+    catalog_snapshot_path.write_bytes(catalog_bytes)
     links, link_manifest = find_direct_links(catalog_bytes)
     required = required_snapshots(candidate_prefectures)
     missing = [item["archive_filename"] for item in required if item["archive_filename"] not in links]
@@ -471,6 +474,7 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
         "catalog_http_status": catalog_response["http_status"],
         "catalog_response_bytes": len(catalog_bytes),
         "catalog_response_sha256": sha256(catalog_bytes),
+        "catalog_snapshot_artifact_path": str(catalog_snapshot_path),
         **link_manifest,
     }
     for item in required:
@@ -495,9 +499,15 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
     source_snapshots = []
     features_by_snapshot = []
     all_code_presence = set()
+    archive_root = output_prefix.parent / "polygon-source-archives"
+    archive_root.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         for fetched in executor.map(fetch_archive, required):
+            archive_path = archive_root / fetched["snapshot_date"] / fetched["archive_filename"]
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(fetched["archive_bytes"])
             snapshot_meta = {key: value for key, value in fetched.items() if key != "archive_bytes"}
+            snapshot_meta["local_artifact_path"] = str(archive_path.relative_to(output_prefix.parent))
             features, member_names = parse_gml_archive(fetched["archive_bytes"], fetched)
             snapshot_meta["parsed_boundary_feature_count"] = len(features)
             snapshot_meta["source_member_names"] = member_names
