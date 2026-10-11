@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import hashlib
+from collections import Counter
 import html
 import io
 import json
@@ -360,6 +361,60 @@ def normalize_xml_bytes_for_expat(xml_bytes: bytes) -> bytes:
     return updated.encode("utf-8")
 
 
+def archive_structure_diagnostic(zip_bytes: bytes) -> dict:
+    """Provide bounded structural diagnostics when an archive yields no features."""
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+        names = archive.namelist()
+        xml_members = [
+            name for name in names
+            if name.lower().endswith((".gml", ".xml"))
+            and not name.lower().endswith(("metadata.xml", "manifest.xml"))
+        ]
+        shp_members = [name for name in names if name.lower().endswith(".shp")]
+        diagnostics = []
+        for member in xml_members[:3]:
+            raw = archive.read(member)
+            decl = re.search(
+                br"<\\?xml[^>]*\\bencoding\\s*=\\s*['\"]([^'\"]+)['\"]",
+                raw[:2048],
+                re.IGNORECASE,
+            )
+            try:
+                normalized = normalize_xml_bytes_for_expat(raw)
+                tags = re.findall(
+                    rb"<(?:[A-Za-z0-9_.-]+:)?([A-Za-z][A-Za-z0-9_.-]*)\\b",
+                    normalized,
+                )
+                counts = Counter(tag.decode("ascii", errors="replace").lower() for tag in tags)
+                diagnostics.append({
+                    "member": member,
+                    "declared_encoding": decl.group(1).decode("ascii", errors="replace") if decl else None,
+                    "xml_bytes": len(raw),
+                    "tag_name_counts_top_25": counts.most_common(25),
+                    "feature_member_count": counts.get("featuremember", 0),
+                    "feature_members_collection_count": counts.get("featuremembers", 0),
+                    "administrative_area_count": counts.get("administrativearea", 0),
+                    "polygon_count": counts.get("polygon", 0),
+                    "polygon_patch_count": counts.get("polygonpatch", 0),
+                    "coordinate_element_counts": {
+                        tag: counts.get(tag, 0) for tag in ("pos", "poslist", "coordinates")
+                    },
+                })
+            except Exception as error:
+                diagnostics.append({
+                    "member": member,
+                    "declared_encoding": decl.group(1).decode("ascii", errors="replace") if decl else None,
+                    "diagnostic_parse_error": f"{type(error).__name__}: {error}",
+                })
+        return {
+            "archive_member_count": len(names),
+            "archive_members_sample": names[:25],
+            "xml_member_names": xml_members[:25],
+            "shp_member_names": shp_members[:25],
+            "xml_structure_samples": diagnostics,
+        }
+
+
 def parse_gml_archive(zip_bytes: bytes, snapshot: dict) -> tuple[list[dict], list[str]]:
     records = []
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
@@ -569,7 +624,12 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
             snapshot_meta["parsed_boundary_feature_count"] = len(features)
             snapshot_meta["source_member_names"] = member_names
             if len(features) == 0:
-                raise RuntimeError(f"Zero boundary features parsed from official MLIT archive {fetched['archive_filename']}; failing closed.")
+                diagnostic = archive_structure_diagnostic(fetched["archive_bytes"])
+                raise RuntimeError(
+                    f"Zero boundary features parsed from official MLIT archive "
+                    f"{fetched['archive_filename']}; failing closed. "
+                    f"Structure diagnostic={json.dumps(diagnostic, ensure_ascii=False)}"
+                )
             source_snapshots.append(snapshot_meta)
             for feature in features:
                 code = str(feature.get("area_code", "")).zfill(5) if feature.get("area_code") else ""
