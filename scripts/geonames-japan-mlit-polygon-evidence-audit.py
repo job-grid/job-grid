@@ -607,18 +607,51 @@ def required_snapshots(candidate_prefectures: set[str]) -> list[dict]:
     return required
 
 
-def candidate_targets(audit: dict) -> list[dict]:
+def candidate_targets(audit: dict, include_all_positive: bool = False) -> list[dict]:
+    target_rows = audit.get("target_results", [])
+    if include_all_positive:
+        selected = [target for target in target_rows if target.get("candidates")]
+        expected_ids = {str(target["geonames_id"]) for target in selected}
+        if not selected:
+            raise RuntimeError("No positive exact-label candidate targets were present in the source audit.")
+        for target in selected:
+            if (
+                target.get("country_code") != "JP"
+                or target.get("feature_code") != "ADM4"
+                or target.get("raw_admin1_code") != "00"
+                or target.get("source_identity_and_raw_codes_verified") is not True
+            ):
+                raise RuntimeError(
+                    "Positive candidate target failed the exact Japan ADM4/raw-admin1-00 source identity guard: "
+                    f"{target.get('geonames_id')}"
+                )
+    else:
+        selected = [
+            target for target in target_rows
+            if str(target.get("geonames_id")) in EXPECTED_TARGET_IDS
+        ]
+        expected_ids = set(EXPECTED_TARGET_IDS)
+
     rows = []
-    for target in audit.get("target_results", []):
-        if target.get("geonames_id") not in EXPECTED_TARGET_IDS:
-            continue
-        lat = float(target["source_latitude"])
-        lon = float(target["source_longitude"])
+    for target in selected:
+        try:
+            lat = float(target["source_latitude"])
+            lon = float(target["source_longitude"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise RuntimeError(
+                f"Target {target.get('geonames_id')} lacks valid source latitude/longitude."
+            ) from error
         codes = sorted({
             str(candidate["area_code"]).zfill(5)
             for candidate in target.get("candidates", [])
             if re.fullmatch(r"\d{5}", str(candidate.get("area_code", "")))
         })
+        if not codes:
+            if include_all_positive:
+                raise RuntimeError(
+                    f"Positive candidate target {target.get('geonames_id')} has no valid five-digit area code."
+                )
+            continue
         rows.append({
             "geonames_id": str(target["geonames_id"]),
             "name": target["geonames_name"],
@@ -629,14 +662,16 @@ def candidate_targets(audit: dict) -> list[dict]:
             "candidate_area_codes": codes,
         })
     ids = {row["geonames_id"] for row in rows}
-    if ids != EXPECTED_TARGET_IDS:
-        raise RuntimeError(f"Expected six identity-collision targets; found ids={sorted(ids)}")
+    if ids != expected_ids:
+        raise RuntimeError(
+            f"Expected target IDs {sorted(expected_ids, key=int)}; found ids={sorted(ids, key=int)}"
+        )
     return sorted(rows, key=lambda row: int(row["geonames_id"]))
 
 
-def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
+def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_positive: bool = False) -> dict:
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
-    targets = candidate_targets(audit)
+    targets = candidate_targets(audit, include_all_positive=include_all_positive)
     candidate_prefectures = {
         code[:2]
         for target in targets
@@ -796,10 +831,13 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
             key=lambda row: (row["snapshot_date"], row["containing_area_code"], row["containing_municipality_name"])
         )
     result = {
-        "report_version": 1,
+        "report_version": 2 if include_all_positive else 1,
+        "selection_mode": "ALL_POSITIVE_ESTAT_LABEL_CANDIDATE_TARGETS" if include_all_positive else "SIX_NAMED_COLLISION_TARGETS",
         "status": "PASS_OFFICIAL_MLIT_HISTORICAL_BOUNDARY_RETRIEVAL_AND_POINT_TEST; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "target_count": len(targets),
+        "target_code_associations_tested": sum(len(target["candidate_area_codes"]) for target in targets),
+        "distinct_candidate_area_codes_tested": len({code for target in targets for code in target["candidate_area_codes"]}),
         "target_ids": sorted(target_by_id, key=int),
         "candidate_codes_tested": len(candidate_stats),
         "source_catalog": source_manifest,
@@ -891,11 +929,15 @@ def perform_point_audit(audit_path: Path, output_prefix: Path) -> dict:
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 2:
-        sys.stderr.write("Usage: geonames-japan-mlit-polygon-evidence-audit.py <japan-estat-evidence-audit.json> <output-prefix>\n")
+    if len(argv) not in {2, 3} or (len(argv) == 3 and argv[2] != "--all-positive-candidates"):
+        sys.stderr.write(
+            "Usage: geonames-japan-mlit-polygon-evidence-audit.py "
+            "<japan-estat-evidence-audit.json> <output-prefix> [--all-positive-candidates]\n"
+        )
         return 2
+    include_all_positive = len(argv) == 3
     try:
-        perform_point_audit(Path(argv[0]), Path(argv[1]))
+        perform_point_audit(Path(argv[0]), Path(argv[1]), include_all_positive=include_all_positive)
     except Exception as error:
         sys.stderr.write(f"MLIT polygon evidence audit failed closed: {type(error).__name__}: {error}\n")
         return 1
