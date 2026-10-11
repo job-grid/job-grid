@@ -289,6 +289,8 @@ export function buildTargetCandidateParentQueue(targetCandidateReport, parentRef
       Number(spatialPolygonReport.target_count) !== inputSummary.positive_candidate_target_count ||
       Number(spatialPolygonReport.target_code_associations_tested) !== inputSummary.target_to_candidate_code_associations ||
       Number(spatialPolygonReport.candidate_codes_tested) !== inputSummary.target_to_candidate_code_associations ||
+      Number(spatialPolygonReport.distinct_candidate_area_codes_tested) !== inputSummary.distinct_candidate_area_code_count ||
+      Number(spatialPolygonReport.source_snapshot_archive_count) !== 122 ||
       Number(spatialPolygonReport.operational_parent_links_created) !== 0 ||
       !Array.isArray(spatialPolygonReport.candidate_results)) {
     throw new Error("The expanded spatial report failed selection mode, target/code coverage, or zero-parent-write validation.");
@@ -307,8 +309,11 @@ export function buildTargetCandidateParentQueue(targetCandidateReport, parentRef
     for (const candidate of target.candidates) {
       const spatial = spatialByTargetCode.get([String(target.geonames_id), String(candidate.area_code)].join("\u0000"));
       if (!spatial) throw new Error(`Spatial report lacks target/code association ${target.geonames_id}/${candidate.area_code}.`);
-      const pointHitSnapshots = String(spatial.point_inside_candidate_polygon_snapshots ?? "")
-        .split(";").map((value) => value.trim()).filter(Boolean);
+      const rawPointHitSnapshots = spatial.point_inside_candidate_polygon_snapshots;
+      const pointHitSnapshots = (Array.isArray(rawPointHitSnapshots)
+        ? rawPointHitSnapshots
+        : String(rawPointHitSnapshots ?? "").split(";"))
+        .map((value) => String(value).trim()).filter(Boolean);
       const periods = candidate.periods.filter((row) => row.matches_target_name === true);
       for (const period of periods) {
         const alignedSnapshots = pointHitSnapshots.filter((snapshot) =>
