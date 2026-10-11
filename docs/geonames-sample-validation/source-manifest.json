@@ -134,7 +134,7 @@
       "sample_selection_algorithm_independently_reimplemented": false
     }
   },
-  "note": "The FAILED_DNS statuses and sources[] entries below describe only the isolated builder's attempted retrieval and remain historically accurate for that environment. Separately, the owner's connected Windows computer contained the five country ZIPs; measured sizes, hashes, ZIP CRC, source counts, record comparisons and crosswalk counts are in owner_laptop_five_country_archive_comparison. Five-country sample comparison passed; hierarchy exceptions, row-level exception export, worldwide source pinning, current ISO comparison and catalog acceptance remain blocked. allCountries.zip was not parsed for this task. Owner sample manifest last_modified_utc is local filesystem mtime, not HTTP metadata. Current addendum: row-level exception exports are now persisted; exact Singapore ID overlap is 24/24 with 118 additional IDs, and the admin1/admin2 exception union contains 2,416 unique GeoNames IDs. Previous statements about unpersisted exports or unmeasured overlap are historical and superseded by this measured reconciliation.",
+  "note": "The FAILED_DNS statuses and sources[] entries below describe only the isolated builder's attempted retrieval and remain historically accurate for that environment. Separately, the owner's connected Windows computer contained the five country ZIPs; measured sizes, hashes, ZIP CRC, source counts, record comparisons and crosswalk counts are in owner_laptop_five_country_archive_comparison. Five-country sample comparison passed; hierarchy exceptions, row-level exception export, worldwide source pinning, current ISO comparison and catalog acceptance remain blocked. allCountries.zip was not parsed for this task. Owner sample manifest last_modified_utc is local filesystem mtime, not HTTP metadata. Current addendum: row-level exception exports are now persisted; exact Singapore ID overlap is 24/24 with 118 additional IDs, and the admin1/admin2 exception union contains 2,416 unique GeoNames IDs. Previous statements about unpersisted exports or unmeasured overlap are historical and superseded by this measured reconciliation. Current independent CI addendum: Phase 0 CI #365 at commit 0fd7a9ea10472d95bf9f961c6072f40e536b4497 fetched and scanned the official allCountries.zip over HTTPS at 2026-10-11T00:51:58Z (HTTP 200), scanned 13,472,324 well-formed 19-field rows, and matched all 2,416 unique unresolved-exception IDs on identity and raw administrative codes. This is separate from the older owner-computer verifier stage described above. It still does not reproduce the algorithm that selected the separate 25,685-row sample, establish all parent paths, provide the ISO snapshot/comparison, or prove worldwide product completeness.",
   "current_stage_status": "PASS_SEPARATE_IMPLEMENTATION_FULL_LOCAL_SCAN_AND_SAMPLE_RECONCILIATION_CATALOG_ACCEPTANCE_BLOCKED",
   "last_checked_owner_input_directory": {
     "path": "C:\\Users\\jonat\\OneDrive\\Desktop\\JobGrid-GeoNames",
@@ -1099,5 +1099,29 @@
     "worldwide_completeness": "UNVERIFIED",
     "catalog_acceptance": "BLOCKED",
     "phase_4c_recovery_readiness": "BLOCKED"
+  },
+  "latest_independent_ci_worldwide_source_audit": {
+    "status": "PASS_GLOBAL_SOURCE_SCAN_AND_EXCEPTION_IDENTITY_RECONCILIATION",
+    "workflow": "Phase 0 CI",
+    "run_number": 365,
+    "run_id": 38100525125,
+    "tested_commit": "0fd7a9ea10472d95bf9f961c6072f40e536b4497",
+    "source_url": "https://download.geonames.org/export/dump/allCountries.zip",
+    "retrieved_at_utc": "2026-10-11T00:51:58Z",
+    "http_status": 200,
+    "http_last_modified_utc": "2026-10-10T01:58:39Z",
+    "archive_size_bytes": 422010093,
+    "archive_sha256": "3b6ba297e83d5cd6717a41cfe72b6cd85d167b0d0ff06069b2c33d410d6abe15",
+    "extracted_text_size_bytes": 1788663996,
+    "extracted_text_sha256": "e563a236d3fcbfb24414534b4fcc8feff4c4230fced91dbaf8d28a9be8242532",
+    "source_rows_scanned": 13472324,
+    "malformed_or_wrong_shape_rows": 0,
+    "unique_exception_ids": 2416,
+    "exact_source_identity_and_raw_code_matches": 2416,
+    "parent_links_assigned": 0,
+    "sample_selection_algorithm_independently_reimplemented": false,
+    "iso_authority_comparison": "UNVERIFIED",
+    "report_json": "docs/geonames-global-exception-source-audit-2026-10-11.json",
+    "report_markdown": "docs/geonames-global-exception-source-audit-2026-10-11.md"
   }
 }
