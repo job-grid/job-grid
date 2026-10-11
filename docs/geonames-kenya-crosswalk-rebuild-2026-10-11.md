@@ -35,3 +35,8 @@ The Kenya Phase 0 CI job runs the tests and rebuilds the ledger from the freshly
 ## Disposition
 
 Both rows remain excluded from the active administrative selector until an authoritative identifier crosswalk and complete parent path are verified. Raw codes 01/03 remain unchanged. The code change closes the repeatable rebuild/reporting workflow, not the underlying identity gaps; zero operational parent links are approved. No migration, seed, import, live database or production changes are part of this work.
+
+
+## Evidence improvement — 2026-10-12
+
+The official native unit paths are now documented separately from GeoNames identifiers. See [Kenya current-unit path evidence](geonames-kenya-current-unit-path-evidence-2026-10-12.md) and the [machine-readable dossier](geonames-kenya-current-unit-evidence-2026-10-12.json). The Kenya CI ledger now reports two documented native paths, zero verified GeoNames entity crosswalks, and zero parent links. This narrows the remaining work to stable identifiers, direct source-backed crosswalks and catalog-parent mapping; those gates are not claimed as complete.

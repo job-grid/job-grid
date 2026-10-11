@@ -1676,6 +1676,7 @@ jobs:
           node scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs \
             "$work/kenya-legacy-admin1-crosswalk-audit.json" \
             docs/geonames-kenya-external-ancestor-evidence-2026-10-11.json \
+            docs/geonames-kenya-current-unit-evidence-2026-10-12.json \
             "$work/kenya-crosswalk-rebuild-ledger"
           python - "$work/kenya-crosswalk-rebuild-ledger.json" <<'PY'
           import json
@@ -1683,11 +1684,11 @@ jobs:
           from pathlib import Path
 
           report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          if report.get("status") != "REBUILD_LEDGER_CREATED__DIRECT_PARENT_PATHS_UNRESOLVED":
+          if report.get("status") != "OFFICIAL_ADMIN_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING":
               raise SystemExit("Kenya rebuild ledger status is unexpected.")
           totals = report.get("totals", {})
-          if totals.get("target_rows") != 2 or totals.get("immediate_parent_paths_verified") != 0:
-              raise SystemExit("Kenya rebuild ledger target/path totals do not reconcile.")
+          if totals.get("target_rows") != 2 or totals.get("official_native_parent_paths_documented") != 2 or totals.get("geonames_entity_crosswalks_verified") != 0 or totals.get("immediate_parent_paths_verified") != 0:
+              raise SystemExit("Kenya rebuild ledger native paths / GeoNames crosswalk totals do not reconcile.")
           if totals.get("operational_parent_links_created") != 0 or totals.get("raw_admin1_codes_changed") != 0:
               raise SystemExit("Safety boundary violated: raw codes/parent links must not change.")
           records = report.get("records", [])

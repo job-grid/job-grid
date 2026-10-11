@@ -82,19 +82,24 @@ function auditKeyRows(target) {
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
 
-export function buildKenyaCrosswalkRebuildLedger(audit, evidence) {
+export function buildKenyaCrosswalkRebuildLedger(audit, evidence, currentUnitEvidence) {
   requireCondition(audit && Array.isArray(audit.targets), "Admin1 audit has no target rows.");
   requireCondition(evidence && Array.isArray(evidence.records), "County-ancestor evidence has no records.");
+  requireCondition(currentUnitEvidence && Array.isArray(currentUnitEvidence.records), "Current official-unit evidence has no records.");
+  requireCondition(currentUnitEvidence.status === "OFFICIAL_NATIVE_UNIT_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING", "Current official-unit evidence status is unexpected.");
   const source = getSourceMetadata(audit);
   const auditTargets = new Map(audit.targets.map((row) => [String(row.geonames_id), row]));
   const evidenceTargets = new Map(evidence.records.map((row) => [String(row.geonames_id), row]));
+  const currentUnitTargets = new Map(currentUnitEvidence.records.map((row) => [String(row.geonames_id), row]));
   requireCondition(auditTargets.size === EXPECTED.size, "Expected exactly two current Kenya legacy-code target rows.");
   requireCondition(evidenceTargets.size === EXPECTED.size, "Expected exactly two county-ancestor evidence rows.");
+  requireCondition(currentUnitTargets.size === EXPECTED.size, "Expected exactly two current official-unit evidence rows.");
 
   const records = [...EXPECTED.entries()].map(([id, expected]) => {
     const auditRow = auditTargets.get(id);
     const evidenceRow = evidenceTargets.get(id);
-    requireCondition(auditRow && evidenceRow, "Missing matched audit/evidence row for GeoNames ID " + id + ".");
+    const currentUnitRow = currentUnitTargets.get(id);
+    requireCondition(auditRow && evidenceRow && currentUnitRow, "Missing matched audit/evidence row for GeoNames ID " + id + ".");
     const rawCode = String(auditRow.source_raw_admin1_code ?? auditRow.raw_admin1_code_preserved ?? "");
     const currentKey = String(auditRow.expected_composite_key ?? auditRow.composite_key_checked ?? "");
     const countryCode = String(auditRow.country_code ?? evidenceRow.country_code ?? "");
@@ -104,6 +109,17 @@ export function buildKenyaCrosswalkRebuildLedger(audit, evidence) {
     requireCondition(countryCode === "KE" && evidenceRow.country_code === "KE", "Country identity mismatch for GeoNames ID " + id + ".");
     requireCondition(featureCode === "ADM3" && evidenceRow.feature_code === "ADM3", "Expected an ADM3 target for GeoNames ID " + id + ".");
     requireCondition(evidenceRow.raw_admin1_code_preserved === expected.rawCode, "Evidence dossier raw code mismatch for GeoNames ID " + id + ".");
+    requireCondition(currentUnitRow.raw_admin1_code_preserved === expected.rawCode, "Current official-unit evidence raw code mismatch for GeoNames ID " + id + ".");
+    requireCondition(currentUnitRow.legacy_composite_key === expected.key, "Current official-unit evidence composite-key mismatch for GeoNames ID " + id + ".");
+    const officialUnit = currentUnitRow.current_official_unit;
+    const geoCrosswalk = currentUnitRow.geonames_crosswalk;
+    requireCondition(officialUnit && officialUnit.path_evidence_status === "OFFICIAL_CURRENT_NATIVE_PATH_DOCUMENTED", "Official native path is not source-documented for GeoNames ID " + id + ".");
+    requireCondition(Array.isArray(officialUnit.verified_official_path) && officialUnit.verified_official_path.length >= 3, "Official native path is incomplete for GeoNames ID " + id + ".");
+    requireCondition(typeof officialUnit.immediate_parent_official_name === "string" && officialUnit.immediate_parent_official_name.length > 0, "Official immediate parent name is missing for GeoNames ID " + id + ".");
+    requireCondition(geoCrosswalk && geoCrosswalk.status === "CURRENT_NATIVE_UNIT_PATH_KNOWN__GEONAMES_ID_CROSSWALK_PENDING", "GeoNames identifier crosswalk must remain explicitly pending for GeoNames ID " + id + ".");
+    requireCondition(geoCrosswalk.immediate_parent_geonames_id === null && Array.isArray(geoCrosswalk.approved_parent_ids) && geoCrosswalk.approved_parent_ids.length === 0, "Native path evidence must not approve GeoNames parent IDs for GeoNames ID " + id + ".");
+    requireCondition(Array.isArray(geoCrosswalk.candidate_geonames_nodes_for_separate_review), "GeoNames candidate nodes missing for GeoNames ID " + id + ".");
+    requireCondition(Array.isArray(geoCrosswalk.unresolved_requirements) && geoCrosswalk.unresolved_requirements.length > 0, "GeoNames crosswalk blockers missing for GeoNames ID " + id + ".");
 
     const ancestor = evidenceRow.candidate_county_ancestor;
     requireCondition(ancestor && String(ancestor.geonames_id) === expected.countyId, "County candidate identity mismatch for GeoNames ID " + id + ".");
@@ -126,6 +142,19 @@ export function buildKenyaCrosswalkRebuildLedger(audit, evidence) {
       legacy_composite_key: expected.key,
       current_crosswalk_key_row_count: count,
       current_crosswalk_key_status: currentKeyStatus,
+      native_official_unit_path: {
+        official_name: officialUnit.official_name,
+        unit_level: officialUnit.official_unit_level,
+        immediate_parent_official_name: officialUnit.immediate_parent_official_name,
+        parent_county_official_name: officialUnit.parent_county_official_name,
+        verified_path: officialUnit.verified_official_path,
+        path_evidence_status: officialUnit.path_evidence_status,
+        temporal_context: currentUnitRow.temporal_context ?? [],
+        official_subcounty_statistics: officialUnit.official_subcounty_statistics ?? null
+      },
+      geonames_entity_crosswalk_status: geoCrosswalk.status,
+      candidate_geonames_parent_nodes_for_review: geoCrosswalk.candidate_geonames_nodes_for_separate_review,
+      geonames_crosswalk_missing_evidence: geoCrosswalk.unresolved_requirements,
       candidate_county_ancestor: {
         geonames_id: String(ancestor.geonames_id),
         name: ancestor.name,
@@ -149,16 +178,19 @@ export function buildKenyaCrosswalkRebuildLedger(audit, evidence) {
   return {
     report_version: "1.0",
     report_date_utc: evidence.audit_date_utc ?? null,
-    status: "REBUILD_LEDGER_CREATED__DIRECT_PARENT_PATHS_UNRESOLVED",
-    purpose: "Rebuild the Kenya exception crosswalk ledger from current source-pinned GeoNames key checks and separately documented official administrative evidence; keep candidate ancestry distinct from immediate parentage.",
+    status: "OFFICIAL_ADMIN_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING",
+    purpose: "Rebuild the Kenya exception crosswalk ledger from the source-pinned GeoNames key check, official Kenyan native unit paths, and separate GeoNames evidence; keep native admin parentage distinct from GeoNames parent IDs.",
     source: {
       current_admin1_crosswalk: source,
       evidence_dossier_status: evidence.status,
-      evidence_dossier_date_utc: evidence.audit_date_utc ?? null
+      evidence_dossier_date_utc: evidence.audit_date_utc ?? null,
+      current_unit_evidence_status: currentUnitEvidence.status,
+      current_unit_evidence_date_utc: currentUnitEvidence.recorded_date_utc ?? null
     },
     decision_boundary: {
       current_key_absence_is_not_a_replacement_mapping: true,
       county_ancestor_candidate_is_not_an_immediate_parent: true,
+      official_native_path_does_not_approve_a_geonames_parent_id: true,
       raw_source_codes_modified: false,
       operational_parent_links_created: 0,
       database_or_production_changes: false
@@ -167,6 +199,8 @@ export function buildKenyaCrosswalkRebuildLedger(audit, evidence) {
       target_rows: records.length,
       exact_current_legacy_keys_absent: records.filter((row) => row.current_crosswalk_key_row_count === 0).length,
       county_ancestor_candidates_recorded: records.filter((row) => row.candidate_county_ancestor).length,
+      official_native_parent_paths_documented: records.filter((row) => row.native_official_unit_path.path_evidence_status === "OFFICIAL_CURRENT_NATIVE_PATH_DOCUMENTED").length,
+      geonames_entity_crosswalks_verified: records.filter((row) => row.geonames_entity_crosswalk_status === "VERIFIED").length,
       immediate_parent_paths_verified: records.filter((row) => row.complete_parent_path_verified).length,
       raw_admin1_codes_changed: records.filter((row) => row.raw_admin1_code_changed).length,
       operational_parent_links_created: records.filter((row) => row.operational_parent_link_created).length,
@@ -191,6 +225,14 @@ export function renderKenyaCrosswalkRebuildLedgerCsv(ledger) {
     "legacy_composite_key",
     "current_crosswalk_key_row_count",
     "current_crosswalk_key_status",
+    "official_current_unit_name",
+    "official_current_unit_level",
+    "official_immediate_parent_official_name",
+    "official_parent_county_name",
+    "official_native_path",
+    "geonames_entity_crosswalk_status",
+    "geonames_candidate_parent_nodes",
+    "geonames_crosswalk_missing_evidence",
     "candidate_county_ancestor_geonames_id",
     "candidate_county_ancestor_name",
     "candidate_county_ancestor_feature_code",
@@ -205,6 +247,13 @@ export function renderKenyaCrosswalkRebuildLedgerCsv(ledger) {
   const rows = ledger.records.map((record) => {
     const row = {
       ...record,
+      official_current_unit_name: record.native_official_unit_path.official_name,
+      official_current_unit_level: record.native_official_unit_path.unit_level,
+      official_immediate_parent_official_name: record.native_official_unit_path.immediate_parent_official_name,
+      official_parent_county_name: record.native_official_unit_path.parent_county_official_name,
+      official_native_path: record.native_official_unit_path.verified_path.join(" > "),
+      geonames_candidate_parent_nodes: record.candidate_geonames_parent_nodes_for_review.map((node) => node.geonames_id + ":" + node.name + ":" + node.feature_code + ":" + node.role).join("; "),
+      geonames_crosswalk_missing_evidence: record.geonames_crosswalk_missing_evidence.join("; "),
       candidate_county_ancestor_geonames_id: record.candidate_county_ancestor.geonames_id,
       candidate_county_ancestor_name: record.candidate_county_ancestor.name,
       candidate_county_ancestor_feature_code: record.candidate_county_ancestor.feature_code,
@@ -216,17 +265,18 @@ export function renderKenyaCrosswalkRebuildLedgerCsv(ledger) {
 }
 
 async function main() {
-  const [auditPath, evidencePath, outputPrefix] = process.argv.slice(2);
-  if (!auditPath || !evidencePath || !outputPrefix) {
-    console.error("Usage: node scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs <current-admin1-audit.json> <county-ancestor-evidence.json> <output-prefix>");
+  const [auditPath, evidencePath, currentUnitEvidencePath, outputPrefix] = process.argv.slice(2);
+  if (!auditPath || !evidencePath || !currentUnitEvidencePath || !outputPrefix) {
+    console.error("Usage: node scripts/geonames-kenya-crosswalk-rebuild-ledger.mjs <current-admin1-audit.json> <county-ancestor-evidence.json> <current-unit-evidence.json> <output-prefix>");
     process.exitCode = 2;
     return;
   }
-  const [auditText, evidenceText] = await Promise.all([
+  const [auditText, evidenceText, currentUnitEvidenceText] = await Promise.all([
     readFile(auditPath, "utf8"),
-    readFile(evidencePath, "utf8")
+    readFile(evidencePath, "utf8"),
+    readFile(currentUnitEvidencePath, "utf8")
   ]);
-  const ledger = buildKenyaCrosswalkRebuildLedger(JSON.parse(auditText), JSON.parse(evidenceText));
+  const ledger = buildKenyaCrosswalkRebuildLedger(JSON.parse(auditText), JSON.parse(evidenceText), JSON.parse(currentUnitEvidenceText));
   const jsonPath = outputPrefix + ".json";
   const csvPath = outputPrefix + ".csv";
   await Promise.all([
@@ -238,6 +288,8 @@ async function main() {
     target_rows: ledger.totals.target_rows,
     exact_current_legacy_keys_absent: ledger.totals.exact_current_legacy_keys_absent,
     county_ancestor_candidates_recorded: ledger.totals.county_ancestor_candidates_recorded,
+    official_native_parent_paths_documented: ledger.totals.official_native_parent_paths_documented,
+    geonames_entity_crosswalks_verified: ledger.totals.geonames_entity_crosswalks_verified,
     immediate_parent_paths_verified: ledger.totals.immediate_parent_paths_verified,
     raw_admin1_codes_changed: ledger.totals.raw_admin1_codes_changed,
     operational_parent_links_created: ledger.totals.operational_parent_links_created,
