@@ -454,6 +454,8 @@ jobs:
           retrieve "mlit-adminarea-current" "https://nlftp.mlit.go.jp/ksj/jpgis/codelist/AdminAreaCd.html"
           retrieve "mlit-adminarea-1990-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_901001.html"
           retrieve "mlit-adminarea-1975-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_751001.html"
+          retrieve "mlit-adminarea-1970-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_701001.html"
+          retrieve "mlit-adminarea-1965-10-01" "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_651001.html"
           python - "$work/mlit" "$work/japan-estat-evidence-audit.json" "$work/mlit-code-evidence.json" "$work/mlit-code-evidence.csv" <<'PY'
           import csv
           import hashlib
@@ -497,6 +499,22 @@ jobs:
                   "as_of_date": "1975-10-01",
                   "html_path": root / "mlit-adminarea-1975-10-01.html",
                   "headers_path": root / "mlit-adminarea-1975-10-01.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1970-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_701001.html",
+                  "as_of_date": "1970-10-01",
+                  "html_path": root / "mlit-adminarea-1970-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1970-10-01.headers",
+              },
+              {
+                  "key": "mlit-adminarea-1965-10-01",
+                  "title": "MLIT National Land Numerical Information — AdministrativeAreaCd",
+                  "url": "https://nlftp.mlit.go.jp/ksj/gmlold/codelist/AdministrativeAreaCd_651001.html",
+                  "as_of_date": "1965-10-01",
+                  "html_path": root / "mlit-adminarea-1965-10-01.html",
+                  "headers_path": root / "mlit-adminarea-1965-10-01.headers",
               },
           ]
 
@@ -719,8 +737,8 @@ jobs:
               raise SystemExit("MLIT code-evidence CSV is empty.")
           if any(row.get("operational_parent_link_created", "").lower() != "false" for row in rows):
               raise SystemExit("MLIT evidence CSV violates the no-parent-write boundary.")
-          if len(data.get("mlit_sources", [])) != 3:
-              raise SystemExit("Expected three captured MLIT source manifests.")
+          if len(data.get("mlit_sources", [])) != 5:
+              raise SystemExit("Expected five captured MLIT source manifests.")
           if any(len(source.get("response_sha256", "")) != 64 for source in data["mlit_sources"]):
               raise SystemExit("An MLIT source lacks a SHA-256 response fingerprint.")
           print(f"Validated MLIT evidence JSON and CSV: {len(data['candidate_counts']['candidate_area_codes'])} area-code candidates; {len(rows)} row-level code/source records; zero parent links.")
@@ -741,6 +759,8 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-current.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1990-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1975-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1970-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
           if-no-files-found: error
           retention-days: 7
 
