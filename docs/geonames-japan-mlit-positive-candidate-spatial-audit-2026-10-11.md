@@ -28,6 +28,33 @@ Source identities and fingerprints:
 - Official e-Stat Standard Area Code catalogue: 14,741 code-history rows over four paginated responses, with 156 historical period detail rows retrieved in four batches. Combined e-Stat snapshot SHA-256: ca52a59ef64294e9af01c303ebad7f4408ac0156031c885538e4aeb6f4c17f33.
 - The exact MLIT boundary download URLs, archive SHA-256 values and sizes are preserved in the artifact manifest. The raw GeoNames and MLIT archives were not committed to repository history.
 
+## Fourteen positive spatial associations — priority for identity and period review
+
+The completed [Phase 0 CI #429 run](https://github.com/job-grid/job-grid/actions/runs/38120352368) printed the following **14 target-to-code associations** with point-in-polygon containment in the selected official boundary snapshots. Each target has one distinct e-Stat area-code candidate in the current exact-label report. That reduces namesake ambiguity but does not prove the GeoNames ID represents that administrative entity or that an immediate parent path is acceptable.
+
+The parent-area code shown here is the e-Stat candidate-history reference retained in the exact-label candidate evidence, **not an approved operational parent edge**.
+
+| GeoNames ID | GeoNames name | Candidate area code | Containment snapshots | Exact-name periods / history periods | Historical parent-area code reference |
+|---|---|---|---|---:|---|
+| `1850471` | Tawaramoto-chō | `29363` | 1965, 1970, 1975, 1995 | 1 / 1 | `29360` |
+| `1850496` | Tatsuno-machi | `20382` | 1965, 1970, 1975, 1995 | 1 / 1 | `20380` |
+| `1851931` | Shirahama-machi | `12465` | 1965, 1970, 1975, 1995 | 2 / 2 | `12460` |
+| `1853828` | Ōsawano-machi | `16301` | 1965, 1970, 1975, 1995 | 5 / 5 | `16300` |
+| `1854370` | Okegawa-machi | `11302` | 1965, 1970 | 2 / 2 | `11300` |
+| `1854628` | Ogōri-machi | `40502` | 1965, 1970 | 3 / 3 | `40500` |
+| `1854978` | Nonoichi-machi | `17344` | 1965, 1970, 1975, 1995 | 9 / 9 | `17340` |
+| `1857469` | Matsutō-machi | `17341` | 1965, 1970 | 3 / 3 | `17340` |
+| `1858533` | Kubokawa-chō | `39404` | 1965, 1970, 1975, 1995 | 2 / 2 | `39400` |
+| `1860320` | Kamojima-chō | `36441` | 1965, 1970, 1975, 1995 | 2 / 2 | `36440` |
+| `1864261` | Echigawa-chō | `25424` | 1965, 1970, 1975, 1995 | 8 / 8 | `25420` |
+| `1865498` | Akasaki-chō | `31369` | 1965, 1970, 1975, 1995 | 2 / 2 | `31360` |
+| `2112526` | Iwanuma-machi | `04381` | 1965, 1970 | 2 / 2 | `04380` |
+| `2113163` | Abiko-machi | `12304` | 1965 | 2 / 2 | `12300` |
+
+The codes `04381`, `11302`, `12304`, `17341` and `40502` are among the historical codes recovered from MLIT's 1965/1970 lists in the separate [administrative-code evidence report](https://github.com/job-grid/job-grid/blob/docs/country-catalog-foundation/docs/geonames-japan-mlit-candidate-code-evidence-2026-10-11.md). The 14 hits are geographically consistent with the candidate polygon in the listed snapshots; a hit in 1965 or 1970 must not be interpreted as validity across all later dates. In particular, the available snapshots are discrete samples and do not prove continuity throughout every e-Stat period.
+
+**Disposition for the next pass:** prioritize these 14 for comparison of exact official Japanese period labels, period start/end dates, administrative class, predecessor/successor links, candidate point location and official boundary coverage. Keep them as `SPATIALLY_SUPPORTED_CANDIDATE_REQUIRES_ENTITY_AND_PERIOD_REVIEW` until the evidence establishes the exact GeoNames entity and correct administrative level. No parent assignment is approved by this table.
+
 ## Spatial result and disposition
 
 Fourteen target-to-code associations have positive point-in-polygon evidence in at least one of the captured official boundary snapshots. This makes those associations useful for further identity and period review; it does **not** establish that an e-Stat code is the matching GeoNames entity or that its parent is the correct immediate parent for the GeoNames feature.
