@@ -112,20 +112,34 @@ class DownloadTableParser(HTMLParser):
             for link in self.row_links:
                 absolute = urllib.parse.urljoin(MLIT_HISTORIC_CATALOG, link)
                 parsed = urllib.parse.urlparse(absolute)
-                if parsed.scheme == "https" and parsed.hostname == "nlftp.mlit.go.jp":
-                    if filename in absolute or parsed.path.endswith(filename):
-                        urls.append(absolute)
-            if not urls:
-                urls = [
-                    urllib.parse.urljoin(MLIT_HISTORIC_CATALOG, link)
-                    for link in self.row_links
-                    if ".zip" in link.lower()
-                    and urllib.parse.urlparse(urllib.parse.urljoin(MLIT_HISTORIC_CATALOG, link)).hostname == "nlftp.mlit.go.jp"
-                ]
-            if urls:
-                # Prefer a URL that explicitly names this exact archive.
-                exact = [url for url in urls if filename in url]
-                self.links_by_filename[filename] = (exact or urls)[0]
+                # The HTML page sometimes includes only a basename in a download
+                # widget/onclick argument. urljoin() would turn that into a bogus
+                # /ksj/gml/datalist/<archive>.zip URL, which returns 404. Never
+                # treat that page-relative basename as a download link.
+                explicit_download_path = (
+                    parsed.path.startswith("/ksj/gml/data/")
+                    or (
+                        parsed.path.startswith("/ksj/gmlold/")
+                        and "/codelist/" not in parsed.path.lower()
+                        and "/datalist/" not in parsed.path.lower()
+                    )
+                )
+                if (
+                    parsed.scheme == "https"
+                    and parsed.hostname == "nlftp.mlit.go.jp"
+                    and parsed.path.rsplit("/", 1)[-1] == filename
+                    and explicit_download_path
+                ):
+                    urls.append(absolute)
+            # Do not guess a URL when the official row exposes only a filename.
+            # An absent direct href is an explicit blocker, not a prompt to try
+            # constructed directory layouts.
+            unique_urls = list(dict.fromkeys(urls))
+            if unique_urls:
+                # Prefer the canonical data archive path when multiple explicit
+                # official links are present in the same row.
+                canonical = [url for url in unique_urls if "/ksj/gml/data/" in urllib.parse.urlparse(url).path]
+                self.links_by_filename[filename] = (canonical or unique_urls)[0]
         self.in_row = False
         self.row_text = []
         self.row_links = []
