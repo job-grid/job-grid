@@ -18,21 +18,58 @@ export const ESTAT_CATALOG_URL = "https://data.e-stat.go.jp/lod/sac";
 export const EXPECTED_JAPAN_TARGETS = 126;
 export const QUERY_LIMIT = 20000;
 
-export const SPARQL_QUERY = `
+export const CATALOG_PAGE_SIZE = 4000;
+export const MAX_CATALOG_PAGES = 25;
+export const QUERY_LIMIT = 20000;
+
+export function buildCatalogQuery(offset = 0) {
+  if (!Number.isInteger(offset) || offset < 0 || offset > MAX_CATALOG_PAGES * CATALOG_PAGE_SIZE) {
+    throw new Error("Invalid Statistical LOD page offset.");
+  }
+  return `
+PREFIX sacs: <http://data.e-stat.go.jp/lod/terms/sacs#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?period ?identifier ?labelEn
+WHERE {
+  ?period a sacs:StandardAreaCode ;
+          dcterms:identifier ?identifier ;
+          rdfs:label ?labelEn .
+  FILTER(LANG(?labelEn) = "en")
+  FILTER(REGEX(STR(?identifier), "^(0[1-9]|[1-3][0-9]|4[0-7])[0-9]{3}$"))
+}
+ORDER BY STR(?identifier) ?period
+LIMIT ${CATALOG_PAGE_SIZE}
+OFFSET ${offset}
+`.trim();
+}
+
+export function buildDetailsQuery(periodUris) {
+  if (!Array.isArray(periodUris) || periodUris.length === 0) {
+    throw new Error("At least one candidate URI is required for a details query.");
+  }
+  const safeUris = [...new Set(periodUris)].map((value) => {
+    const url = new URL(value);
+    if (url.protocol !== "http:" || url.hostname !== "data.e-stat.go.jp" ||
+        !url.pathname.startsWith("/lod/sac/") || url.search || url.hash) {
+      throw new Error(`Rejected unexpected Statistical LOD URI: ${value}`);
+    }
+    return `<${url.href}>`;
+  });
+  if (safeUris.length > 2000) {
+    throw new Error(`Candidate details query exceeded the 2,000-URI safety cap: ${safeUris.length}`);
+  }
+  return `
 PREFIX sacs: <http://data.e-stat.go.jp/lod/terms/sacs#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT
-  ?period ?identifier ?labelEn ?labelJa ?issued ?valid
-  ?parent ?parentIdentifier ?parentLabelEn ?parentLabelJa
-  ?previous ?succeeding ?administrativeClass
+  ?period ?labelJa ?issued ?valid ?parent ?parentIdentifier
+  ?parentLabelEn ?parentLabelJa ?previous ?succeeding ?administrativeClass
 WHERE {
-  ?period a sacs:StandardAreaCode ;
-          dcterms:identifier ?identifier .
-  FILTER(REGEX(STR(?identifier), "^(0[1-9]|[1-3][0-9]|4[0-7])[0-9]{3}$"))
-
-  OPTIONAL { ?period rdfs:label ?labelEn . FILTER(LANG(?labelEn) = "en") }
+  VALUES ?period { ${safeUris.join(" ")} }
   OPTIONAL { ?period rdfs:label ?labelJa . FILTER(LANG(?labelJa) = "ja") }
   OPTIONAL { ?period dcterms:issued ?issued }
   OPTIONAL { ?period dcterms:valid ?valid }
@@ -46,9 +83,11 @@ WHERE {
     OPTIONAL { ?parent rdfs:label ?parentLabelJa . FILTER(LANG(?parentLabelJa) = "ja") }
   }
 }
-ORDER BY ?identifier ?issued ?period
-LIMIT 20000
+ORDER BY ?period ?issued ?parent
 `.trim();
+}
+
+export const SPARQL_QUERY = buildCatalogQuery(0);
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -308,10 +347,10 @@ export function renderCandidateCsv(report) {
   return lines.join("\n") + "\n";
 }
 
-export async function fetchEstatSnapshot(fetchImpl = fetch, now = () => new Date()) {
-  const form = new URLSearchParams({ query: SPARQL_QUERY });
+async function requestEstatQuery(query, fetchImpl, now, { allowEmpty = false } = {}) {
+  const form = new URLSearchParams({ query });
   let lastError;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const response = await fetchImpl(ESTAT_SPARQL_ENDPOINT, {
         method: "POST",
@@ -321,30 +360,24 @@ export async function fetchEstatSnapshot(fetchImpl = fetch, now = () => new Date
           "user-agent": "Job-Grid-Geography-Evidence-Audit/1.0",
         },
         body: form.toString(),
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(60000),
       });
       const bytes = Buffer.from(await response.arrayBuffer());
       const text = bytes.toString("utf8");
-      if (!response.ok) {
-        throw new Error(`e-Stat SPARQL HTTP ${response.status}: ${text.slice(0, 200)}`);
-      }
+      if (!response.ok) throw new Error(`e-Stat SPARQL HTTP ${response.status}: ${text.slice(0, 200)}`);
       const parsed = JSON.parse(text);
       const bindings = parsed?.results?.bindings;
-      if (!Array.isArray(bindings) || bindings.length === 0) {
-        throw new Error("e-Stat SPARQL response lacks non-empty results.bindings.");
-      }
-      if (bindings.length >= QUERY_LIMIT) {
-        throw new Error(`e-Stat source result reached the ${QUERY_LIMIT}-row safety limit; paginate before using this snapshot.`);
+      if (!Array.isArray(bindings) || (!allowEmpty && bindings.length === 0)) {
+        throw new Error("e-Stat SPARQL response lacks expected results.bindings.");
       }
       return {
+        parsed,
         bindings,
-        responseText: text,
+        text,
         manifest: {
-          source_name: "Japan Statistical LOD — Standard Area Code List",
-          catalog_url: ESTAT_CATALOG_URL,
           endpoint_url: ESTAT_SPARQL_ENDPOINT,
-          query_sha256: sha256(SPARQL_QUERY),
-          captured_at_utc: now().toISOString().replace(/\.\d{3}Z$/, "Z"),
+          query_sha256: sha256(query),
+          captured_at_utc: now().toISOString().replace(/\\.\\d{3}Z$/, "Z"),
           http_status: response.status,
           http_date_header: response.headers.get("date"),
           http_last_modified_header: response.headers.get("last-modified"),
@@ -353,20 +386,140 @@ export async function fetchEstatSnapshot(fetchImpl = fetch, now = () => new Date
           response_bytes: bytes.byteLength,
           response_sha256: sha256(bytes),
           result_row_count: bindings.length,
-          result_cap: QUERY_LIMIT,
-          license_note: "The official Statistical LOD SPARQL API page states that site content is licensed CC BY 4.0 except where otherwise noted; confirm applicable dataset terms before redistribution.",
-          source_scope_note: "e-Stat documents standard-area-code and related municipality abolishment, absorption, name-change and hierarchy data from April 1970 onward. This is a candidate evidence source, not a GeoNames crosswalk.",
         },
       };
     } catch (error) {
       lastError = error;
       const message = String(error?.message ?? error);
-      const retryable = /HTTP 429|HTTP 5\d\d|fetch failed|timed out|timeout/i.test(message);
-      if (attempt === 3 || !retryable) break;
-      await new Promise((resolveDelay) => setTimeout(resolveDelay, attempt * 1000));
+      const retryable = /HTTP 429|HTTP 5\\d\\d|fetch failed|timed out|timeout/i.test(message);
+      if (attempt === 2 || !retryable) break;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 1000));
     }
   }
   throw lastError ?? new Error("e-Stat source retrieval failed.");
+}
+
+/**
+ * Page the exact official code-list over SPARQL because the public endpoint
+ * truncates large results. Enrich only exact-label candidates with hierarchy
+ * and historical properties; do not assume a returned label proves identity.
+ */
+export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = () => new Date()) {
+  const targetKeys = new Set(targetNames.map(normalizeExactLabel).filter(Boolean));
+  const catalogPages = [];
+  const catalogRows = [];
+  for (let pageNumber = 0; pageNumber < MAX_CATALOG_PAGES; pageNumber += 1) {
+    const offset = pageNumber * CATALOG_PAGE_SIZE;
+    const page = await requestEstatQuery(buildCatalogQuery(offset), fetchImpl, now, { allowEmpty: offset > 0 });
+    const pageRows = parseEstatBindings(page.bindings);
+    if (pageRows.some((row) => !row.period_uri || !row.area_code || !row.label_en)) {
+      const sample = page.bindings.find((binding) =>
+        !bindingValue(binding, "period") || !bindingValue(binding, "identifier") || !bindingValue(binding, "labelEn"));
+      throw new Error(`e-Stat catalog page contained unbound required variables: ${JSON.stringify({ offset, keys: Object.keys(sample ?? {}), sample })}`);
+    }
+    if (pageRows.length > CATALOG_PAGE_SIZE) {
+      throw new Error(`e-Stat page ${pageNumber} exceeded page-size cap.`);
+    }
+    catalogPages.push({
+      offset,
+      row_count: pageRows.length,
+      manifest: page.manifest,
+      response: page.parsed,
+      response_text: page.text,
+    });
+    catalogRows.push(...pageRows);
+    if (pageRows.length < CATALOG_PAGE_SIZE) break;
+    if (pageNumber === MAX_CATALOG_PAGES - 1) {
+      throw new Error(`e-Stat catalog reached the ${MAX_CATALOG_PAGES}-page safety cap; additional pagination is required.`);
+    }
+  }
+  if (catalogRows.length === 0) throw new Error("e-Stat catalog returned zero standard-area-code rows.");
+
+  const candidateUris = [...new Set(catalogRows
+    .filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)))
+    .map((row) => row.period_uri))];
+  let detailQuery = null;
+  let detailResult = null;
+  if (candidateUris.length) {
+    detailQuery = buildDetailsQuery(candidateUris);
+    detailResult = await requestEstatQuery(detailQuery, fetchImpl, now);
+  }
+  const detailRows = detailResult ? parseEstatBindings(detailResult.bindings) : [];
+  const detailsByUri = new Map();
+  for (const row of detailRows) {
+    if (!row.period_uri) throw new Error("e-Stat candidate-details result omitted its period URI.");
+    const items = detailsByUri.get(row.period_uri) ?? [];
+    items.push(row);
+    detailsByUri.set(row.period_uri, items);
+  }
+
+  const sourceRows = [];
+  for (const row of catalogRows) {
+    const details = detailsByUri.get(row.period_uri) ?? [null];
+    for (const detail of details) {
+      sourceRows.push({
+        ...row,
+        label_ja: detail?.label_ja ?? "",
+        effective_from: detail?.effective_from ?? "",
+        effective_until: detail?.effective_until ?? "",
+        parent_uri: detail?.parent_uri ?? "",
+        parent_area_code: detail?.parent_area_code ?? "",
+        parent_label_en: detail?.parent_label_en ?? "",
+        parent_label_ja: detail?.parent_label_ja ?? "",
+        previous_period_uri: detail?.previous_period_uri ?? "",
+        succeeding_period_uri: detail?.succeeding_period_uri ?? "",
+        administrative_class_uri: detail?.administrative_class_uri ?? "",
+      });
+    }
+  }
+
+  const pageManifests = catalogPages.map((page) => ({
+    offset: page.offset,
+    row_count: page.row_count,
+    ...page.manifest,
+  }));
+  const combinedSourceHash = sha256([
+    ...pageManifests.map((page) => `${page.offset}:${page.response_sha256}`),
+    detailResult?.manifest.response_sha256 ?? "NO_CANDIDATE_DETAIL_QUERY",
+  ].join("\\n"));
+  const totalBytes = pageManifests.reduce((sum, page) => sum + page.response_bytes, 0) +
+    (detailResult?.manifest.response_bytes ?? 0);
+  const manifest = {
+    source_name: "Japan Statistical LOD — Standard Area Code List",
+    catalog_url: ESTAT_CATALOG_URL,
+    endpoint_url: ESTAT_SPARQL_ENDPOINT,
+    captured_at_utc: now().toISOString().replace(/\\.\\d{3}Z$/, "Z"),
+    http_status: 200,
+    catalog_query_sha256: sha256(SPARQL_QUERY),
+    catalog_page_size: CATALOG_PAGE_SIZE,
+    catalog_page_count: pageManifests.length,
+    catalog_result_row_count: catalogRows.length,
+    catalog_pages: pageManifests,
+    candidate_detail_query_sha256: detailQuery ? sha256(detailQuery) : null,
+    candidate_detail_response_sha256: detailResult?.manifest.response_sha256 ?? null,
+    candidate_detail_result_rows: detailRows.length,
+    response_bytes: totalBytes,
+    response_sha256: combinedSourceHash,
+    source_snapshot_sha256: combinedSourceHash,
+    result_row_count: catalogRows.length,
+    result_cap_per_page: CATALOG_PAGE_SIZE,
+    license_note: "The official Statistical LOD SPARQL API page states that site content is licensed CC BY 4.0 except where otherwise noted; confirm applicable dataset terms before redistribution.",
+    source_scope_note: "e-Stat documents standard-area-code and related municipality abolishment, absorption, name-change and hierarchy data from April 1970 onward. This is a candidate evidence source, not a GeoNames crosswalk.",
+  };
+  const responsePayload = {
+    catalog_pages: catalogPages.map(({ offset, row_count, manifest: pageManifest, response }) => ({
+      offset, row_count, source: pageManifest, response,
+    })),
+    candidate_details: detailResult ? {
+      source: detailResult.manifest,
+      response: detailResult.parsed,
+    } : null,
+  };
+  return {
+    sourceRows,
+    responseText: JSON.stringify(responsePayload, null, 2) + "\\n",
+    manifest,
+  };
 }
 
 export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, fetchImpl = fetch, now = () => new Date() }) {
@@ -398,18 +551,8 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     source_identity_and_raw_codes_verified: true,
   }));
   const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
-  const snapshot = await fetchEstatSnapshot(fetchImpl, now);
-  const missingRequiredBinding = snapshot.bindings.find((binding) =>
-    !bindingValue(binding, "period")?.length || !bindingValue(binding, "identifier")?.length
-  );
-  if (missingRequiredBinding) {
-    throw new Error(`e-Stat result variable mismatch or unbound key fields: ${JSON.stringify({
-      available_binding_keys: Object.keys(missingRequiredBinding),
-      first_binding: missingRequiredBinding,
-    })}`);
-  }
-  const sourceRows = parseEstatBindings(snapshot.bindings);
-  const report = buildCandidateAudit(targets, sourceRows, snapshot.manifest.response_sha256);
+  const snapshot = await fetchEstatSnapshot(targets.map((row) => row.name), fetchImpl, now);
+  const report = buildCandidateAudit(targets, snapshot.sourceRows, snapshot.manifest.source_snapshot_sha256);
   report.generated_at_utc = now().toISOString().replace(/\.\d{3}Z$/, "Z");
   report.input = {
     target_export_path: targetsPath,
