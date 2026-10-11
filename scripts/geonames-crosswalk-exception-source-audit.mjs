@@ -258,13 +258,23 @@ async function auditSource(sourcePath, targets) {
   const sortedCounts = (counts) => Object.fromEntries(
     [...counts.entries()].sort(([left], [right]) => left.localeCompare(right)),
   );
+  const countryCodeCountsSorted = sortedCounts(countryCodeCounts);
+  const featureClassCountsSorted = sortedCounts(featureClassCounts);
+  const totalCounts = (counts) => Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const countryCodeBucketRecordTotal = totalCounts(countryCodeCountsSorted);
+  const featureClassRecordTotal = totalCounts(featureClassCountsSorted);
 
   return {
     sourceRowsById,
     sourceLineCount,
     sourceRowsWithValidFieldCountAndId,
-    countryCodeRecordCounts: sortedCounts(countryCodeCounts),
-    featureClassRecordCounts: sortedCounts(featureClassCounts),
+    countryCodeRecordCounts: countryCodeCountsSorted,
+    countryCodeBucketRecordTotal,
+    featureClassRecordCounts: featureClassCountsSorted,
+    featureClassRecordTotal,
+    aggregateTotalsMatchSourceRowCount:
+      countryCodeBucketRecordTotal === sourceRowsWithValidFieldCountAndId &&
+      featureClassRecordTotal === sourceRowsWithValidFieldCountAndId,
     blankCountryCodeRows,
     nonstandardCountryCodeRows,
     malformedRows,
@@ -316,8 +326,11 @@ async function main() {
       rows_with_19_fields_and_nonempty_id: audit.sourceRowsWithValidFieldCountAndId,
       malformed_or_wrong_shape_source_lines: audit.malformedRows,
       distinct_raw_country_code_buckets: Object.keys(audit.countryCodeRecordCounts).length,
+      country_code_bucket_record_total: audit.countryCodeBucketRecordTotal,
       country_code_record_counts: audit.countryCodeRecordCounts,
+      feature_class_record_total: audit.featureClassRecordTotal,
       feature_class_record_counts: audit.featureClassRecordCounts,
+      aggregate_totals_match_source_row_count: audit.aggregateTotalsMatchSourceRowCount,
       rows_with_blank_country_code: audit.blankCountryCodeRows,
       rows_with_nonstandard_country_code_format: audit.nonstandardCountryCodeRows,
     },
