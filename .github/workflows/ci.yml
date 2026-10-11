@@ -285,13 +285,13 @@ jobs:
       - name: Inventory exact GeoNames Kenya name candidates for Kiambururu parent resolution (read-only)
         shell: bash
         env:
-          RUNNER_TEMP_DIR: \${{ runner.temp }}
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
           node --test tests/geonames-kenya-unit-node-candidate-audit.test.js
-          node scripts/geonames-kenya-unit-node-candidate-audit.mjs \\
-            "$RUNNER_TEMP_DIR/geonames-source/KE/KE.txt" \\
-            "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit" \\
+          node scripts/geonames-kenya-unit-node-candidate-audit.mjs \
+            "$RUNNER_TEMP_DIR/geonames-source/KE/KE.txt" \
+            "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit" \
             "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json"
           cat "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
           node - "$RUNNER_TEMP_DIR/kenya-unit-node-candidate-audit.json" "$RUNNER_TEMP_DIR/geonames-source/remote-source-manifest.json" <<'NODE'
