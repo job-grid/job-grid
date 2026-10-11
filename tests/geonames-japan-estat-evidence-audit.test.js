@@ -177,7 +177,7 @@ test("source verification rejects absent or duplicate target IDs", () => {
   );
 });
 
-test("exact normalized labels report candidate periods but never approve or write parents", () => {
+test("groups historical code periods under distinct area-code candidates without approving parents", () => {
   const targets = makeTargets();
   const verifiedTargets = targets.map((row) => ({
     ...row,
@@ -187,7 +187,8 @@ test("exact normalized labels report candidate periods but never approve or writ
   const sourceRows = [
     estatRow(1, { area_code: "27100", label_en: "Yao-cho", period_uri: "http://data.e-stat.go.jp/lod/sac/C27100-19700401" }),
     estatRow(2, { area_code: "27100", label_en: "Yao cho", period_uri: "http://data.e-stat.go.jp/lod/sac/C27100-19900401" }),
-    estatRow(3, { area_code: "27102", label_en: "Different Place" }),
+    estatRow(3, { area_code: "27101", label_en: "Yao cho", period_uri: "http://data.e-stat.go.jp/lod/sac/C27101-19700401" }),
+    estatRow(4, { area_code: "27102", label_en: "Different Place" }),
   ];
   const report = buildCandidateAudit(verifiedTargets, sourceRows, "a".repeat(64));
   assert.equal(report.target_count, 126);
@@ -195,12 +196,19 @@ test("exact normalized labels report candidate periods but never approve or writ
   assert.equal(report.operational_parent_links_created, 0);
   const yao = report.target_results.find((row) => row.geonames_id === verifiedTargets[0].geonames_id);
   assert.equal(yao.exact_name_candidate_count, 2);
-  assert.equal(yao.review_status, "MULTIPLE_EXACT_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION");
-  assert.equal(yao.candidates.every((candidate) => Boolean(candidate.parent_uri)), true);
+  assert.equal(yao.exact_name_matched_period_count, 3);
+  assert.equal(yao.review_status, "MULTIPLE_AREA_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION");
+  const code27100 = yao.candidates.find((candidate) => candidate.area_code === "27100");
+  assert.equal(code27100.exact_matching_period_count, 2);
+  assert.equal(code27100.history_period_count, 2);
+  assert.equal(code27100.periods.length, 2);
+  assert.equal(code27100.periods.every((period) => period.parent_references.some((parent) => parent.area_code === "27000")), true);
+  assert.equal(yao.candidates.every((candidate) => candidate.area_code !== ""), true);
   assert.equal(yao.operational_parent_link_created, false);
   assert.equal(report.targets_without_exact_label_candidates, 125);
   const csv = renderCandidateCsv(report);
-  assert.match(csv, /MULTIPLE_EXACT_LABEL_CANDIDATES_REQUIRE_DISAMBIGUATION/);
+  assert.match(csv, /MULTIPLE_AREA_CODE_CANDIDATES_REQUIRE_DISAMBIGUATION/);
+  assert.match(csv, /candidate_history_period_count/);
   assert.match(csv, /false/);
 });
 
