@@ -1,5 +1,5 @@
 {
-  "report_version": "1.9",
+  "report_version": "2.0",
   "generated_on_utc_date": "2026-10-10",
   "pr": 27,
   "status": {
@@ -782,5 +782,21 @@
       "parent_links_or_ids_assigned": 0,
       "all_parent_paths_verified": false
     }
+  },
+  "current_admin_parent_path_audit_status_refinement": {
+    "as_of_utc": "2026-10-11",
+    "run_url": "https://github.com/job-grid/job-grid/actions/runs/38098277223",
+    "artifact_url": "https://github.com/job-grid/job-grid/actions/runs/38098277223/artifacts/11686253623",
+    "raw_admin1_00_semantics_reference": "https://download.geonames.org/export/dump/readme.txt",
+    "status_counts": {
+      "BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED": 126,
+      "BLOCKED_PARENT_KEY_NOT_FOUND": 2
+    },
+    "candidate_paths_found_requiring_owner_approval": 0,
+    "explicit_hierarchy_paths_found_requiring_owner_approval": 0,
+    "targets_with_direct_adm_hierarchy_edges": 0,
+    "unresolved_or_blocked_targets": 128,
+    "operational_parent_links_created": 0,
+    "interpretation": "GeoNames documents admin code 00 as a general feature for which no specific admin1 code is defined. Raw values are preserved; this does not create or infer a parent."
   }
 }
