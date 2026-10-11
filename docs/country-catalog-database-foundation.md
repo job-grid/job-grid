@@ -490,6 +490,24 @@ A read-only, repeatable parent-path audit utility is now documented in [the audi
 - A candidate path is output as evidence for review only. The tool explicitly reports that zero operational parent links were created.
 - Automated unit tests include an end-to-end CLI fixture and are subject to current-head CI.
 - Four official GeoNames record pages have been spot-checked (two of Japan's 126 current ADM4 candidates, plus both Kenya ADM3 candidates). The visible hierarchy for these examples does not enumerate intermediate administrative parents. These spot checks do not close the complete 128-record review and do not authorize parent links.
-- The tool has not yet been run against a source snapshot whose original remote retrieval metadata is verified. ISO authority comparison and worldwide completeness also remain unverified.
+- Superseded by the 2026-10-11 live source-pinned run: official JP.zip, KE.zip and hierarchy.zip were fetched in CI with HTTP 200, Last-Modified headers, ETags, SHA-256 hashes and ZIP CRC validation. The row-level result found zero direct ADM edges and zero candidate paths across the 128 targets; all 128 remain blocked. ISO authority comparison and worldwide completeness remain unverified.
 
 **Current result: read-only audit tooling added; parent hierarchy and catalog acceptance remain blocked.** No database schema, migrations, seeds, imports, live database, production or deployment changes were made.
+
+## 5K. Live source-pinned parent-path audit — 2026-10-11
+
+The completed [Phase 0 CI run](https://github.com/job-grid/job-grid/actions/runs/38097159134) retrieved the current GeoNames JP.zip, KE.zip and hierarchy.zip archives and captured source URL, actual retrieval timestamp, HTTP status, Last-Modified, ETag, byte length and SHA-256. ZIP CRC validation passed for all three. The combined JP/KE feature subset contains 135,252 lines (SHA-256 `092a1832f995f1aa2e9de7071b6f1fcd4b5afb151d3ec18306e3a8e13fbe95e2`). The hierarchy text has 519,230 lines (SHA-256 `f81fdc85602678e22135fde1084d12f31f087bfe53e30897f686a70f57bc6c5f`).
+
+| Review outcome | Result |
+|---|---:|
+| Current admin targets reviewed | 128 |
+| Japan ADM4 targets | 126 |
+| Kenya ADM3 targets | 2 |
+| Complete exact-code candidate paths | 0 |
+| Direct type=ADM hierarchy edges for targets | 0 |
+| Targets still blocked | 128 |
+| Operational parent links written | 0 |
+
+All 126 Japan targets have raw admin1 `00`, which remains unchanged and unresolved. Kenya targets are Kiambururu Sub-Location (GeoNames ID 192705, raw admin1 `01`) and Imenti Central (ID 7800132, raw admin1 `03`); neither had a matching current ADM1 composite key or direct type=ADM edge in the downloaded source. The full row-level CSV, JSON and source retrieval manifest are retained temporarily in the [CI artifact](https://github.com/job-grid/job-grid/actions/runs/38097159134/artifacts/11687045546), which expires 2026-10-18.
+
+This is a source-pinned audit of the two countries and the 128 exception targets, not a worldwide completeness result. No parent links, imports, migrations, seeds, database writes, production changes or deployments occurred. The official ISO snapshot comparison, worldwide completeness and Phase 4C recovery readiness remain separately blocked.
