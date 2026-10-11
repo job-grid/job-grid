@@ -74,3 +74,10 @@ The detailed 128-row CSV, JSON summary and source retrieval manifest are availab
 The official GeoNames README says hierarchy.zip stores parent ID, child ID and relationship type; `ADM` entries model the hierarchy represented by admin1–4 codes, while toponym-to-admin relationships are reconstructed from the source admin codes. For these 128 specific targets, the independent hierarchy dump did not supply a direct ADM edge, so it provides no override for the missing/placeholder codes. This is evidence against fabricating an ancestry chain, not a claim that GeoNames' full hierarchy dataset is globally complete.
 
 These archives are the bytes fetched during this CI run, with real retrieval timestamps, Last-Modified headers, ETags and hashes. The checksums pin those downloaded bytes; they do not assert an immutable GeoNames release ID. Current ISO authority comparison and worldwide completeness remain unverified.
+
+
+## Admin1 code `00` semantics clarified — 2026-10-11
+
+The audit's blocking reason/status was refined after checking the [official GeoNames README](https://download.geonames.org/export/dump/readme.txt), which states that admin code `00` denotes a general feature for which no specific admin1 code is defined. The 126 Japan targets now use the more precise row status `BLOCKED_RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED` instead of the generic missing/placeholder status. The two Kenya targets remain `BLOCKED_PARENT_KEY_NOT_FOUND`.
+
+This is a **classification/reason correction only**. It does not normalize raw code `00`, declare those features invalid, make an ancestor up, or create parent links. All 128 targets remain blocked and no candidate paths were found in `allCountries` composite-code checks or in direct `ADM` hierarchy edges. Unit tests now assert the documented source semantics and the no-link safety boundary; the latest CI run remains in progress at the time of this doc update.
