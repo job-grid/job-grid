@@ -417,6 +417,18 @@ jobs:
               raise SystemExit("Global GeoNames source contained malformed/wrong-shape rows.")
           if report.get("parent_ids_or_links_assigned") != 0:
               raise SystemExit("Safety boundary violation: parent IDs or links must remain zero.")
+          coverage = report.get("input", {}).get("source_country_code_coverage", {})
+          source_rows = coverage.get("rows_with_19_fields_and_nonempty_id")
+          if coverage.get("aggregate_totals_match_source_row_count") is not True:
+              raise SystemExit("Country-code/feature-class aggregate totals do not reconcile.")
+          if coverage.get("country_code_bucket_record_total") != source_rows:
+              raise SystemExit("Country-code bucket count total does not match source row count.")
+          if coverage.get("feature_class_record_total") != source_rows:
+              raise SystemExit("Feature-class count total does not match source row count.")
+          if sum(coverage.get("country_code_record_counts", {}).values()) != source_rows:
+              raise SystemExit("Persisted raw country-code bucket frequencies do not reconcile.")
+          if sum(coverage.get("feature_class_record_counts", {}).values()) != source_rows:
+              raise SystemExit("Feature-class frequencies do not reconcile.")
           accounted = report.get("source_identity_and_raw_codes_match", 0) + report.get("blocked_or_drifted_ids", 0)
           if accounted != report.get("unique_exception_ids"):
               raise SystemExit("Every unique exception ID must have a source audit disposition.")
