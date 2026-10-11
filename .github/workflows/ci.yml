@@ -760,19 +760,21 @@ jobs:
             --all-positive-candidates
           python -m json.tool "$work/japan-mlit-polygon-audit.json" >/dev/null
           python -m json.tool "$work/japan-mlit-polygon-audit.manifest.json" >/dev/null
-          python - "$work/japan-estat-evidence-audit.json" "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" <<'PY'
+          python - "$work/japan-estat-evidence-audit.json" "$work/japan-mlit-polygon-audit.json" "$work/japan-mlit-polygon-audit.csv" "$work/japan-mlit-polygon-audit.candidate-results.csv" "$work/japan-mlit-polygon-audit.target-summary.csv" <<'PY'
           import csv
           import json
           import sys
           from pathlib import Path
 
-          estat_path, report_path, observations_path, candidate_path = map(Path, sys.argv[1:])
+          estat_path, report_path, observations_path, candidate_path, target_summary_path = map(Path, sys.argv[1:])
           estat = json.loads(estat_path.read_text(encoding="utf-8"))
           report = json.loads(report_path.read_text(encoding="utf-8"))
           with observations_path.open(encoding="utf-8", newline="") as stream:
               observations = list(csv.DictReader(stream))
           with candidate_path.open(encoding="utf-8", newline="") as stream:
               candidates = list(csv.DictReader(stream))
+          with target_summary_path.open(encoding="utf-8", newline="") as stream:
+              target_summaries = list(csv.DictReader(stream))
 
           positive_targets = [target for target in estat.get("target_results", []) if target.get("candidates")]
           expected_ids = {str(target["geonames_id"]) for target in positive_targets}
@@ -810,25 +812,47 @@ jobs:
               raise SystemExit("Polygon audit violated the no-parent-write boundary.")
           if any(len(item.get("archive_sha256", "")) != 64 for item in report["source_snapshots"]):
               raise SystemExit("At least one historical polygon archive lacks a SHA-256 fingerprint.")
-          for target in report["target_observations"]:
-              if not target.get("polygon_observations"):
-                  raise SystemExit(f"No polygon context recorded for GeoNames ID {target['geonames_id']}; fail closed.")
+          expected_collision_ids = {"1851030", "1851031", "1859673", "1865064", "1865066", "1865067"}
+          target_observation_map = {str(target["geonames_id"]): target for target in report["target_observations"]}
+          observed_ids = {
+              target_id for target_id, target in target_observation_map.items()
+              if target.get("polygon_observations")
+          }
+          if not expected_collision_ids.issubset(observed_ids):
+              raise SystemExit("One or more of the six original collision targets lost required polygon context.")
+          if len(target_summaries) != len(positive_targets):
+              raise SystemExit("Target summary CSV must preserve all positive-candidate target rows.")
+          if {row["geonames_id"] for row in target_summaries} != expected_ids:
+              raise SystemExit("Target summary CSV IDs do not match source-derived positive-candidate IDs.")
+          summary_missing = {
+              row["geonames_id"] for row in target_summaries
+              if row.get("polygon_context_status") != "CONTAINING_POLYGON_OBSERVED"
+          }
+          if summary_missing != set(report.get("target_ids_without_polygon_context", [])):
+              raise SystemExit("Target summary unresolved spatial-context IDs do not match JSON.")
+          print(
+              "Targets without polygon context in selected snapshots: "
+              + (", ".join(sorted(summary_missing)) if summary_missing else "none")
+              + "; these remain unresolved and were not omitted."
+          )
 
           candidate_codes_with_point_hit = sum(
               bool(row["point_inside_candidate_polygon_snapshots"]) for row in candidates
           )
           print(
               f"Validated official polygon audit: {report['target_count']} positive-candidate targets; "
-              f"{report['source_snapshot_archive_count']} archives; {len(observations)} containing-polygon rows; "
-              f"{len(candidates)} target-code rows; zero parent links."
+              f"{report['source_snapshot_archive_count']} archives; {len(observations)} containment rows; "
+              f"{len(candidates)} target-code rows; {len(target_summaries)} target-summary rows; zero parent links."
           )
           print("## Japan positive-candidate point-in-polygon evidence")
-          print(f"- Positive e-Stat candidate targets with official boundary context: {report['target_count']}/{len(positive_targets)}")
+          print(f"- Positive e-Stat candidate targets selected: {report['target_count']}/{len(positive_targets)}")
+          print(f"- Targets with containing-polygon context: {report['target_rows_with_polygon_context']}/{report['target_count']}")
+          print(f"- Targets without containing-polygon context: {report['target_rows_without_polygon_context']}")
           print(f"- Historical/current MLIT boundary archives retrieved and CRC-checked: {report['source_snapshot_archive_count']}")
           print(f"- Distinct e-Stat candidate area codes inspected: {len(expected_codes)}")
           print(f"- Target-to-candidate-code associations inspected: {len(candidates)}")
           print(f"- Candidate associations with a point inside the candidate polygon: {candidate_codes_with_point_hit}")
-          print("- Spatial containment is candidate evidence only; no GeoNames crosswalk or parent link approved.")
+          print("- Positive containment remains candidate evidence; missing context remains unresolved; no parent links approved.")
           PY
 
       - name: Upload Japan row-level candidate evidence and source snapshots (no GeoNames archive)
@@ -851,6 +875,7 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.target-summary.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.manifest.json
             ${{ runner.temp }}/geonames-japan-estat/mlit-n03-v2_2-download-index.html
             ${{ runner.temp }}/geonames-japan-estat/polygon-source-archives/**/*.zip
