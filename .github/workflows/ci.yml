@@ -1483,6 +1483,14 @@ jobs:
           unzip -oq "$archive" -d "$work/extracted"
           test -s "$work/extracted/allCountries.txt"
 
+      - name: Run source-pinned GeoNames country-master identity audit
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          bash scripts/geonames-country-master-ci-audit.sh "$RUNNER_TEMP_DIR/geonames-world-source"
+
       - name: Compare all unique crosswalk exception IDs against the official global source
         shell: bash
         env:
@@ -1536,6 +1544,8 @@ jobs:
             ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.csv
             ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.json
             ${{ runner.temp }}/geonames-world-source/source-manifest.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/geonames-country-catalog-aggregate.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/country-master-source-manifest.json
           if-no-files-found: error
           retention-days: 7
 
