@@ -22,7 +22,7 @@ const EXPECTED_COUNTRY = "JP";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const normalizeJapanese = (value) => String(value ?? "").normalize("NFC").trim();
 
-function exactJapaneseMatchFields(record, label) {
+export function exactJapaneseMatchFields(record, label) {
   const key = normalizeJapanese(label);
   if (!key) return [];
   const fields = [];
