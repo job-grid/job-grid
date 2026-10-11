@@ -433,3 +433,130 @@ jobs:
             ${{ runner.temp }}/geonames-world-source/source-manifest.json
           if-no-files-found: error
           retention-days: 7
+
+  geonames-kenya-legacy-admin1-crosswalk-audit:
+    name: Phase 0 CI / Kenya legacy admin1 crosswalk audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Retrieve and fingerprint current official GeoNames admin1 crosswalk
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-kenya-admin1"
+          mkdir -p "$work"
+          url="https://download.geonames.org/export/dump/admin1CodesASCII.txt"
+          source="$work/admin1CodesASCII.txt"
+          headers="$work/admin1CodesASCII.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$source" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          test -s "$source"
+
+          python - "$headers" "$source" "$url" "$retrieved_at" "$status" "$work/source-manifest.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from datetime import timezone
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+
+          headers_path, source_path, url, retrieved_at, status, manifest_path = sys.argv[1:]
+          raw_headers = Path(headers_path).read_text(encoding="iso-8859-1", errors="replace")
+          last_block = {}
+          current = {}
+          current_status = None
+          for line in raw_headers.replace("\r\n", "\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if current_status == "200":
+                      last_block = current
+                  pieces = line.split()
+                  current_status = pieces[1] if len(pieces) > 1 else None
+                  current = {}
+              elif ":" in line and current_status:
+                  key, value = line.split(":", 1)
+                  current[key.strip().lower()] = value.strip()
+          if current_status == "200":
+              last_block = current
+
+          path = Path(source_path)
+          last_modified_raw = last_block.get("last-modified")
+          last_modified_utc = None
+          if last_modified_raw:
+              try:
+                  dt = parsedate_to_datetime(last_modified_raw)
+                  if dt.tzinfo is not None:
+                      last_modified_utc = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+              except (TypeError, ValueError, OverflowError):
+                  pass
+          record = {
+              "filename": path.name,
+              "url": url,
+              "retrieved_at_utc": retrieved_at,
+              "http_status": int(status),
+              "http_last_modified_header": last_modified_raw,
+              "http_last_modified_utc": last_modified_utc,
+              "etag": last_block.get("etag"),
+              "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              "size_bytes": path.stat().st_size,
+          }
+          Path(manifest_path).write_text(
+              json.dumps({"manifest_version": 1, "remote_source": record}, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(record))
+          PY
+
+      - name: Audit exact KE.01 and KE.03 crosswalk keys without inferring replacements
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-kenya-admin1"
+          node scripts/geonames-kenya-legacy-admin1-crosswalk-audit.mjs \
+            "$work/admin1CodesASCII.txt" \
+            "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit" \
+            "$work/source-manifest.json"
+          cat "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          python - "$RUNNER_TEMP_DIR/kenya-legacy-admin1-crosswalk-audit.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if report.get("target_count") != 2:
+              raise SystemExit("Expected the two known Kenya legacy-code targets.")
+          if report.get("source", {}).get("retrieval_metadata_verified") is not True:
+              raise SystemExit("Official admin1 crosswalk retrieval metadata did not validate.")
+          if report.get("malformed_rows") != 0:
+              raise SystemExit("Official admin1 crosswalk contained malformed rows.")
+          if report.get("candidate_parent_ids_assigned") != 0 or report.get("operational_parent_links_created") != 0:
+              raise SystemExit("Safety boundary violation: no parent IDs or links may be assigned here.")
+          if len(report.get("targets", [])) != 2:
+              raise SystemExit("Both legacy-code targets need explicit row-level disposition.")
+          print("Kenya legacy-key audit complete; replacement parentage remains unresolved unless separately evidenced and approved.")
+          PY
+
+      - name: Upload Kenya legacy-code audit and retrieval manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-kenya-legacy-admin1-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.csv
+            ${{ runner.temp }}/kenya-legacy-admin1-crosswalk-audit.json
+            ${{ runner.temp }}/geonames-kenya-admin1/source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
