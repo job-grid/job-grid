@@ -99,3 +99,13 @@ The read-only audit was rerun with the more precise GeoNames README interpretati
 The taxonomy now distinguishes a documented general-feature code from a genuinely absent crosswalk key. No source values changed; all 128 remain blocked. The Japan raw `00` fields remain untouched, and no parent was synthesized.
 
 The updated row-level CSV, JSON summary and source manifest are in the [seven-day CI artifact](https://github.com/job-grid/job-grid/actions/runs/38098277223/artifacts/11686253623), expiring 2026-10-18.
+
+
+## External Kenyan administrative evidence — county ancestors only
+
+Separate official sources now suggest county-level ancestry candidates for the two Kenya rows, while leaving the immediate parent paths unresolved:
+
+- GeoNames 192705, Kiambururu Sub-Location, raw admin1 `01`: the IEBC Act schedule lists Kiambururu among sub-locations of Kiambu County; a 2024 Ministry of Interior Gazette instead lists Kiambururu as a Location under Githunguri Sub-County. Candidate county ancestor only: Kiambu County ADM2 ID 8693007 (not Kiambu ADM1 ID 192709). This unit-level discrepancy and the absence of a direct GeoNames ID crosswalk require owner review.
+- GeoNames 7800132, Imenti Central, raw admin1 `03`: Meru County Government lists Central Imenti as a sub-county/constituency and its administrator list uses Imenti Central; a 2022 Gazette places Central Imenti under Meru County. Candidate county ancestor only: Meru County ADM2 ID 8693009 (not Meru ADM1 ID 186824). Exact entity crosswalk and immediate path require owner review.
+
+The [external-ancestor evidence dossier](geonames-kenya-external-ancestor-evidence-2026-10-11.md) stores the source links, claims and unresolved issues. The exact keys `KE.01` and `KE.03` remain absent from current `admin1CodesASCII.txt`; the GeoNames pages for both records show no parent link. Therefore all 128 remain blocked: 126 Japan records under the specific `00` disposition and two Kenya records with unresolved immediate parent paths. Candidate ancestry evidence is not an approved or operational parent link.
