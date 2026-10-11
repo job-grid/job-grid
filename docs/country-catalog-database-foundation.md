@@ -538,3 +538,15 @@ The current authoritative exact-key evidence establishes why these records canno
 Source metadata: retrieved `2026-10-11T00:18:08Z`; HTTP 200; Last-Modified `2026-10-10T01:58:39Z`; ETag `"2501f-65d72cdb3fbc2"`; 151,583 bytes; SHA-256 `1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a`. The [machine-readable report](geonames-kenya-legacy-admin1-crosswalk-audit-2026-10-11.json) is committed. The row-level CSV/JSON and retrieval manifest are temporarily in [CI artifact](https://github.com/job-grid/job-grid/actions/runs/38097953584/artifacts/11686852169) through 2026-10-18.
 
 The Phase 0 run at commit `2e231945d57d3f71d1345962a4fc212fd714f5dc` passed the legacy-key audit and all **79 automated tests**. The wider global-source audit, source-pinned parent-path audit, repository integrity, database migration validation, dependency scan and secret scan also passed.
+
+
+## 5N. External Kenya county-ancestor leads — 2026-10-11
+
+Official Kenyan administrative materials now provide stronger county-level ancestry evidence for the two Kenya ADM3 exception records. These are **ancestor candidates for owner review**, not verified immediate-parent paths:
+
+- **Kiambururu Sub-Location, GeoNames ID 192705, raw admin1 `01`:** the 2011 IEBC Act schedule/revision lists Kiambururu among sub-locations of Kiambu County in the Ngewa ward schedule. The 2024 Ministry of Interior Gazette lists Kiambururu as a Location under Githunguri Sub-County, creating a level/label discrepancy. The current county-level GeoNames candidate is Kiambu County **ADM2 ID 8693007**, which is distinct from Kiambu ADM1 ID 192709.
+- **Imenti Central, GeoNames ID 7800132, raw admin1 `03`:** Meru County Government lists Central Imenti as a sub-county/constituency and its administrator list uses “Imenti Central”; the 2022 Gazette places Central Imenti under Meru County. The current county-level GeoNames candidate is Meru County **ADM2 ID 8693009**, distinct from Meru ADM1 ID 186824. Exact entity-ID crosswalk and immediate path remain unresolved.
+
+Evidence citations and unresolved points are in the [external-ancestor dossier](geonames-kenya-external-ancestor-evidence-2026-10-11.md) and [machine-readable review](geonames-kenya-external-ancestor-evidence-2026-10-11.json). The official GeoNames target pages for both IDs still display no parent relationship; current crosswalk keys `KE.01` and `KE.03` remain absent. These county ancestor leads do not change the 128-record overall blocked status and do not authorize writing any parent link.
+
+No raw code was changed; no parent link, seed, import, migration, database or production change was performed. ISO source comparison, independent sample-selection reproduction and worldwide product completeness remain unverified.
