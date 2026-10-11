@@ -18,7 +18,7 @@ export const ESTAT_CATALOG_URL = "https://data.e-stat.go.jp/lod/sac";
 export const EXPECTED_JAPAN_TARGETS = 126;
 export const CATALOG_PAGE_SIZE = 4000;
 export const MAX_CATALOG_PAGES = 25;
-export const QUERY_LIMIT = 20000;
+export const DETAIL_QUERY_BATCH_SIZE = 50;
 
 export function buildCatalogQuery(offset = 0) {
   if (!Number.isInteger(offset) || offset < 0 || offset > MAX_CATALOG_PAGES * CATALOG_PAGE_SIZE) {
@@ -55,8 +55,8 @@ export function buildDetailsQuery(periodUris) {
     }
     return `<${url.href}>`;
   });
-  if (safeUris.length > 2000) {
-    throw new Error(`Candidate details query exceeded the 2,000-URI safety cap: ${safeUris.length}`);
+  if (safeUris.length > DETAIL_QUERY_BATCH_SIZE) {
+    throw new Error(`Candidate details query exceeded the ${DETAIL_QUERY_BATCH_SIZE}-URI batch cap: ${safeUris.length}`);
   }
   return `
 PREFIX sacs: <http://data.e-stat.go.jp/lod/terms/sacs#>
@@ -436,21 +436,32 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
   const candidateUris = [...new Set(catalogRows
     .filter((row) => targetKeys.has(normalizeExactLabel(row.label_en)))
     .map((row) => row.period_uri))];
-  let detailQuery = null;
-  let detailResult = null;
-  if (candidateUris.length) {
-    detailQuery = buildDetailsQuery(candidateUris);
-    detailResult = await requestEstatQuery(detailQuery, fetchImpl, now);
+  const detailBatches = [];
+  const detailRows = [];
+  for (let offset = 0; offset < candidateUris.length; offset += DETAIL_QUERY_BATCH_SIZE) {
+    const uris = candidateUris.slice(offset, offset + DETAIL_QUERY_BATCH_SIZE);
+    const query = buildDetailsQuery(uris);
+    const result = await requestEstatQuery(query, fetchImpl, now);
+    const rows = parseEstatBindings(result.bindings);
+    if (rows.some((row) => !row.period_uri)) {
+      throw new Error(`e-Stat candidate-detail batch at offset ${offset} omitted a bound period URI.`);
+    }
+    detailBatches.push({
+      target_offset: offset,
+      requested_period_count: uris.length,
+      query,
+      manifest: result.manifest,
+      response: result.parsed,
+      response_text: result.text,
+    });
+    detailRows.push(...rows);
   }
-  const detailRows = detailResult ? parseEstatBindings(detailResult.bindings) : [];
   const detailsByUri = new Map();
   for (const row of detailRows) {
-    if (!row.period_uri) throw new Error("e-Stat candidate-details result omitted its period URI.");
     const items = detailsByUri.get(row.period_uri) ?? [];
     items.push(row);
     detailsByUri.set(row.period_uri, items);
   }
-
   const sourceRows = [];
   for (const row of catalogRows) {
     const details = detailsByUri.get(row.period_uri) ?? [null];
@@ -476,12 +487,18 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     row_count: page.row_count,
     ...page.manifest,
   }));
+  const detailBatchManifests = detailBatches.map((batch) => ({
+    target_offset: batch.target_offset,
+    requested_period_count: batch.requested_period_count,
+    ...batch.manifest,
+  }));
   const combinedSourceHash = sha256([
     ...pageManifests.map((page) => `${page.offset}:${page.response_sha256}`),
-    detailResult?.manifest.response_sha256 ?? "NO_CANDIDATE_DETAIL_QUERY",
+    ...detailBatchManifests.map((batch) => `${batch.target_offset}:${batch.response_sha256}`),
+    ...(detailBatchManifests.length === 0 ? ["NO_CANDIDATE_DETAIL_QUERY"] : []),
   ].join("\n"));
   const totalBytes = pageManifests.reduce((sum, page) => sum + page.response_bytes, 0) +
-    (detailResult?.manifest.response_bytes ?? 0);
+    detailBatchManifests.reduce((sum, batch) => sum + batch.response_bytes, 0);
   const manifest = {
     source_name: "Japan Statistical LOD — Standard Area Code List",
     catalog_url: ESTAT_CATALOG_URL,
@@ -493,8 +510,8 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     catalog_page_count: pageManifests.length,
     catalog_result_row_count: catalogRows.length,
     catalog_pages: pageManifests,
-    candidate_detail_query_sha256: detailQuery ? sha256(detailQuery) : null,
-    candidate_detail_response_sha256: detailResult?.manifest.response_sha256 ?? null,
+    candidate_detail_batch_count: detailBatchManifests.length,
+    candidate_detail_batches: detailBatchManifests,
     candidate_detail_result_rows: detailRows.length,
     response_bytes: totalBytes,
     response_sha256: combinedSourceHash,
@@ -508,10 +525,12 @@ export async function fetchEstatSnapshot(targetNames, fetchImpl = fetch, now = (
     catalog_pages: catalogPages.map(({ offset, row_count, manifest: pageManifest, response }) => ({
       offset, row_count, source: pageManifest, response,
     })),
-    candidate_details: detailResult ? {
-      source: detailResult.manifest,
-      response: detailResult.parsed,
-    } : null,
+    candidate_details: detailBatches.map(({ target_offset, requested_period_count, manifest: detailManifest, response }) => ({
+      target_offset,
+      requested_period_count,
+      source: detailManifest,
+      response,
+    })),
   };
   return {
     sourceRows,
