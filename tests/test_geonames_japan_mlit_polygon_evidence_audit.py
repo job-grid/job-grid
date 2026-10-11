@@ -96,6 +96,50 @@ class GmlAuditTests(unittest.TestCase):
         self.assertEqual(AUDIT.geometry_location((140.0, 36.0), geometry), "INSIDE")
         self.assertEqual(AUDIT.geometry_location((138.0, 36.0), geometry), "OUTSIDE")
 
+    def test_archive_with_unsupported_featuremember_gml_falls_back_to_shapefile(self):
+        import shapefile
+
+        shp_io, shx_io, dbf_io = io.BytesIO(), io.BytesIO(), io.BytesIO()
+        writer = shapefile.Writer(
+            shp=shp_io,
+            shx=shx_io,
+            dbf=dbf_io,
+            shapeType=shapefile.POLYGON,
+        )
+        writer.field("N03_001", "C", size=40)
+        writer.field("N03_002", "C", size=40)
+        writer.field("N03_003", "C", size=40)
+        writer.field("N03_004", "C", size=40)
+        writer.field("N03_007", "C", size=5)
+        writer.poly([[(139.0, 35.0), (141.0, 35.0), (141.0, 37.0), (139.0, 37.0), (139.0, 35.0)]])
+        writer.record("Yamagata", "", "Higashitagawa-gun", "Asahi-mura", "06427")
+        writer.close()
+
+        unsupported_gml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml">
+          <gml:curveMember><gml:Curve><gml:segments><gml:LineStringSegment>
+            <gml:posList>35 139 35 141</gml:posList>
+          </gml:LineStringSegment></gml:segments></gml:Curve></gml:curveMember>
+        </gml:FeatureCollection>"""
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("N03-651001_06-g.xml", unsupported_gml)
+            archive.writestr("N03-651001_06-g_AdministrativeBoundary.shp", shp_io.getvalue())
+            archive.writestr("N03-651001_06-g_AdministrativeBoundary.shx", shx_io.getvalue())
+            archive.writestr("N03-651001_06-g_AdministrativeBoundary.dbf", dbf_io.getvalue())
+
+        records, members = AUDIT.parse_gml_archive(
+            buffer.getvalue(),
+            {"snapshot_date": "1965-10-01", "prefecture_code": "06", "archive_filename": "sample.zip"},
+        )
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["area_code"], "06427")
+        self.assertEqual(records[0]["municipality_name"], "Asahi-mura")
+        self.assertIn("N03-651001_06-g_AdministrativeBoundary.shp", members)
+        geometry = {"type": "Polygon", "coordinates": records[0]["polygons"][0]}
+        self.assertEqual(AUDIT.geometry_location((140.0, 36.0), geometry), "INSIDE")
+
     def test_candidate_target_selection_requires_all_six_exact_ids(self):
         rows = []
         for geonames_id in sorted(AUDIT.EXPECTED_TARGET_IDS, key=int):
