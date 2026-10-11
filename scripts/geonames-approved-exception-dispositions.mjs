@@ -86,13 +86,6 @@ export function buildDispositionRows(admin1Rows, admin2Rows) {
     const disposition = getDisposition(row.feature_code);
     Object.assign(row, disposition, {
       owner_policy_approval_date: OWNER_POLICY_APPROVAL_DATE,
-      // These 128 current ADM exceptions are not accepted operational catalog
-      // nodes until a verified country-specific immediate-parent path exists.
-      // Preserve the original exception row for audit; exclusion is a separate
-      // operational-catalog decision and does not mutate source identity/code.
-      initial_operational_admin_catalog_disposition: /^ADM[1-4]$/.test(row.feature_code)
-        ? "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH"
-        : "NOT_A_CURRENT_ADMIN_PARENT_PATH_TARGET",
       parent_link_created: false,
     });
   }
@@ -190,7 +183,7 @@ const CSV_FIELDS = [
   "raw_admin1_code", "raw_admin2_code", "missing_reference_category",
   "proposed_review_classification", "crosswalk_lookup_key", "raw_missing_code",
   "owner_policy_approval_date", "owner_approved_disposition",
-  "current_admin_selector_treatment", "initial_operational_admin_catalog_disposition", "parent_link_created",
+  "current_admin_selector_treatment", "parent_link_created",
 ];
 
 function escapeCsv(value) {
@@ -220,8 +213,8 @@ const INITIAL_ADMIN_EXCLUSION_FIELDS = [
 export function toInitialAdminCatalogExclusionCsv(rows) {
   const excluded = rows
     .filter((row) =>
-      row.initial_operational_admin_catalog_disposition ===
-      "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH")
+      row.owner_approved_disposition === "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED" &&
+      /^ADM[1-4]$/.test(row.feature_code))
     .filter((row, index, all) =>
       all.findIndex((candidate) => candidate.geonames_id === row.geonames_id) === index)
     .sort((a, b) =>
@@ -235,7 +228,14 @@ export function toInitialAdminCatalogExclusionCsv(rows) {
         ? "RAW_ADMIN1_00_GENERAL_FEATURE_ANCESTOR_UNRESOLVED"
         : "EXACT_COUNTRY_ADMIN_PARENT_KEY_NOT_FOUND";
       const result = {
-        ...row,
+        geonames_id: row.geonames_id,
+        name: row.name,
+        country_code: row.country_code,
+        feature_code: row.feature_code,
+        raw_admin1_code: row.raw_admin1_code,
+        raw_admin2_code: row.raw_admin2_code,
+        initial_operational_admin_catalog_disposition:
+          "EXCLUDE_FROM_INITIAL_OPERATIONAL_CATALOG_UNRESOLVED_PARENT_PATH",
         exclusion_reason: exclusionReason,
         parent_link_created: false,
       };
