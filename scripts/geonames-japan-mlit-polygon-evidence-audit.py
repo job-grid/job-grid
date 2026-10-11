@@ -669,6 +669,15 @@ def candidate_targets(audit: dict, include_all_positive: bool = False) -> list[d
     return sorted(rows, key=lambda row: int(row["geonames_id"]))
 
 
+def polygon_context_status(observations: list[dict]) -> str:
+    """Make missing spatial context explicit rather than silently dropping a target."""
+    return (
+        "CONTAINING_POLYGON_OBSERVED"
+        if observations
+        else "NO_CONTAINING_POLYGON_OBSERVED_IN_SELECTED_SNAPSHOTS"
+    )
+
+
 def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_positive: bool = False) -> dict:
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     targets = candidate_targets(audit, include_all_positive=include_all_positive)
@@ -830,6 +839,21 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
         target_observations[target["geonames_id"]].sort(
             key=lambda row: (row["snapshot_date"], row["containing_area_code"], row["containing_municipality_name"])
         )
+    target_observation_rows = [
+        {
+            **target,
+            "polygon_context_status": polygon_context_status(target_observations[target["geonames_id"]]),
+            "polygon_observations": target_observations[target["geonames_id"]],
+        }
+        for target in targets
+    ]
+    target_rows_with_polygon_context = sum(
+        bool(target["polygon_observations"]) for target in target_observation_rows
+    )
+    target_ids_without_polygon_context = [
+        target["geonames_id"] for target in target_observation_rows
+        if not target["polygon_observations"]
+    ]
     result = {
         "report_version": 2 if include_all_positive else 1,
         "selection_mode": "ALL_POSITIVE_ESTAT_LABEL_CANDIDATE_TARGETS" if include_all_positive else "SIX_NAMED_COLLISION_TARGETS",
@@ -840,13 +864,13 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
         "distinct_candidate_area_codes_tested": len({code for target in targets for code in target["candidate_area_codes"]}),
         "target_ids": sorted(target_by_id, key=int),
         "candidate_codes_tested": len(candidate_stats),
+        "target_rows_with_polygon_context": target_rows_with_polygon_context,
+        "target_rows_without_polygon_context": len(target_observation_rows) - target_rows_with_polygon_context,
+        "target_ids_without_polygon_context": target_ids_without_polygon_context,
         "source_catalog": source_manifest,
         "source_snapshots": source_snapshots,
         "source_snapshot_archive_count": len(source_snapshots),
-        "target_observations": [
-            {**target, "polygon_observations": target_observations[target["geonames_id"]]}
-            for target in targets
-        ],
+        "target_observations": target_observation_rows,
         "candidate_results": sorted(candidate_stats.values(), key=lambda row: (int(row["geonames_id"]), row["candidate_code"])),
         "operational_parent_links_created": 0,
         "limitations": [
@@ -885,6 +909,41 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
         writer = csv.DictWriter(stream, fieldnames=fields)
         writer.writeheader()
         writer.writerows(flat_rows)
+    with prefix.with_suffix(".target-summary.csv").open("w", newline="", encoding="utf-8") as stream:
+        fields = [
+            "geonames_id", "geonames_name", "geonames_latitude", "geonames_longitude",
+            "raw_admin1_code", "raw_admin2_code", "candidate_area_codes",
+            "candidate_area_code_count", "polygon_context_status", "containing_polygon_observation_count",
+            "containing_area_codes_observed", "containing_municipalities_observed",
+            "candidate_codes_with_point_inside_polygon_snapshots", "operational_parent_link_created",
+        ]
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        for target in result["target_observations"]:
+            observations = target["polygon_observations"]
+            target_candidates = [
+                row for row in result["candidate_results"]
+                if row["geonames_id"] == target["geonames_id"]
+            ]
+            writer.writerow({
+                "geonames_id": target["geonames_id"],
+                "geonames_name": target["name"],
+                "geonames_latitude": target["latitude"],
+                "geonames_longitude": target["longitude"],
+                "raw_admin1_code": target["raw_admin1_code"],
+                "raw_admin2_code": target["raw_admin2_code"],
+                "candidate_area_codes": ";".join(target["candidate_area_codes"]),
+                "candidate_area_code_count": len(target["candidate_area_codes"]),
+                "polygon_context_status": target["polygon_context_status"],
+                "containing_polygon_observation_count": len(observations),
+                "containing_area_codes_observed": ";".join(sorted({str(row["containing_area_code"]) for row in observations if row["containing_area_code"]})),
+                "containing_municipalities_observed": ";".join(sorted({str(row["containing_municipality_name"]) for row in observations if row["containing_municipality_name"]})),
+                "candidate_codes_with_point_inside_polygon_snapshots": ";".join(sorted({
+                    row["candidate_code"] for row in target_candidates
+                    if row["point_inside_candidate_polygon_snapshots"]
+                })),
+                "operational_parent_link_created": "false",
+            })
     with prefix.with_suffix(".candidate-results.csv").open("w", newline="", encoding="utf-8") as stream:
         fields = [
             "geonames_id", "geonames_name", "geonames_latitude", "geonames_longitude",
@@ -906,6 +965,12 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
         "catalog_snapshot": source_manifest,
         "source_snapshots": source_snapshots,
         "source_snapshot_archive_count": len(source_snapshots),
+        "target_count": result["target_count"],
+        "target_rows_with_polygon_context": result["target_rows_with_polygon_context"],
+        "target_rows_without_polygon_context": result["target_rows_without_polygon_context"],
+        "target_ids_without_polygon_context": result["target_ids_without_polygon_context"],
+        "target_code_associations_tested": result["target_code_associations_tested"],
+        "distinct_candidate_area_codes_tested": result["distinct_candidate_area_codes_tested"],
         "source_archive_hashes": [
             {"snapshot_date": item["snapshot_date"], "prefecture_code": item["prefecture_code"],
              "archive_filename": item["archive_filename"], "download_url": item["download_url"],
@@ -919,7 +984,9 @@ def perform_point_audit(audit_path: Path, output_prefix: Path, include_all_posit
         "target_count": result["target_count"],
         "candidate_codes_tested": result["candidate_codes_tested"],
         "source_snapshot_archive_count": result["source_snapshot_archive_count"],
-        "target_rows_with_polygon_observations": sum(bool(t["polygon_observations"]) for t in result["target_observations"]),
+        "target_rows_with_polygon_observations": result["target_rows_with_polygon_context"],
+        "target_rows_without_polygon_observations": result["target_rows_without_polygon_context"],
+        "target_ids_without_polygon_observations": result["target_ids_without_polygon_context"],
         "candidate_codes_with_point_inside_candidate_polygon": sum(bool(c["point_inside_candidate_polygon_snapshots"]) for c in result["candidate_results"]),
         "operational_parent_links_created": 0,
         "source_snapshot_archives": len(result["source_snapshots"]),
