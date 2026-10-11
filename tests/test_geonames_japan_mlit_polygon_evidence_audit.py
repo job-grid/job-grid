@@ -124,6 +124,10 @@ class GmlAuditTests(unittest.TestCase):
 
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "KS-META-N03-651001_06-g.xml",
+                b'<?xml version="1.0" encoding="Shift_JIS"?><metadata><encoding>shift_jis</encoding></metadata>',
+            )
             archive.writestr("N03-651001_06-g.xml", unsupported_gml)
             archive.writestr("N03-651001_06-g_AdministrativeBoundary.shp", shp_io.getvalue())
             archive.writestr("N03-651001_06-g_AdministrativeBoundary.shx", shx_io.getvalue())
@@ -136,6 +140,8 @@ class GmlAuditTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["area_code"], "06427")
         self.assertEqual(records[0]["municipality_name"], "Asahi-mura")
+        self.assertEqual(records[0]["dbf_text_encoding"].lower().replace("-", "_"), "shift_jis")
+        self.assertEqual(records[0]["dbf_encoding_source_member"], "KS-META-N03-651001_06-g.xml")
         self.assertIn("N03-651001_06-g_AdministrativeBoundary.shp", members)
         geometry = {"type": "Polygon", "coordinates": records[0]["polygons"][0]}
         self.assertEqual(AUDIT.geometry_location((140.0, 36.0), geometry), "INSIDE")
