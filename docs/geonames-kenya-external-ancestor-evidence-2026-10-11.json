@@ -1,0 +1,114 @@
+{
+  "report_version": "1.0",
+  "audit_date_utc": "2026-10-11",
+  "status": "EXTERNAL_EVIDENCE_FOUND_FOR_COUNTY_LEVEL_ANCESTOR_CANDIDATES__NO_PARENT_PATH_APPROVED",
+  "decision_boundary": {
+    "purpose": "Separate official non-GeoNames administrative evidence from GeoNames code-key/hierarchy evidence, for owner review.",
+    "candidate_county_ancestors_are_not_immediate_parent_links": true,
+    "parent_path_complete": false,
+    "owner_approval_required": true,
+    "raw_admin_codes_changed": false,
+    "operational_parent_links_created": 0,
+    "database_or_production_changes": false
+  },
+  "records": [
+    {
+      "geonames_id": "192705",
+      "geonames_name": "Kiambururu Sub-Location",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "01",
+      "raw_admin2_code_preserved": "",
+      "official_record_url": "https://www.geonames.org/192705/kiambururu-sub-location.html",
+      "geoNames_record_identity": {
+        "coordinate": "-1.05000, 36.83333",
+        "source_note": "Current GeoNames page identifies ID 192705 as ADM3 Kiambururu Sub-Location. Its hierarchy panel lists Kenya and the target only, with no parent link."
+      },
+      "candidate_county_ancestor": {
+        "geonames_id": "8693007",
+        "name": "Kiambu County",
+        "feature_code": "ADM2",
+        "page_url": "https://www.geonames.org/8693007/kiambu-county.html",
+        "disposition": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__ADMIN_LEVEL_CONFLICT",
+        "evidence_sources": [
+          {
+            "authority": "Kenya Law / Independent Electoral and Boundaries Commission Act schedule",
+            "title": "Independent Electoral and Boundaries Commission Act No. 9 of 2011, ward descriptions",
+            "url": "https://www.kenyalaw.org/kl/fileadmin/pdfdownloads/Acts/IndependentElectoralandBoundariesCommissionNo9of2011.pdf",
+            "specific_finding": "The Githunguri constituency schedule lists Ngewa Ward and describes it as comprising Giathieko, Kimathi, Nyaga and Kiambururu sub-locations of Kiambu County.",
+            "evidence_scope": "Strong official county-level ancestry evidence for the exact sub-location name; the table is a 2011 election-boundary schedule and does not contain the GeoNames ID."
+          },
+          {
+            "authority": "Kenya Ministry of Interior / Kenya Gazette",
+            "title": "Gazette Vol. 17, 14 February 2024 — Special Issue, Administrative Units",
+            "url": "https://www.interior.go.ke/sites/default/files/2024-05/gazette-vol.-17-14-2-24-special-admin-units.pdf",
+            "specific_finding": "Under Kiambu County, Githunguri Sub-County, the gazette lists Kiambururu as a Location.",
+            "evidence_scope": "Current official hierarchy lead; the unit level differs from GeoNames' 'Kiambururu Sub-Location' wording, so exact entity-level identity and immediate parent path require review."
+          }
+        ],
+        "unresolved_points": [
+          "The older IEBC schedule explicitly calls it a sub-location in Kiambu County, while the 2024 administrative-units gazette lists Kiambururu as a Location under Githunguri Sub-County.",
+          "Neither official table includes GeoNames ID 192705 or a direct identifier crosswalk.",
+          "The current GeoNames page has no parent link. The missing raw admin1 crosswalk key KE.01 remains absent."
+        ]
+      },
+      "status": "COUNTY_ANCESTOR_EVIDENCE_FOUND__IMMEDIATE_PARENT_PATH_UNRESOLVED",
+      "parent_link_created": false
+    },
+    {
+      "geonames_id": "7800132",
+      "geonames_name": "Imenti Central",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "03",
+      "raw_admin2_code_preserved": "",
+      "official_record_url": "https://www.geonames.org/7800132/imenti-central.html",
+      "geoNames_record_identity": {
+        "coordinate": "-0.00206, 37.59484",
+        "source_note": "Current GeoNames page identifies ID 7800132 as ADM3 Imenti Central. Its hierarchy panel lists Kenya and the target only, with no parent link."
+      },
+      "candidate_county_ancestor": {
+        "geonames_id": "8693009",
+        "name": "Meru County",
+        "feature_code": "ADM2",
+        "page_url": "https://www.geonames.org/8693009/meru-county.html",
+        "disposition": "CANDIDATE_COUNTY_ANCESTOR_REQUIRES_OWNER_REVIEW__NAME_VARIANT_AND_IMMEDIATE_PATH_UNVERIFIED",
+        "evidence_sources": [
+          {
+            "authority": "County Government of Meru",
+            "title": "Sub Counties",
+            "url": "https://meru.go.ke/sub-counties/",
+            "specific_finding": "The county government's page identifies Central Imenti as one of Meru's administrative sub-counties and a parliamentary constituency."
+          },
+          {
+            "authority": "County Government of Meru",
+            "title": "Sub County Administrators",
+            "url": "https://meru.go.ke/1164/sub-county-administrators/",
+            "specific_finding": "The county government list includes an administrator for IMENTI CENTRAL."
+          },
+          {
+            "authority": "Kenya Gazette / Independent Electoral and Boundaries Commission",
+            "title": "Kenya Gazette, 24 August 2022 — election result tables",
+            "url": "https://new.kenyalaw.org/akn/ke/officialGazette/gazette/2022-08-24/170/eng%402022-08-24/source",
+            "specific_finding": "The official gazette places Central Imenti constituency under Meru County."
+          }
+        ],
+        "unresolved_points": [
+          "The spelling/order varies between GeoNames 'Imenti Central' and county-government 'Central Imenti' in the administrative sub-counties list.",
+          "The government sources do not include GeoNames ID 7800132 or a direct identifier crosswalk.",
+          "The current GeoNames page has no parent link. The missing raw admin1 crosswalk key KE.03 remains absent."
+        ]
+      },
+      "status": "COUNTY_ANCESTOR_EVIDENCE_FOUND__IMMEDIATE_PARENT_PATH_UNRESOLVED",
+      "parent_link_created": false
+    }
+  ],
+  "important_note": "The two current county-level records (Kiambu County GeoNames ID 8693007 and Meru County ID 8693009) are ADM2 entities distinct from the legacy/currently named ADM1 records Kiambu ID 192709 and Meru ID 186824. Do not use those ADM1 IDs interchangeably with the county-level ADM2 records.",
+  "remaining_gates": [
+    "Review exact entity identity / administrative level conflict for GeoNames 192705 before approving any direct or indirect path.",
+    "Verify exact entity identity and immediate administrative path for GeoNames 7800132; a county-level ancestor candidate is not a full path.",
+    "Preserve raw admin1 codes 01 and 03 until a separately authorized source mapping policy determines how their historic key mismatch should be handled.",
+    "All 126 Japan ADM4 raw admin1 00 records remain blocked; no ancestor path has been inferred.",
+    "ISO authority comparison, reproduction of the separate 25,685-row sample-selection algorithm, and product/worldwide geographic completeness remain unverified."
+  ]
+}
