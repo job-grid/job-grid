@@ -589,3 +589,26 @@ Sample selection is now **PASS for same-script reproduction and separately autho
 - independent evidence that the actual Phase 4C backup/restore path is operational.
 
 No source archives were committed. The original source files and sample output were not modified. No operational parent links, migrations, seeds, imports, database writes, production or deployment actions occurred. PR #27 remains open, draft and unmerged.
+
+## 5P. Separate source-record retention from selector activation — 2026-10-11
+
+**Decision: do not delete the 128 unresolved administrative records. Preserve them as source-verified reference records, but keep them ineligible for current administrative selectors until their parent paths are proven.** This follows the owner-approved conservative policy and avoids treating incomplete hierarchy metadata as evidence that the source entities themselves are invalid.
+
+The latest source-pinned checks support this split:
+- The global GeoNames exception source audit verified all **2,416 / 2,416** unique exception IDs against the current official `allCountries.zip` on GeoNames ID, name, country, feature code and raw admin1/admin2 values, with zero missing IDs, duplicate IDs or identity/raw-code drift.
+- The latest current-administration path set is **128 records**: 126 Japan ADM4 records with raw admin1 `00`, plus Kenya ADM3 IDs `192705` and `7800132`, whose current `KE.01` and `KE.03` crosswalk keys are absent.
+- The Japan e-Stat/MLIT audit completed successfully, but exact GeoNames parent identities remain unapproved; the Kenya sources provide possible county ancestry but not verified immediate-parent paths.
+
+### Required future import and query behavior
+
+For these 128 records, an approved future source import may retain the source identity and raw codes in a reference/staging layer without setting a parent:
+- Preserve the GeoNames ID, source name, country, feature code, raw admin codes and source snapshot provenance.
+- Set the parent association to null/unresolved; do not synthesize a parent, normalize raw `00`, or replace the missing Kenya keys with a guessed code.
+- Mark hierarchy resolution as unresolved and selector eligibility as false. Exclude these records from current administrative selection APIs and user-facing administrative pickers by default.
+- Keep record identity/referenceability so later evidence can update the resolution without changing or deleting the source record.
+- Promote a record only after a row-level check establishes entity identity, administrative level, effective period where relevant, and an evidenced immediate-parent path. A name match, spatial containment, or internal code consistency alone is not enough.
+
+**Acceptance effect:** unresolved paths remain a blocker for publishing these records as *current selectable administrative nodes*, not a reason to delete them or to discard otherwise source-verified reference rows. This is a documented target behavior, not a claim that a production selector or database has already been changed; this PR remains a documentation/design proposal and no migration, import, application rollout or production change has been performed.
+
+The overall catalog proposal remains **BLOCKED** on its separate ISO source comparison, policy/completeness and provenance gates. The 128 path investigations remain open for evidence-led repair, while safe retention and default selector exclusion are the agreed disposition in the meantime.
+
