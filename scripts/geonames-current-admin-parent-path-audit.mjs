@@ -353,7 +353,7 @@ function auditCurrentAdminParentsByCodes(targetRows, sourceRecords) {
 
 export function parseHierarchyLine(line) {
   if (!line.trim()) return null;
-  const fields = line.split("\\t");
+  const fields = line.split("\t");
   if (fields.length !== 3 || fields.some((field) => field.length === 0)) {
     throw new Error("Invalid GeoNames hierarchy row: expected parentId, childId, type.");
   }
