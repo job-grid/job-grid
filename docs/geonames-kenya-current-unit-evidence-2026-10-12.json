@@ -1,0 +1,210 @@
+{
+  "report_version": "1.0",
+  "recorded_date_utc": "2026-10-12",
+  "status": "OFFICIAL_NATIVE_UNIT_PATHS_DOCUMENTED__GEONAMES_CROSSWALK_PENDING",
+  "sources": [
+    {
+      "id": "kenya_gazette_2024_kiambururu",
+      "authority": "Kenya Ministry of Interior / Kenya Gazette",
+      "title": "Gazette Vol. 17, 14 February 2024 — Special Issue: Administrative Units",
+      "url": "https://www.interior.go.ke/sites/default/files/2024-05/gazette-vol.-17-14-2-24-special-admin-units.pdf",
+      "location": "PDF page numbered 526; KIAMBU COUNTY > GITHUNGURI SUB-COUNTY",
+      "finding": "Kiambururu appears under Locations within Githunguri Sub-County, Kiambu County.",
+      "limitation": "No GeoNames ID or stable machine-readable identifier crosswalk is supplied."
+    },
+    {
+      "id": "kenya_law_iebc_2011_kiambururu",
+      "authority": "Kenya Law / IEBC Act schedule",
+      "title": "Independent Electoral and Boundaries Commission Act No. 9 of 2011",
+      "url": "https://www.kenyalaw.org/kl/fileadmin/pdfdownloads/Acts/IndependentElectoralandBoundariesCommissionNo9of2011.pdf",
+      "location": "Githunguri constituency / Ngewa Ward schedule",
+      "finding": "Historical schedule lists Kiambururu among the sub-locations of Kiambu County.",
+      "limitation": "Historical schedule does not include GeoNames ID 192705 or prove a formal reclassification date."
+    },
+    {
+      "id": "knbs_2019_census_kiambururu",
+      "authority": "Kenya National Bureau of Statistics",
+      "title": "2019 Kenya Population and Housing Census: Volume II — Distribution of Population by Administrative Units",
+      "url": "https://www.knbs.or.ke/wp-content/uploads/2023/09/2019-Kenya-population-and-Housing-Census-Volume-2-Distribution-of-Population-by-Administrative-Units.pdf",
+      "finding": "Indexed official census table contains the exact KIAMBURURU row and a population value of 4,000.",
+      "limitation": "The row corroborates the name but does not publish a GeoNames ID crosswalk."
+    },
+    {
+      "id": "meru_cadp_2026_2027",
+      "authority": "County Government of Meru",
+      "title": "County Annual Development Plan FY 2026/2027, November 2025",
+      "url": "https://meru.go.ke/assets/file/05b8937c-county-annual-development-plan-cadp-.pdf",
+      "location": "Printed page 18 / PDF page index 17, sections 1.1.3 Administrative units and 1.1.4 Political Units",
+      "findings": [
+        "The administrative-units section says Meru County's structure comprises sixteen sub-counties.",
+        "Table 1 lists Imenti Central as a sub-county with 4 divisions, 22 locations, 57 sub-locations and area 333.10 km².",
+        "The next section separately lists Imenti Central as a parliamentary constituency, so the two same-named unit types must not be conflated."
+      ],
+      "limitation": "No direct identifier crosswalk to GeoNames ID 7800132 is published."
+    },
+    {
+      "id": "geonames_githunguri_location",
+      "authority": "GeoNames",
+      "title": "Githunguri Location, ID 197219",
+      "url": "https://www.geonames.org/197219/githunguri-location.html",
+      "finding": "A distinct administrative-division entry called Githunguri Location (ADMD).",
+      "limitation": "The Gazette names Githunguri Sub-County as Kiambururu Location's parent; ID 197219 is not treated as that sub-county."
+    },
+    {
+      "id": "geonames_kiambururu",
+      "authority": "GeoNames",
+      "title": "Kiambururu Sub-Location, ID 192705",
+      "url": "https://www.geonames.org/192705/kiambururu-sub-location.html",
+      "finding": "Record is labelled Kiambururu Sub-Location (ADM3); its displayed hierarchy has no parent link."
+    },
+    {
+      "id": "geonames_imenti_central",
+      "authority": "GeoNames",
+      "title": "Imenti Central, ID 7800132",
+      "url": "https://www.geonames.org/7800132/imenti-central.html",
+      "finding": "Record is labelled Imenti Central (ADM3); its displayed hierarchy has no parent link."
+    }
+  ],
+  "records": [
+    {
+      "geonames_id": "192705",
+      "name": "Kiambururu Sub-Location",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "01",
+      "legacy_composite_key": "KE.01",
+      "current_official_unit": {
+        "official_name": "Kiambururu",
+        "official_unit_level": "Location",
+        "immediate_parent_official_name": "Githunguri Sub-County",
+        "parent_county_official_name": "Kiambu County",
+        "verified_official_path": [
+          "Kenya",
+          "Kiambu County",
+          "Githunguri Sub-County",
+          "Kiambururu (Location)"
+        ],
+        "path_evidence_status": "OFFICIAL_CURRENT_NATIVE_PATH_DOCUMENTED"
+      },
+      "temporal_context": [
+        {
+          "year": 2011,
+          "source_id": "kenya_law_iebc_2011_kiambururu",
+          "reported_unit_level": "Sub-Location"
+        },
+        {
+          "year": 2019,
+          "source_id": "knbs_2019_census_kiambururu",
+          "reported_unit_level": "NOT_INFERRED_FROM_INDEXED_ROW"
+        },
+        {
+          "year": 2024,
+          "source_id": "kenya_gazette_2024_kiambururu",
+          "reported_unit_level": "Location"
+        }
+      ],
+      "geonames_crosswalk": {
+        "status": "CURRENT_NATIVE_UNIT_PATH_KNOWN__GEONAMES_ID_CROSSWALK_PENDING",
+        "immediate_parent_geonames_id": null,
+        "approved_parent_ids": [],
+        "candidate_geonames_nodes_for_separate_review": [
+          {
+            "geonames_id": "197219",
+            "name": "Githunguri Location",
+            "feature_code": "ADMD",
+            "role": "NOT_AN_APPROVED_PARENT",
+            "reason": "A Location record, not a verified Githunguri Sub-County node."
+          },
+          {
+            "geonames_id": "192709",
+            "name": "Kiambu County",
+            "feature_code": "ADM1",
+            "role": "COUNTY_LEVEL_CANDIDATE_ONLY",
+            "reason": "Current admin1 crosswalk example KE.22; not an immediate parent."
+          },
+          {
+            "geonames_id": "8693007",
+            "name": "Kiambu County",
+            "feature_code": "ADM2",
+            "role": "COUNTY_LEVEL_CANDIDATE_ONLY",
+            "reason": "Separate GeoNames entity; not interchangeable with ADM1 ID 192709."
+          }
+        ],
+        "unresolved_requirements": [
+          "Find a stable authoritative identifier/code for current Kiambururu Location.",
+          "Establish a source-backed crosswalk from that current unit to GeoNames ID 192705.",
+          "Identify a verified GeoNames node or catalog mapping for Githunguri Sub-County; do not substitute ID 197219.",
+          "Validate a complete GeoNames-to-catalog parent path after these checks."
+        ]
+      }
+    },
+    {
+      "geonames_id": "7800132",
+      "name": "Imenti Central",
+      "country_code": "KE",
+      "feature_code": "ADM3",
+      "raw_admin1_code_preserved": "03",
+      "legacy_composite_key": "KE.03",
+      "current_official_unit": {
+        "official_name": "Imenti Central",
+        "official_unit_level": "Sub-County",
+        "immediate_parent_official_name": "Meru County",
+        "parent_county_official_name": "Meru County",
+        "verified_official_path": [
+          "Kenya",
+          "Meru County",
+          "Imenti Central (Sub-County)"
+        ],
+        "official_subcounty_statistics": {
+          "divisions": 4,
+          "locations": 22,
+          "sub_locations": 57,
+          "area_km2": 333.1
+        },
+        "path_evidence_status": "OFFICIAL_CURRENT_NATIVE_PATH_DOCUMENTED"
+      },
+      "temporal_context": [
+        {
+          "source_id": "meru_cadp_2026_2027",
+          "report_year": "FY 2026/2027",
+          "published": "2025-11",
+          "finding": "Administrative sub-county, distinct from same-named parliamentary constituency."
+        }
+      ],
+      "geonames_crosswalk": {
+        "status": "CURRENT_NATIVE_UNIT_PATH_KNOWN__GEONAMES_ID_CROSSWALK_PENDING",
+        "immediate_parent_geonames_id": null,
+        "approved_parent_ids": [],
+        "candidate_geonames_nodes_for_separate_review": [
+          {
+            "geonames_id": "186824",
+            "name": "Meru",
+            "feature_code": "ADM1",
+            "role": "COUNTY_LEVEL_CANDIDATE_ONLY",
+            "reason": "Current admin1 crosswalk key KE.35; no approved direct link from target 7800132 exists."
+          },
+          {
+            "geonames_id": "8693009",
+            "name": "Meru County",
+            "feature_code": "ADM2",
+            "role": "COUNTY_LEVEL_CANDIDATE_ONLY",
+            "reason": "Separate GeoNames entity; not interchangeable with ADM1 ID 186824."
+          }
+        ],
+        "unresolved_requirements": [
+          "Capture a source-backed identifier/code or boundary crosswalk linking the current Imenti Central Sub-County to GeoNames ID 7800132.",
+          "Confirm the canonical GeoNames entity for the current county parent without interchanging IDs 186824 and 8693009.",
+          "Validate a complete GeoNames-to-catalog parent path after these checks."
+        ]
+      }
+    }
+  ],
+  "decision_boundary": {
+    "native_official_unit_paths_documented": 2,
+    "geonames_entity_crosswalks_verified": 0,
+    "immediate_parent_geonames_ids_assigned": 0,
+    "raw_admin1_codes_changed": 0,
+    "operational_parent_links_created": 0,
+    "database_or_production_changes": false
+  }
+}
