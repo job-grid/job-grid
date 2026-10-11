@@ -16,6 +16,8 @@
 | Positive-label candidate targets reviewed | 33 |
 | Single-code candidate targets in source list | 29 |
 | Candidate associations with point inside candidate polygon | 14 |
+| Spatial hits also overlapping at least one exact-name e-Stat candidate period | 13 of 14 |
+| Spatial hit observed only before the exact-name e-Stat period recorded in this snapshot | 1 (GeoNames ID 2113163) |
 | Supported in four selected snapshots | 9 |
 | Supported in two selected snapshots | 4 |
 | Supported in one selected snapshot | 1 |
@@ -27,26 +29,26 @@
 
 Each entry below has an exact e-Stat English-label candidate, an official Japanese label and parent reference in the captured e-Stat history, and MLIT point-in-polygon hits on the listed snapshots. The “snapshot hits” column counts selected boundary dates only; it is not a statement that an administrative definition existed unchanged throughout every intervening year.
 
-| GeoNames ID | GeoNames label | e-Stat area code | Official Japanese candidate label | e-Stat parent code / label | MLIT point-in-polygon snapshots | Evidence tier |
+| GeoNames ID | GeoNames label | e-Stat area code | Official Japanese candidate label | e-Stat parent code / label | MLIT point-in-polygon snapshots | Exact-name e-Stat period alignment | Evidence tier |
 |---:|---|---:|---|---|---|---|
-| 1850471 | Tawaramoto-chō | 29363 | 田原本町 | 29360 / Shiki-gun (磯城郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1850496 | Tatsuno-machi | 20382 | 辰野町 | 20380 / Kamiina-gun (上伊那郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1851931 | Shirahama-machi | 12465 | 白浜町 | 12460 / Awa-gun (安房郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1853828 | Ōsawano-machi | 16301 | 大沢野町 | 16300 / Kaminiikawa-gun (上新川郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1854370 | Okegawa-machi | 11302 | 桶川町 | 11300 / Kitaadachi-gun (北足立郡) | 1965, 1970 | Two snapshots |
-| 1854628 | Ogōri-machi | 40502 | 小郡町 | 40500 / Mii-gun (三井郡) | 1965, 1970 | Two snapshots |
-| 1854978 | Nonoichi-machi | 17344 | 野々市町 | 17340 / Ishikawa-gun (石川郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1857469 | Matsutō-machi | 17341 | 松任町 | 17340 / Ishikawa-gun (石川郡) | 1965, 1970 | Two snapshots |
-| 1858533 | Kubokawa-chō | 39404 | 窪川町 | 39400 / Takaoka-gun (高岡郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1860320 | Kamojima-chō | 36441 | 鴨島町 | 36440 / Oe-gun (麻植郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1864261 | Echigawa-chō | 25424 | 愛知川町 | 25420 / Echi-gun (愛知郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 1865498 | Akasaki-chō | 31369 | 赤碕町 | 31360 / Tōhaku-gun (東伯郡) | 1965, 1970, 1975, 1995 | Four snapshots |
-| 2112526 | Iwanuma-machi | 04381 | 岩沼町 | 04380 / Natori-gun (名取郡) | 1965, 1970 | Two snapshots |
-| 2113163 | Abiko-machi | 12304 | 我孫子町 | 12300 / Higashikatsushika-gun (東葛飾郡) | 1965 | One snapshot |
+| 1850471 | Tawaramoto-chō | 29363 | 田原本町 | 29360 / Shiki-gun (磯城郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1850496 | Tatsuno-machi | 20382 | 辰野町 | 20380 / Kamiina-gun (上伊那郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1851931 | Shirahama-machi | 12465 | 白浜町 | 12460 / Awa-gun (安房郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1853828 | Ōsawano-machi | 16301 | 大沢野町 | 16300 / Kaminiikawa-gun (上新川郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1854370 | Okegawa-machi | 11302 | 桶川町 | 11300 / Kitaadachi-gun (北足立郡) | 1965, 1970 | Yes — 1970-10-01 lies within candidate period | Two snapshots |
+| 1854628 | Ogōri-machi | 40502 | 小郡町 | 40500 / Mii-gun (三井郡) | 1965, 1970 | Yes — 1970-10-01 lies within candidate period | Two snapshots |
+| 1854978 | Nonoichi-machi | 17344 | 野々市町 | 17340 / Ishikawa-gun (石川郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1857469 | Matsutō-machi | 17341 | 松任町 | 17340 / Ishikawa-gun (石川郡) | 1965, 1970 | Yes — 1970-10-01 lies within candidate period | Two snapshots |
+| 1858533 | Kubokawa-chō | 39404 | 窪川町 | 39400 / Takaoka-gun (高岡郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1860320 | Kamojima-chō | 36441 | 鴨島町 | 36440 / Oe-gun (麻植郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1864261 | Echigawa-chō | 25424 | 愛知川町 | 25420 / Echi-gun (愛知郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 1865498 | Akasaki-chō | 31369 | 赤碕町 | 31360 / Tōhaku-gun (東伯郡) | 1965, 1970, 1975, 1995 | Yes — includes 1970+ hit | Four snapshots |
+| 2112526 | Iwanuma-machi | 04381 | 岩沼町 | 04380 / Natori-gun (名取郡) | 1965, 1970 | Yes — 1970-10-01 lies within candidate period | Two snapshots |
+| 2113163 | Abiko-machi | 12304 | 我孫子町 | 12300 / Higashikatsushika-gun (東葛飾郡) | 1965 | No — hit predates period start 1970-04-01 | One snapshot, historical-only |
 
 ## Interpretation and guardrails
 
-1. These 14 target/code associations should be reviewed first for exact source identity, feature semantics, applicable historical period and administrative level. Four-snapshot support is stronger geographic corroboration than one-snapshot support, but it is not a different approval rule.
+1. These 14 target/code associations should be reviewed first for exact source identity, feature semantics, applicable historical period and administrative level. Thirteen of the fourteen have at least one spatial hit in a selected year overlapping the captured exact-name e-Stat candidate period. Abiko-machi (GeoNames ID 2113163) has only a 1965 polygon hit while its captured exact-name candidate period starts on 1970-04-01; treat it as historical-only, not period-aligned corroboration. Four-snapshot support is stronger geographic corroboration than one-snapshot support, but it is not a different approval rule.
 2. The e-Stat parent references are source-recorded administrative ancestry candidates. They are not yet crosswalked to a matching GeoNames parent ID, and an administrative parent cannot be written without that separate identity/level review.
 3. The 15 remaining single-code target candidates and all four multi-code targets must not be silently promoted. The six earlier collision records have documented conflicting containment evidence; GeoNames IDs 1851030, 1851031, 1859673, 1865064, 1865066 and 1865067 remain unresolved.
 4. GeoNames ID 1864225 (Ei-chō) still has no containing-polygon observation in the selected snapshots. Keep it explicitly unresolved. Do not infer a polygon or ancestor from the name.
