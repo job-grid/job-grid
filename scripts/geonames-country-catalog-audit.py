@@ -142,6 +142,10 @@ def scan_country_entities(path: Path) -> tuple[dict[str, Any], set[str], set[str
     member_name = ""
     by_source_country: dict[str, Counter[str]] = defaultdict(Counter)
     place_code_counts: Counter[str] = Counter()
+    place_candidate_ids: list[str] = []
+    admin_ids_by_level: dict[str, list[str]] = defaultdict(list)
+    place_candidate_invalid_id_rows = 0
+    admin_invalid_id_rows = 0
 
     with zipfile.ZipFile(path, "r") as archive:
         candidates = [name for name in archive.namelist() if name == "allCountries.txt" or name.endswith("/allCountries.txt")]
@@ -173,12 +177,24 @@ def scan_country_entities(path: Path) -> tuple[dict[str, Any], set[str], set[str
                     place_code_counts[feature_code] += 1
                     if feature_code in CURRENT_PLACE_CANDIDATE_CODES:
                         bucket["current_place_candidate_rows"] += 1
+                        place_id = fields[0].strip()
+                        if ID_RE.fullmatch(place_id):
+                            place_candidate_ids.append(place_id)
+                        else:
+                            place_candidate_invalid_id_rows += 1
+                            malformed_rows += 1
                     elif feature_code in NONCURRENT_PLACE_CODES:
                         bucket["historical_or_noncurrent_place_rows"] += 1
                     elif feature_code.startswith("PPL"):
                         bucket["other_ppl_family_rows"] += 1
                 if feature_class == "A" and feature_code in CURRENT_ADMIN_FEATURE_CODES:
                     bucket[f"{feature_code.lower()}_rows"] += 1
+                    admin_id = fields[0].strip()
+                    if ID_RE.fullmatch(admin_id):
+                        admin_ids_by_level[feature_code].append(admin_id)
+                    else:
+                        admin_invalid_id_rows += 1
+                        malformed_rows += 1
 
                 if feature_class != "A":
                     continue
@@ -210,6 +226,10 @@ def scan_country_entities(path: Path) -> tuple[dict[str, Any], set[str], set[str
         "historical_political_duplicate_geoname_id_groups": duplicate_group_count(historical_country_ids),
         "recognized_country_entity_rows": len(country_entity_ids),
         "recognized_country_entity_duplicate_geoname_id_groups": duplicate_group_count(country_entity_ids),
+        "current_place_candidate_rows_missing_valid_id": place_candidate_invalid_id_rows,
+        "current_place_candidate_duplicate_geoname_id_groups": duplicate_group_count(place_candidate_ids),
+        "current_admin_feature_rows_missing_valid_id": admin_invalid_id_rows,
+        "current_admin_feature_duplicate_id_groups": sum(duplicate_group_count(values) for values in admin_ids_by_level.values()),
     }
     coverage_rows = []
     for country_code, values in sorted(by_source_country.items()):
@@ -220,6 +240,9 @@ def scan_country_entities(path: Path) -> tuple[dict[str, Any], set[str], set[str
         "source_country_code_buckets_with_current_place_candidates": sum(1 for row in coverage_rows if row.get("current_place_candidate_rows", 0) > 0),
         "source_country_code_buckets_with_no_current_place_candidates": sum(1 for row in coverage_rows if row.get("source_rows", 0) > 0 and row.get("current_place_candidate_rows", 0) == 0),
         "current_place_candidate_rows": sum(v["current_place_candidate_rows"] for v in by_source_country.values()),
+        "current_place_candidate_unique_ids": len(set(place_candidate_ids)),
+        "current_place_candidate_duplicate_id_groups": duplicate_group_count(place_candidate_ids),
+        "current_admin_feature_duplicate_id_groups": sum(duplicate_group_count(values) for values in admin_ids_by_level.values()),
         "populated_feature_class_rows": sum(v["populated_feature_rows"] for v in by_source_country.values()),
         "historical_or_noncurrent_place_rows": sum(v["historical_or_noncurrent_place_rows"] for v in by_source_country.values()),
         "other_ppl_family_rows": sum(v["other_ppl_family_rows"] for v in by_source_country.values()),
@@ -296,6 +319,10 @@ def main() -> int:
         or counts["current_or_territory_duplicate_geoname_id_groups"] > 0
         or counts["historical_political_duplicate_geoname_id_groups"] > 0
         or counts["recognized_country_entity_duplicate_geoname_id_groups"] > 0
+        or counts["current_place_candidate_rows_missing_valid_id"] > 0
+        or counts["current_place_candidate_duplicate_geoname_id_groups"] > 0
+        or counts["current_admin_feature_rows_missing_valid_id"] > 0
+        or counts["current_admin_feature_duplicate_id_groups"] > 0
         or counts["country_info_ids_without_recognized_country_feature"] > 0
         or counts["pcli_ids_without_country_info"] > 0
     )
