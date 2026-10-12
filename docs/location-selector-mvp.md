@@ -8,7 +8,7 @@ The picker is a **frontend preview only**. It does not save a candidate profile,
 
 ## Bundled country fallback
 
-A bundled, sorted JSON country-name/code list is included in `public/data/countries.en.json` so the country dropdown can still offer a broad list when the remote country endpoint is unavailable. The source snapshot is from [umpirsky/country-list](https://github.com/umpirsky/country-list), provided under the MIT License; the license notice is shipped at `public/data/COPYING-country-list.txt`.
+A bundled, sorted JSON country-name/code list of **249 entries** is included in `public/data/countries.en.json` so the country dropdown can still offer a broad list when the remote country endpoint is unavailable. It was captured on 2026-10-12 from [umpirsky/country-list commit `bd490a163ae4709bbe4b54c4f638f24e032828d2`](https://github.com/umpirsky/country-list/commit/bd490a163ae4709bbe4b54c4f638f24e032828d2), source file [`data/en/country.json`](https://github.com/umpirsky/country-list/blob/bd490a163ae4709bbe4b54c4f638f24e032828d2/data/en/country.json), provided under the MIT License. The license notice is shipped at `public/data/COPYING-country-list.txt`.
 
 This file is a **country picker fallback only**. It is not treated as a newly approved ISO authority snapshot, and its entries do not establish sovereignty, legal status, employment eligibility or operational geography completeness. The place-search provider is still needed for city/town suggestions.
 
