@@ -45,6 +45,8 @@ jobs:
           deno-version: v2.x
       - name: Type-check trusted Edge Function
         run: deno check --no-lock --config supabase/functions/close-vacancy/deno.json supabase/functions/close-vacancy/index.ts
+      - name: Test Edge Function request boundary without live credentials
+        run: deno test --no-lock --config supabase/functions/close-vacancy/deno.json supabase/functions/close-vacancy/index.test.ts
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
