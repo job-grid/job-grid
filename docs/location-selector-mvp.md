@@ -6,6 +6,12 @@ A responsive, keyboard-accessible location-selector preview to the static Job Gr
 
 The picker is a **frontend preview only**. It does not save a candidate profile, create a database table, change an API, import a catalog or deploy to production.
 
+## Bundled country fallback
+
+A bundled, sorted JSON country-name/code list is included in `public/data/countries.en.json` so the country dropdown can still offer a broad list when the remote country endpoint is unavailable. The source snapshot is from [umpirsky/country-list](https://github.com/umpirsky/country-list), provided under the MIT License; the license notice is shipped at `public/data/COPYING-country-list.txt`.
+
+This file is a **country picker fallback only**. It is not treated as a newly approved ISO authority snapshot, and its entries do not establish sovereignty, legal status, employment eligibility or operational geography completeness. The place-search provider is still needed for city/town suggestions.
+
 ## Current provider adapter
 
 - Country labels are loaded from the REST Countries public endpoint.
