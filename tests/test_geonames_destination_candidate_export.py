@@ -16,7 +16,7 @@ spec.loader.exec_module(exporter)
 
 def geonames_row(gid, name, feature_class, feature_code, country, admin1="", admin2="", admin3="", admin4=""):
     fields = [
-        str(gid), name, name, "", "0.0", "0.0", feature_class, feature_code, country,
+        str(gid), name, name, "", str(latitude), str(longitude), feature_class, feature_code, country,
         "", admin1, admin2, admin3, admin4, "0", "", "0", "UTC", "20261011"
     ]
     assert len(fields) == 19
@@ -39,6 +39,9 @@ class DestinationCandidateExportTests(unittest.TestCase):
             geonames_row(104, "Kosovo Town Test", "P", "PPLC", "XK"),
             geonames_row(105, "Antilles Old Place Test", "P", "PPL", "AN"),
             geonames_row(200, "Road Test", "R", "RD", "KE"),
+            geonames_row(106, "", "P", "PPL", "KE"),
+            geonames_row(107, "Bad Coordinate Test", "P", "PPL", "KE", latitude="95.0", longitude="181.0"),
+            geonames_row(108, "No Coordinate Test", "P", "PPL", "KE", latitude="", longitude=""),
         ]
         all_text = "\n".join(all_rows) + "\n"
         country_text = "\n".join([
@@ -82,12 +85,12 @@ class DestinationCandidateExportTests(unittest.TestCase):
                 all_path, country_path, country_manifest, master_report, exception_manifest, output
             )
             self.assertEqual(report["status"], "PASS_SOURCE_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED")
-            self.assertEqual(report["counts"]["allcountries_source_rows_scanned"], 7)
-            self.assertEqual(report["counts"]["destination_scope_rows"], 6)
-            self.assertEqual(report["counts"]["candidate_file_rows"], 6)
+            self.assertEqual(report["counts"]["allcountries_source_rows_scanned"], 10)
+            self.assertEqual(report["counts"]["destination_scope_rows"], 9)
+            self.assertEqual(report["counts"]["candidate_file_rows"], 9)
             self.assertEqual(report["counts"]["operational_selectable_rows"], 0)
             self.assertEqual(report["counts"]["parent_links_created"], 0)
-            self.assertEqual(report["counts"]["unique_candidate_source_ids"], 6)
+            self.assertEqual(report["counts"]["unique_candidate_source_ids"], 9)
             self.assertTrue(report_path.is_file())
             with gzip.open(gz_path, "rt", encoding="utf-8", newline="") as stream:
                 records = list(csv.DictReader(stream))
@@ -103,6 +106,17 @@ class DestinationCandidateExportTests(unittest.TestCase):
             self.assertTrue(all(row["parent_link_created"] == "false" for row in records))
             self.assertEqual(by_id["100"]["raw_admin4_code"], "003")
             self.assertEqual(by_id["100"]["parent_resolution_status"], "UNVERIFIED_RAW_CODES_ONLY")
+            self.assertEqual(by_id["106"]["source_disposition"], "HELD_MISSING_CANONICAL_NAME")
+            self.assertEqual(by_id["106"]["record_status_proposal"], "review_required")
+            self.assertEqual(by_id["106"]["source_record_identity_status"], "BLOCKED_EMPTY_CANONICAL_NAME")
+            self.assertEqual(by_id["107"]["source_disposition"], "HELD_INVALID_WGS84_COORDINATES")
+            self.assertEqual(by_id["107"]["coordinate_validation_status"], "INVALID_WGS84")
+            self.assertEqual(by_id["108"]["source_disposition"], "CURRENT_PLACE_CANDIDATE")
+            self.assertEqual(by_id["108"]["coordinate_validation_status"], "MISSING_WGS84")
+            self.assertEqual(report["counts"]["empty_canonical_name_rows"], 1)
+            self.assertEqual(report["counts"]["invalid_coordinate_rows"], 1)
+            self.assertEqual(report["counts"]["missing_coordinate_rows"], 1)
+            self.assertEqual(report["counts"]["record_quality_hold_rows"], 2)
 
 
 if __name__ == "__main__":
