@@ -1295,6 +1295,66 @@ jobs:
           print("- Historical source nodes, parent edges and GeoNames associations remain review-only; no database, selector or production changes.")
           PY
 
+      - name: Retrieve exact e-Stat details for Japan parent-only periods (review only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-estat-parent-reference-detail-audit.test.js
+          node scripts/geonames-japan-estat-parent-reference-detail-audit.mjs \
+            "$work/japan-native-estat-period-graph.json" \
+            "$work/japan-parent-reference-detail-audit"
+          python - "$work/japan-native-estat-period-graph.json" "$work/japan-parent-reference-detail-audit.json" "$work/japan-parent-reference-detail-audit.period-details.csv" "$work/japan-parent-reference-detail-audit.parent-edges.csv" <<'PY'
+          import csv
+          import json
+          import sys
+          from pathlib import Path
+
+          graph_path, report_path, details_path, edges_path = map(Path, sys.argv[1:])
+          graph = json.loads(graph_path.read_text(encoding="utf-8"))
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          counts = report.get("counts", {})
+          stubs = graph.get("parent_reference_only_nodes", [])
+          if report.get("status") != "PASS_JAPAN_ESTAT_PARENT_REFERENCE_DETAIL_AUDIT__SOURCE_EVIDENCE_ONLY__NO_SELECTABLE_RECORDS":
+              raise SystemExit("Japan parent-reference detail audit returned an unexpected status.")
+          expected = len(stubs)
+          if counts.get("parent_only_stubs_requested") != expected:
+              raise SystemExit("Parent-only URI query count does not match the source graph.")
+          if counts.get("parent_period_details_found", 0) + counts.get("parent_period_details_not_found", 0) != expected:
+              raise SystemExit("Every parent-only URI must be accounted for as found or unresolved.")
+          if report.get("decision_boundary", {}).get("every_input_stub_is_accounted_for") is not True:
+              raise SystemExit("Parent-only URI coverage assertion is missing.")
+          detail_rows = report.get("parent_period_details", [])
+          expected_uris = {row["period_uri"] for row in stubs}
+          if {row.get("period_uri") for row in detail_rows} != expected_uris or len(detail_rows) != expected:
+              raise SystemExit("Parent-period details do not retain each exact requested URI once.")
+          if any(row.get("selectable") is not False or row.get("operational_parent_link_created") is not False for row in detail_rows):
+              raise SystemExit("Parent-period detail rows violate the non-operational boundary.")
+          if any(edge.get("selectable") is not False or edge.get("operational_parent_link_created") is not False for edge in report.get("parent_period_declared_edges", [])):
+              raise SystemExit("Parent-period edges violate the non-operational boundary.")
+          batches = report.get("detail_batches", [])
+          if sum(batch.get("requested_period_count", 0) for batch in batches) != expected:
+              raise SystemExit("The detail query batches do not reconcile to the parent-only URI set.")
+          if any(batch.get("http_status") != 200 or len(batch.get("response_sha256", "")) != 64 or len(batch.get("query_sha256", "")) != 64 for batch in batches):
+              raise SystemExit("A parent detail query lacks successful response/hash provenance.")
+          for path in (details_path, edges_path):
+              if not path.is_file():
+                  raise SystemExit(f"Missing parent-period detail CSV: {path.name}")
+          with details_path.open(encoding="utf-8", newline="") as stream:
+              csv_details = list(csv.DictReader(stream))
+          if len(csv_details) != expected:
+              raise SystemExit("Parent-period detail CSV does not retain every stub.")
+          if any(row["selectable"] != "False" or row["operational_parent_link_created"] != "False" for row in csv_details):
+              raise SystemExit("Parent-period detail CSV violates the non-operational boundary.")
+          print("## Exact e-Stat parent-period detail supplement")
+          print(f"- Parent-only period URIs requested: {expected}")
+          print(f"- Official detail bindings found: {counts.get('parent_period_details_found')}")
+          print(f"- Unreturned URIs explicitly held for review: {counts.get('parent_period_details_not_found')}")
+          print(f"- Periods with validation issues: {counts.get('detail_validation_issues')}")
+          print(f"- Further parent edges discovered: {counts.get('source_parent_edges_retained_from_detail_rows')}")
+          print("- GeoNames crosswalks, selectable records and operational links created: 0")
+          PY
+
       - name: Audit official e-Stat parents against exact GeoNames Japan administrative labels
         shell: bash
         run: |
@@ -1599,6 +1659,10 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1975-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1970-10-01.html
             ${{ runner.temp }}/geonames-japan-estat/mlit/mlit-adminarea-1965-10-01.html
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-reference-detail-audit.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-reference-detail-audit.period-details.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-reference-detail-audit.parent-edges.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-parent-reference-detail-audit.unresolved.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-polygon-audit.candidate-results.csv

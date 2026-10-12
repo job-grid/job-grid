@@ -27,9 +27,18 @@ Every record remains non-selectable. The output asserts zero verified GeoNames-t
 
 1. Review source licence/retention terms before any long-term storage of source snapshots.
 2. Fetch and reconcile current e-Stat period histories and current MLIT boundaries separately from 1995 historical evidence.
-3. Retrieve period details for referenced parent URIs and resolve multiple-parent or malformed-reference cases without discarding source evidence.
+3. **Direct-parent detail retrieval is implemented as a separate read-only CI supplement:** it queries exact parent-only e-Stat period URIs discovered by the graph, records query/response SHA-256 hashes, and accounts every URI as detail-found or explicitly unresolved. Review the generated row-level sidecar before attempting recursive expansion. Multiple-parent, malformed and missing detail cases remain non-operational.
 4. Approve stable internal unit identities and duplicate-prevention rules before deciding public selectability.
 5. Keep GeoNames crosswalk verification as an independent decision; never infer identity from names, spatial containment, or the existence of an official parent reference.
 6. Keep the ISO machine-readable snapshot comparison and actual backup/restore readiness as separate catalog acceptance gates.
 
 No production or database change is made by this proposal.
+
+
+## Addendum — exact parent-period detail supplement (2026-10-12)
+
+The CI workflow now runs a separate read-only audit against each exact e-Stat period URI emitted as a parent-reference-only stub by the bounded 1995 spatial-first graph. It retrieves detail responses in batches using the official Statistical LOD endpoint and retains the response/query hashes, returned effective dates, source-declared parents, previous/succeeding period URIs, and administrative-class references. Its JSON and CSV sidecars are attached to the Japan evidence artifact.
+
+The supplemental check accounts for each requested URI exactly once as detail-found or unresolved. Conflicting dates, malformed parent URI/code pairs, multiple parent references and missing responses remain explicit review states. The new parent references discovered from those details are reported but **not recursively resolved in this step**. They are not promoted into canonical nodes or operational hierarchy, and none of this proves a GeoNames identity match.
+
+No selector entries, database writes, migrations, seeds, imports or deployments are introduced. This narrows one evidence gap only; current e-Stat/current-boundary coverage, source retention terms, ISO comparison and actual backup/restore readiness remain open.
