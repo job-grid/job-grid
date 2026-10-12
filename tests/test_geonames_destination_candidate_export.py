@@ -14,7 +14,7 @@ exporter = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(exporter)
 
 
-def geonames_row(gid, name, feature_class, feature_code, country, admin1="", admin2="", admin3="", admin4=""):
+def geonames_row(gid, name, feature_class, feature_code, country, admin1="", admin2="", admin3="", admin4="", latitude="0.0", longitude="0.0"):
     fields = [
         str(gid), name, name, "", str(latitude), str(longitude), feature_class, feature_code, country,
         "", admin1, admin2, admin3, admin4, "0", "", "0", "UTC", "20261011"
@@ -94,7 +94,7 @@ class DestinationCandidateExportTests(unittest.TestCase):
             self.assertTrue(report_path.is_file())
             with gzip.open(gz_path, "rt", encoding="utf-8", newline="") as stream:
                 records = list(csv.DictReader(stream))
-            self.assertEqual(len(records), 6)
+            self.assertEqual(len(records), 9)
             by_id = {row["geonames_id"]: row for row in records}
             self.assertEqual(by_id["100"]["source_disposition"], "CURRENT_PLACE_CANDIDATE")
             self.assertEqual(by_id["101"]["source_disposition"], "HELD_HISTORICAL_OR_NONCURRENT_PLACE")
