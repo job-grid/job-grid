@@ -14,6 +14,17 @@ The picker is a **frontend preview only**. It does not save a candidate profile,
 - A limited fallback list is provided if the country-list service is unavailable. The interface explicitly says it is only a fallback rather than silently claiming that it is the full list.
 - User-visible remote strings are escaped before insertion into the page. Search requests are debounced and stale responses are discarded.
 
+## Selection event contract
+
+When a user selects a result, the component emits a bubbling `job-grid-location-selected` custom event. The versioned `detail` payload contains:
+- a selected country code and display name;
+- provider name and provider ID (not an internal Job Grid place ID);
+- place name, feature code/type and available administrative labels;
+- coordinates when both are available; and
+- a display label for presentation.
+
+The payload is rejected by the helper when the selected place's country does not match the selected country. Missing admin levels stay omitted. This makes the preview consumable by a future profile/search form without claiming the selection was saved. A backend integration must validate country and provider IDs server-side, resolve them to internal catalog identities and handle provider-data changes.
+
 ## Before commercial release
 
 Treat these public services as **preview adapters**, not an approved production data contract. Review the provider's current commercial usage terms, rate limits, attribution requirements, uptime and data-refresh guarantees. Replace the adapters with an approved licensed/self-hosted data source or a controlled server-side catalog as needed. Do not store these provider codes as verified internal/ISO identities simply because they were returned by an API.
