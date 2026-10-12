@@ -196,6 +196,24 @@ def validate_exception_dispositions(manifest, geo_rows):
     return by_id
 
 
+
+
+def validate_complete_reconciliation(geo_rows, m49_rows, dispositions):
+    """Require an exact one-to-one set between live out-of-M49 tuples and dispositions."""
+    m49_pairs = {(r["alpha2"], r["alpha3"]) for r in m49_rows}
+    live_unmatched = {str(r["geonames_id"]) for r in geo_rows
+                      if (r["alpha2"], r["alpha3"]) not in m49_pairs}
+    disposition_ids = set(dispositions)
+    if live_unmatched != disposition_ids:
+        missing = sorted(live_unmatched - disposition_ids)
+        stale = sorted(disposition_ids - live_unmatched)
+        raise ValueError(
+            "Exception disposition ledger must exactly equal live GeoNames tuples absent from M49; "
+            f"undocumented={missing}; stale_or_now_matched={stale}."
+        )
+    return {"live_unmatched_source_ids": len(live_unmatched), "disposition_rows": len(disposition_ids)}
+
+
 def reconcile(geo, m49, sources, dispositions=None):
     m49_pairs = {(r["alpha2"], r["alpha3"]): r for r in m49}
     geo_pairs = {(r["alpha2"], r["alpha3"]): r for r in geo
@@ -364,9 +382,7 @@ def main(argv=None):
         m49=parse_m49(a.m49_html.read_text(encoding="utf-8"))
         exception_manifest=json.loads(a.exception_dispositions.read_text(encoding="utf-8"))
         dispositions=validate_exception_dispositions(exception_manifest,geo)
-        live_missing = {r["geonames_id"] for r in geo if (r["alpha2"],r["alpha3"]) not in {(x["alpha2"],x["alpha3"]) for x in m49}}
-        if live_missing != {gid for gid, item in dispositions.items() if (item["source_codes"]["alpha2"],item["source_codes"]["alpha3"]) not in {(x["alpha2"],x["alpha3"]) for x in m49}}:
-            raise ValueError("Every live source pair outside M49 must be accounted for, and no expected exception may silently disappear.")
+        reconciliation_gate=validate_complete_reconciliation(geo,m49,dispositions)
         report,rows=reconcile(geo,m49,sources,dispositions)
     except (OSError,UnicodeError,json.JSONDecodeError,ValueError) as exc:
         print(f"BLOCKED_COUNTRY_AREA_CODE_AUDIT: {type(exc).__name__}: {exc}",file=sys.stderr); return 2
