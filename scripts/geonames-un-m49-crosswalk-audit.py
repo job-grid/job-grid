@@ -333,10 +333,11 @@ def reconcile(geo, m49, sources, dispositions=None):
         pair = (r["alpha2"], r["alpha3"])
         m = m49_pairs.get(pair)
         if m:
+            exact += 1
             if r["numeric3"] != m["m49_code"]:
                 state, numeric_mismatch = "ALPHA_PAIR_MATCH_NUMERIC3_CONFLICT", numeric_mismatch + 1
             else:
-                state, exact = "MATCHED_ALPHA2_ALPHA3_PAIR", exact + 1
+                state = "MATCHED_ALPHA2_ALPHA3_PAIR"
                 numeric_equal += 1
         elif A2.fullmatch(pair[0]) and ma2.get(pair[0]):
             state, a2conf = "ALPHA2_MATCH_ALPHA3_CONFLICT", a2conf + 1
