@@ -21,6 +21,21 @@ This is a proposed default because it uses the already selected Supabase data pl
 
 The implementation has no vacancy-create, independent moderation, employer portal, or application-submission workflow. Consequently it is **not by itself the full recruitment marketplace** and no real Close Job button has been added to the public website. Existing applications are not modified or deleted by closure; the vacancy row itself is retained.
 
+## Phase 2A schema compatibility — open blocker
+
+PR #25, `docs/phase-2a-recruitment-spec.md`, is currently open, unmerged and draft. It is a proposed logical model, not an owner-approved physical schema. This Close Job migration must not be described as reconciled to an approved canonical schema.
+
+The mapping is only partial today:
+
+| Phase 2A concept | Current Close Job proposal | Compatibility gap |
+|---|---|---|
+| `organizations` | Minimal tenant row with legal/display names and status | The logical model also includes organization type, registration jurisdiction/number, verification status and later branches/worksites. |
+| `organization_memberships` | Tenant-scoped user, role and active/revoked state | Identity uses Supabase `auth.users`; role/identity model still requires owner approval and an implemented membership administration flow. |
+| `vacancies` | Minimum status/version, country/location, title/body and publication-window fields | The logical model also includes branch/geography references, occupation/sector/skill fields, employment and compensation terms, moderation/verification state, and application deadline. Those are not represented by this minimum proposal. |
+| `job_applications` | No production table exists in this proposal or the verified empty public schema | SQL CI now creates a disposable table using the Phase 2A `job_applications` contract name to test that closure does not delete a related application row. This is a contract fixture, not evidence of a live application table or real candidate history. |
+
+**Release gate:** until the owner approves a single Phase 2A core schema, do not apply this migration. The implementation must then be reworked as additive closure columns, policies, audit and idempotency objects against those canonical entities, rather than creating a competing simplified organization/vacancy model. No live database or application data was changed by this PR.
+
 ## Security boundaries
 
 - The API gateway verifies JWTs and the function validates the access token against Supabase Auth.
