@@ -444,9 +444,9 @@ def reconcile(geo, m49, sources, dispositions=None):
         "database_or_production_changes":False},
       "limitations":[
         "UN M49 is an official UN reference that displays ISO-assigned alpha-2/alpha-3 codes; it is not an ISO Country Codes Collection download.",
-        "M49 numeric identifiers are not treated as proof of ISO numeric-3 conformity.",
+        "A UN M49 numerical value becomes an ISO numeric-3 candidate only for an exact alpha-2/alpha-3 pair when GeoNames countryInfo numeric agrees; a live ISO OBP/Collection snapshot remains a separate refresh gate.",
         "The four non-matching tuples are accounted for by a versioned conservative disposition file; source tuples are not rewritten.",
-        "Taiwan's ISO tuple has older official ISO-newsletter corroboration; a live ISO OBP/collection snapshot is not included in this audit.",
+        "Taiwan's ISO tuple has official ISO-newsletter corroboration; a live ISO OBP/collection snapshot is not included in this audit.",
         "Code reconciliation does not establish administrative parentage or worldwide destination completeness."]}
     return report, detail
 
