@@ -67,7 +67,9 @@ async function runFixture(t, infoRows, pcliRows) {
   const report = JSON.parse(await readFile(reportPath, "utf8"));
   const coveragePath = join(dir, "geonames-destination-source-coverage.json");
   const destinationCoverage = JSON.parse(await readFile(coveragePath, "utf8"));
-  return { result, report, destinationCoverage };
+  const coverageCsvPath = join(dir, "geonames-destination-coverage-by-source-country.csv");
+  const destinationCoverageCsv = await readFile(coverageCsvPath, "utf8");
+  return { result, report, destinationCoverage, destinationCoverageCsv };
 }
 
 test("countryInfo and PCLI IDs reconcile and the aggregate report contains no source rows", async (t) => {
@@ -173,7 +175,7 @@ test("malformed countryInfo and worldwide rows fail closed", async (t) => {
   assert.equal(report.counts.all_countries_malformed_rows, 1);
 });
 test("destination coverage distinguishes current place candidates, administrative levels, and historical places", async (t) => {
-  const { result, report, destinationCoverage } = await runFixture(
+  const { result, report, destinationCoverage, destinationCoverageCsv } = await runFixture(
     t,
     [
       countryInfo({ alpha2: "KE", alpha3: "KEN", numeric: "404", name: "Kenya", id: "100" }),
@@ -202,6 +204,8 @@ test("destination coverage distinguishes current place candidates, administrativ
   assert.equal(destinationCoverage.worldwide_destination_completeness, "NOT_ESTABLISHED_BY_SOURCE_COUNTS_ALONE");
   assert.equal(report.interpretation.destination_coverage, "SOURCE_FEATURE_DISTRIBUTION_AUDITED_NOT_WORLDWIDE_PRODUCT_COMPLETENESS");
   assert.equal(report.interpretation.destination_candidate_rows, 3);
+  assert.ok(destinationCoverageCsv.includes("source_country_code"));
+  assert.ok(destinationCoverageCsv.split("\\n").some(line => line.endsWith(",KE")));
 });
 
 test("a country with only historical/abandoned places is surfaced without auto-selection", async (t) => {
