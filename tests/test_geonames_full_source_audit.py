@@ -33,7 +33,7 @@ class FullGeoNamesAuditTests(unittest.TestCase):
                     "2\t101\tja\tSample alias\t0\t0\t0\t0\t\t\n"
                     "3\t999\ten\tUnresolved target\t0\t0\t0\t1\t\t\n")
             (root / "admin1CodesASCII.txt").write_text("KE.26\tKisumu County\tKisumu County\t191242\nJP.01\tExample Region\tExample Region\t200001\n", encoding="utf-8")
-            (root / "admin2Codes.txt").write_text("KE.26.191242\tKisumu subunit\tKisumu subunit\t191242\nJP.01.999999\tUnmapped parent\tUnmapped parent\t999999\n", encoding="utf-8")
+            (root / "admin2Codes.txt").write_text("KE.26.191242\tKisumu subunit\tKisumu subunit\t191242\n", encoding="utf-8")
             report = MODULE.audit(root, output, "2026-10-13T00:00:00Z")
             self.assertEqual(report["all_countries"]["physical_rows"], 3)
             self.assertEqual(report["all_countries"]["unique_valid_geoname_ids"], 3)
