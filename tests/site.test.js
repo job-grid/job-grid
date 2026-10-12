@@ -8,6 +8,10 @@ const css = await readFile(new URL("../styles/global.css", import.meta.url), "ut
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
 const buildScript = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
 const mainScript = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
+const employerHtml = await readFile(new URL("../employer-jobs.html", import.meta.url), "utf8");
+const employerCss = await readFile(new URL("../styles/employer.css", import.meta.url), "utf8");
+const employerScript = await readFile(new URL("../scripts/employer-jobs.js", import.meta.url), "utf8");
+const runtimeConfig = await readFile(new URL("../scripts/runtime-config.js", import.meta.url), "utf8");
 const logo = await readFile(new URL("../public/job-grid-logo.png", import.meta.url));
 
 test("homepage includes semantic landmarks and descriptive metadata", () => {
@@ -60,4 +64,34 @@ test("vacancy cards are clearly marked sample content and no live features are c
   assert.match(html, /not live vacancies/);
   assert.match(html, /Search, filters, applications, and employer accounts are not connected yet/);
   assert.doesNotMatch(html, /action="https?:\/\//);
+});
+
+test("employer portal route is present, noindexed, and never uses fake vacancy data", () => {
+  assert.ok(components.includes('href="/employer-jobs.html"'));
+  assert.ok(employerHtml.includes('<main id="main"'));
+  assert.ok(employerHtml.includes('name="robots" content="noindex, nofollow"'));
+  assert.ok(employerHtml.includes('id="close-vacancy-dialog"'));
+  assert.ok(employerHtml.includes('id="confirm-close"'));
+  assert.ok(employerHtml.includes('id="portal-notice"'));
+  assert.ok(employerHtml.includes("Close requests are re-authorized by the database"));
+  assert.equal(employerHtml.includes("Sample employer"), false);
+  assert.equal(employerHtml.includes("Operations Coordinator"), false);
+  assert.ok(runtimeConfig.includes('supabaseUrl: ""'));
+  assert.ok(runtimeConfig.includes('publishableKey: ""'));
+  assert.ok(employerCss.includes("@media (max-width: 740px)"));
+  assert.ok(employerScript.includes("auth.getSession"));
+  assert.ok(employerScript.includes("Idempotency-Key"));
+  assert.ok(employerScript.includes("expected_version"));
+  assert.equal(employerHtml.includes('type="password"'), false);
+  assert.equal(employerHtml.includes('name="access_token"'), false);
+  assert.equal(employerHtml.includes('name="service_role_key"'), false);
+});
+
+test("employer workspace uses tenant membership reads and does not send actor identity", () => {
+  assert.ok(employerScript.includes("organization_memberships"));
+  assert.ok(employerScript.includes('status: "eq.active"'));
+  assert.ok(employerScript.includes("vacancies"));
+  assert.ok(employerScript.includes('new Set(["owner", "admin", "recruiter"])'));
+  assert.ok(employerScript.includes("window?.jobGridAuth"));
+  assert.equal(employerScript.includes("actor_user_id:"), false);
 });
