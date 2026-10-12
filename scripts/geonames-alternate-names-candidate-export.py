@@ -147,8 +147,6 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     candidate_country, country_totals = read_candidate_scope(candidate_gzip)
     country_area_country, country_area_source = read_country_area_scope(country_info_path, country_info_manifest_path)
     country_area_counts = Counter(country_area_country.values())
-    country_area_alias_rows = Counter()
-    country_area_alias_ids_by_code = Counter()
     if set(candidate_country).intersection(country_area_country):
         raise ValueError("A GeoNames ID appears in both country/area and destination candidate scopes.")
     source_meta = source_manifest_record(manifest_path, archive_path)
@@ -163,7 +161,6 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     exported_rows = 0
     aliases_by_language = Counter()
     alias_country_rows = Counter()
-    alias_country_ids = Counter()
     blank_language_rows = 0
     flag_malformed_rows = 0
     member_digest = hashlib.sha256()
@@ -207,8 +204,6 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                     source_country_code = country_area_country[geonames_id]
                     country_code_bucket = source_country_code.strip().upper() or "(blank)"
                     country_area_ids_with_aliases.add(geonames_id)
-                    country_area_alias_rows[source_country_code] += 1
-                    country_area_alias_ids_by_code[source_country_code] += 0
                 else:
                     continue
                 if alias_id in alias_ids_seen:
@@ -216,7 +211,6 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                 else:
                     alias_ids_seen.add(alias_id)
                 alias_country_rows[(country_code_bucket, record_scope_kind)] += 1
-                alias_country_ids[(country_code, record_scope_kind, geonames_id)] += 1
                 language = language.strip()
                 if language:
                     aliases_by_language[language] += 1
