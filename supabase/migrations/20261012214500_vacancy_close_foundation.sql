@@ -380,7 +380,11 @@ GRANT SELECT (
   work_location, country_code, status, version, published_at, expires_at,
   created_at, updated_at
 ) ON public.vacancies TO anon;
-GRANT SELECT ON public.vacancies TO authenticated;
+GRANT SELECT (
+  id, organization_id, reference_code, slug, title, description,
+  work_location, country_code, status, version, published_at, expires_at,
+  created_at, updated_at
+) ON public.vacancies TO authenticated;
 
 GRANT SELECT, INSERT, UPDATE ON public.organizations,
   public.organization_memberships, public.platform_roles, public.vacancies

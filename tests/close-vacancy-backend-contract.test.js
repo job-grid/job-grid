@@ -94,3 +94,9 @@ test("gateway JWT verification is enabled and live-release gates remain explicit
   assert.ok(docs.includes("separately approved isolated database target"));
   assert.ok(docs.includes("No migration was executed"));
 });
+
+test("anonymous and authenticated table grants do not expose internal creator identity", () => {
+  assert.ok(migration.includes("GRANT SELECT ("));
+  assert.equal(/GRANT SELECT ON public\.vacancies TO authenticated/i.test(migration), false);
+  assert.ok(migration.includes("created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL"));
+});

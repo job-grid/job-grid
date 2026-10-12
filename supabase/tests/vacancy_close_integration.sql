@@ -55,6 +55,17 @@ INSERT INTO public.vacancies (
     'Nairobi', 'KE', 'draft', 1, NULL, NULL
   );
 
+DO $column_grant_test$
+BEGIN
+  IF has_column_privilege('anon', 'public.vacancies', 'created_by', 'SELECT') THEN
+    RAISE EXCEPTION 'anonymous role has access to internal created_by column';
+  END IF;
+  IF has_column_privilege('authenticated', 'public.vacancies', 'created_by', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated role has access to internal created_by column';
+  END IF;
+END;
+$column_grant_test$;
+
 -- Test-only stand-in for a future applications table. A closure must retain the
 -- vacancy row and must not delete any rows related to it.
 CREATE TABLE public.__vacancy_applications_probe (
