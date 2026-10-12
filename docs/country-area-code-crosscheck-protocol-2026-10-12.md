@@ -10,9 +10,9 @@ Sources: [UNSD M49 overview](https://unstats.un.org/unsd/methodology/m49/overvie
 
 ## Numeric-code boundary
 
-The UN explains that the alphabetic codes in M49 are assigned by ISO, while M49 numeric codes are maintained by UNSD for statistical use. The audit therefore never labels an M49 numeric code as proof of an ISO numeric-3 value. Numeric equality is diagnostic only. Missing/conflicting tuples are review cases and never permission to rewrite a code.
+The UN M49 page describes its numerical codes as those used for statistical processing by UNSD, and ISO's country-code guidance states that the numeric country code is assigned by the UN. The audit now compares the GeoNames countryInfo numeric value with the UN value for each exact alpha-2 + alpha-3 pair; the live source has 248 exact pair/numeric agreements and zero numeric conflicts. Only those rows receive a proposed ISO numeric-3 candidate, with explicit provenance; an alpha pair with a conflicting numeric value blocks the audit. Kosovo remains without an ISO numeric value, while Taiwan's `TW/TWN/158` tuple has separate official ISO-newsletter corroboration. Historical source tuples remain historical-only.
 
-This public cross-check advances the review without purchasing the annual ISO collection. It is not called a downloaded ISO Country Codes Collection file or a direct ISO-published machine-readable snapshot. Conflicts and non-standard GeoNames codes remain visible in row-level evidence.
+This public cross-check advances the review without purchasing the annual ISO collection. It is not called a downloaded ISO Country Codes Collection file or a direct current ISO OBP snapshot. Numeric candidates are source-backed, not proof that the live ISO collection was refreshed in this run; a periodic direct ISO-source review remains open. Conflicts and non-standard GeoNames codes remain visible in row-level evidence.
 
 ## Audit behavior
 
