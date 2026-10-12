@@ -74,6 +74,39 @@ export function normalizeLocations(payload, countryCode) {
 }
 
 /** Render the chosen place with any available admin levels; missing parent levels are valid. */
+/** Build the versioned, country-scoped payload emitted to future profile/search integrations. */
+export function buildLocationSelectionPayload(place, countryCode, countries = []) {
+  const code = String(countryCode ?? "").trim().toUpperCase();
+  if (!place || !/^[A-Z]{2}$/.test(code) || place.countryCode !== code || !place.id || !place.name) return null;
+  const country = countries.find((item) => item.code === code);
+  const adminAreas = [
+    ["admin1", place.admin1],
+    ["admin2", place.admin2],
+    ["admin3", place.admin3],
+    ["admin4", place.admin4]
+  ].filter(([, name]) => String(name ?? "").trim())
+    .map(([level, name]) => ({ level, name: String(name).trim() }));
+  const latitude = Number.isFinite(place.latitude) ? place.latitude : null;
+  const longitude = Number.isFinite(place.longitude) ? place.longitude : null;
+  return {
+    schemaVersion: 1,
+    country: { code, name: country?.name || place.country || code },
+    place: {
+      provider: "open-meteo-geocoding",
+      providerId: String(place.id),
+      name: String(place.name).trim(),
+      type: place.featureCode.startsWith("ADM") ? "administrative_area"
+        : place.featureCode.startsWith("PPL") ? "populated_place" : "unknown",
+      featureCode: place.featureCode || null,
+      adminAreas,
+      coordinates: latitude !== null && longitude !== null
+        ? { latitude, longitude }
+        : null
+    },
+    displayLabel: buildPlaceLabel(place)
+  };
+}
+
 export function buildPlaceLabel(place) {
   if (!place) return "";
   const segments = [place.name, place.admin4, place.admin3, place.admin2, place.admin1, place.country];
@@ -150,6 +183,14 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
         if (!Number.isInteger(index) || !this.matches[index]) return;
         this.selected = this.matches[index];
         this.renderSelection();
+        const payload = buildLocationSelectionPayload(this.selected, this.selectedCountry, this.countries);
+        if (payload) {
+          this.dispatchEvent(new CustomEvent("job-grid-location-selected", {
+            detail: payload,
+            bubbles: true,
+            composed: true
+          }));
+        }
       });
       this.addEventListener("click", (event) => {
         if (event.target.closest('[data-action="retry-countries"]')) void this.loadCountries();
