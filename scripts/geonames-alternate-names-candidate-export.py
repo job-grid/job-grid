@@ -64,9 +64,10 @@ def read_candidate_scope(path: Path):
                 raise ValueError("Candidate export contains an invalid GeoNames ID.")
             if gid in candidate_country:
                 raise ValueError(f"Candidate export contains duplicate GeoNames ID {gid}.")
-            code = str(row.get("source_country_code_raw", "")).strip().upper() or "(blank)"
-            candidate_country[gid] = code
-            country_totals[code] += 1
+            raw_code = str(row.get("source_country_code_raw", ""))
+            code_bucket = raw_code.strip().upper() or "(blank)"
+            candidate_country[gid] = (raw_code, code_bucket)
+            country_totals[code_bucket] += 1
     if not candidate_country:
         raise ValueError("Candidate destination export is empty.")
     return candidate_country, country_totals
@@ -199,11 +200,12 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                     flag_malformed_rows += 1
                 if geonames_id in candidate_country:
                     record_scope_kind = "destination_place_or_admin"
-                    source_country_code = candidate_country[geonames_id]
+                    source_country_code, country_code_bucket = candidate_country[geonames_id]
                     candidate_ids_with_aliases.add(geonames_id)
                 elif geonames_id in country_area_country:
                     record_scope_kind = "country_area"
                     source_country_code = country_area_country[geonames_id]
+                    country_code_bucket = source_country_code.strip().upper() or "(blank)"
                     country_area_ids_with_aliases.add(geonames_id)
                     country_area_alias_rows[source_country_code] += 1
                     country_area_alias_ids_by_code[source_country_code] += 0
@@ -213,8 +215,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                     duplicate_alias_ids += 1
                 else:
                     alias_ids_seen.add(alias_id)
-                country_code = source_country_code
-                alias_country_rows[(country_code, record_scope_kind)] += 1
+                alias_country_rows[(country_code_bucket, record_scope_kind)] += 1
                 alias_country_ids[(country_code, record_scope_kind, geonames_id)] += 1
                 language = language.strip()
                 if language:
@@ -252,13 +253,14 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
         raise ValueError("Alias coverage includes a GeoNames ID outside the candidate scope.")
     member_sha = member_digest.hexdigest()
 
-    aliases_by_destination_code = Counter(candidate_country[gid] for gid in candidate_ids_with_aliases)
+    aliases_by_destination_code = Counter(candidate_country[gid][1] for gid in candidate_ids_with_aliases)
     aliases_by_country_area_code = Counter(country_area_country[gid] for gid in country_area_ids_with_aliases)
     destination_per_code = []
     for code, total in sorted(country_totals.items()):
         ids_with_aliases = aliases_by_destination_code[code]
         destination_per_code.append({
-            "source_country_code_raw": code,
+            "source_country_code_raw": "" if code == "(blank)" else code,
+            "source_country_code_bucket": code,
             "record_scope_kind": "destination_place_or_admin",
             "source_scope_records": total,
             "source_scope_records_with_aliases": ids_with_aliases,
