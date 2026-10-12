@@ -224,6 +224,8 @@ def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sourc
         pair = (source_row["alpha2"], source_row["alpha3"])
         m49_row = m49_by_pair.get(pair)
         if m49_row:
+            if source_row["numeric3"] != m49_row["m49_code"]:
+                raise ValueError(f"GeoNames numeric code conflicts with the UN numeric code for exact alpha-pair ID {source_id}.")
             records.append({
                 "record_key": "geonames:" + source_id,
                 "geonames_id": source_id,
@@ -235,7 +237,8 @@ def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sourc
                 "proposed_selectable_as_destination": True,
                 "operational_selectable": False,
                 "sovereignty_claim": False,
-                "iso_codes": {"alpha2": source_row["alpha2"], "alpha3": source_row["alpha3"], "numeric3": None},
+                "iso_code_candidates": {"alpha2": m49_row["alpha2"], "alpha3": m49_row["alpha3"], "numeric3": m49_row["m49_code"]},
+                "iso_code_evidence_status": "UN_M49_ISO_ALPHA_PAIR_EXACT__NUMERIC_ASSIGNED_BY_UN_AND_MATCHES_GEONAMES__DIRECT_ISO_COLLECTION_REFRESH_PENDING",
                 "iso_numeric3_candidate_from_geonames": source_row["numeric3"],
                 "m49_current_code": m49_row["m49_code"],
                 "m49_current_row_present": True,
@@ -262,7 +265,14 @@ def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sourc
             "proposed_selectable_as_destination": decision["selectable_as_destination"],
             "operational_selectable": False,
             "sovereignty_claim": False,
-            "iso_codes": decision["iso_codes"],
+            "iso_code_candidates": decision["iso_codes"],
+            "iso_code_evidence_status": (
+                "ISO_NEWSLETTER_CORROBORATION__DIRECT_ISO_COLLECTION_REFRESH_PENDING"
+                if source_id == "1668284" else
+                "NO_CURRENT_ISO_TUPLE_ASSIGNED__GEONAMES_CODES_RETAINED_SOURCE_ONLY"
+                if source_id == "831053" else
+                "HISTORICAL_SOURCE_CODES_ONLY__NOT_CURRENT_ISO_FIELDS"
+            ),
             "iso_numeric3_candidate_from_geonames": source_row["numeric3"],
             "m49_current_code": None,
             "m49_current_row_present": False,
@@ -318,13 +328,16 @@ def reconcile(geo, m49, sources, dispositions=None):
     ma2, ma3 = idx(m49, "alpha2"), idx(m49, "alpha3")
     ga2, ga3 = idx(geo, "alpha2"), idx(geo, "alpha3")
     detail = []
-    exact, missing, a2conf, a3conf, numeric_equal = 0, 0, 0, 0, 0
+    exact, missing, a2conf, a3conf, numeric_equal, numeric_mismatch = 0, 0, 0, 0, 0, 0
     for r in geo:
         pair = (r["alpha2"], r["alpha3"])
         m = m49_pairs.get(pair)
         if m:
-            state, exact = "MATCHED_ALPHA2_ALPHA3_PAIR", exact + 1
-            numeric_equal += r["numeric3"] == m["m49_code"]
+            if r["numeric3"] != m["m49_code"]:
+                state, numeric_mismatch = "ALPHA_PAIR_MATCH_NUMERIC3_CONFLICT", numeric_mismatch + 1
+            else:
+                state, exact = "MATCHED_ALPHA2_ALPHA3_PAIR", exact + 1
+                numeric_equal += 1
         elif A2.fullmatch(pair[0]) and ma2.get(pair[0]):
             state, a2conf = "ALPHA2_MATCH_ALPHA3_CONFLICT", a2conf + 1
         elif A3.fullmatch(pair[1]) and ma3.get(pair[1]):
@@ -383,12 +396,14 @@ def reconcile(geo, m49, sources, dispositions=None):
             row["exception_disposition_status"] = "UNDOCUMENTED_REQUIRES_REVIEW"
             undocumented += 1
     structural = duplicates > 0
-    code_conflicts = a2conf + a3conf + mmissing
+    code_conflicts = a2conf + a3conf + mmissing + numeric_mismatch
     unresolved = undocumented + code_conflicts
     verified = all(x.get("http_status") == 200 and re.fullmatch(r"[a-f0-9]{64}", x.get("sha256",""))
                    for x in sources.values())
     if structural:
         status = "BLOCKED_STRUCTURAL_SOURCE_ISSUES"
+    elif numeric_mismatch:
+        status = "BLOCKED_NUMERIC_CODE_CONFLICTS"
     elif unresolved:
         status = "BLOCKED_UNDOCUMENTED_OR_CONFLICTING_CODE_ROWS"
     elif missing and dispositions:
@@ -406,6 +421,8 @@ def reconcile(geo, m49, sources, dispositions=None):
         "geonames_exact_alpha2_alpha3_pair_matches":exact, "un_m49_exact_alpha2_alpha3_pair_matches":mexact,
         "geonames_pairs_not_present_in_un_m49":missing, "geonames_alpha2_match_alpha3_conflicts":a2conf,
         "geonames_alpha3_match_alpha2_conflicts":a3conf, "un_m49_pairs_missing_or_conflicting":mmissing,
+        "geonames_numeric3_equals_un_m49_numeric_code_on_exact_pairs":int(numeric_equal),
+        "alpha2_alpha3_matched_but_numeric_code_conflicts":numeric_mismatch,
         "numeric3_equals_m49_code_diagnostic_only":int(numeric_equal), "duplicate_code_groups":duplicates,
         "documented_exception_rows":documented, "undocumented_exception_rows":undocumented,
         "current_destination_area_exceptions":current_destination_exceptions,
@@ -416,7 +433,8 @@ def reconcile(geo, m49, sources, dispositions=None):
       "interpretation":{
         "source_retrieval_metadata_verified":verified,
         "identity_join":"exact alpha-2 + alpha-3 pair; names are not identity keys",
-        "un_m49_numeric_code_is_iso_numeric3":False,
+        "un_m49_numeric_code_is_iso_numeric3":"CANDIDATE_WHERE_EXACT_ALPHA_PAIR_AND_GEONAMES_NUMERIC_MATCH",
+        "numeric_code_basis":"ISO states the numeric country code is assigned by the UN; for an exact UN M49 alpha-2/alpha-3 match, the M49 numeric value is the UN-issued numeric-code candidate when GeoNames' numeric value agrees.",
         "direct_iso_country_codes_collection_snapshot":"NOT_CAPTURED_BY_THIS_AUDIT",
         "automatic_code_replacement_authorized":False,
         "source_code_exception_dispositions":"PASS" if dispositions and undocumented == 0 else "NOT_PERFORMED",
@@ -469,8 +487,8 @@ def write_report(report, rows, out, catalog_package=None):
         catalog_fields=[
             "record_key","geonames_id","canonical_display_name_candidate","geonames_source_name",
             "catalog_role","entity_kind","record_status_candidate","proposed_selectable_as_destination",
-            "operational_selectable","sovereignty_claim","iso_alpha2","iso_alpha3","iso_numeric3",
-            "source_alpha2","source_alpha3","source_numeric3","iso_numeric3_candidate_from_geonames",
+            "operational_selectable","sovereignty_claim","iso_alpha2_candidate","iso_alpha3_candidate","iso_numeric3_candidate",
+            "iso_code_evidence_status","source_alpha2","source_alpha3","source_numeric3","iso_numeric3_candidate_from_geonames",
             "m49_current_code","m49_current_row_present","source_identity_status","disposition_status","valid_to","classification_note"
         ]
         with (out/"country-area-destination-catalog-candidate.csv").open("w",newline="",encoding="utf-8") as f:
@@ -483,9 +501,10 @@ def write_report(report, rows, out, catalog_package=None):
                     "entity_kind":r["entity_kind"],"record_status_candidate":r["record_status_candidate"],
                     "proposed_selectable_as_destination":r["proposed_selectable_as_destination"],
                     "operational_selectable":r["operational_selectable"],"sovereignty_claim":r["sovereignty_claim"],
-                    "iso_alpha2":r["iso_codes"].get("alpha2"),"iso_alpha3":r["iso_codes"].get("alpha3"),
-                    "iso_numeric3":r["iso_codes"].get("numeric3"),"source_alpha2":r["source_codes_preserved"]["alpha2"],
-                    "source_alpha3":r["source_codes_preserved"]["alpha3"],"source_numeric3":r["source_codes_preserved"]["numeric3"],
+                    "iso_alpha2_candidate":r["iso_code_candidates"].get("alpha2"),"iso_alpha3_candidate":r["iso_code_candidates"].get("alpha3"),
+                    "iso_numeric3_candidate":r["iso_code_candidates"].get("numeric3"),"iso_code_evidence_status":r["iso_code_evidence_status"],
+                    "source_alpha2":r["source_codes_preserved"]["alpha2"],"source_alpha3":r["source_codes_preserved"]["alpha3"],
+                    "source_numeric3":r["source_codes_preserved"]["numeric3"],
                     "iso_numeric3_candidate_from_geonames":r["iso_numeric3_candidate_from_geonames"],
                     "m49_current_code":r["m49_current_code"],"m49_current_row_present":r["m49_current_row_present"],
                     "source_identity_status":r["source_identity_status"],"disposition_status":r["disposition_status"],
@@ -514,7 +533,7 @@ def main(argv=None):
         print(f"BLOCKED_COUNTRY_AREA_CODE_AUDIT: {type(exc).__name__}: {exc}",file=sys.stderr); return 2
     write_report(report,rows,a.output_dir,catalog_package)
     print(json.dumps({"status":report["status"],"counts":report["counts"]},indent=2))
-    return 1 if report["status"]=="BLOCKED_STRUCTURAL_SOURCE_ISSUES" else 0
+    return 1 if report["status"].startswith("BLOCKED_") else 0
 
 if __name__=="__main__":
     raise SystemExit(main())
