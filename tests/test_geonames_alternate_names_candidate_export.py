@@ -156,7 +156,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             self.assertEqual(len(rows),1)
             self.assertEqual(rows[0]["reason_code"],"INVALID_BOOLEAN_FLAGS")
             self.assertEqual(rows[0]["geonames_id_candidate"],"1")
-            self.assertEqual(base64.b64decode(rows[0]["raw_line_base64"]).decode("utf-8").strip(),alt_row(1,1,"en","A",("yes","0","0","0")))
+            self.assertEqual(base64.b64decode(rows[0]["raw_line_base64"]).decode("utf-8").rstrip("\r\n"),alt_row(1,1,"en","A",("yes","0","0","0")))
 
 
     def test_quarantines_wrong_width_and_invalid_utf8_rows_with_exact_source_bytes(self):
