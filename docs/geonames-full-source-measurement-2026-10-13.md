@@ -13,7 +13,16 @@ Captured during CI at `2026-10-12T22:05:13Z`. These are measurements of the offi
 | `admin1CodesASCII.txt` | **3,865** | 3,865 unique code keys |
 | `admin2Codes.txt` | **47,642** | 47,642 unique code keys |
 
-The source dump contains **31,490 Kenya rows** and **103,762 Japan rows**. These are GeoNames source-feature counts, not counts of approved or selectable Job Grid locations.
+The source dump contains **253 distinct two-letter/nonblank country-code values**, **31,490 Kenya rows**, and **103,762 Japan rows**. This is not a count of sovereign countries: GeoNames also contains territory and other geographic entities. These are GeoNames source-feature counts, not counts of approved or selectable Job Grid locations.
+
+Additional source-candidate and relationship measures from the full audit:
+- **4,999,249** populated-place rows matched the current-place feature-code candidate allowlist.
+- **494,153** administrative-area rows matched the current-admin feature-code candidate allowlist.
+- **232,588** allCountries rows had a non-empty admin1 reference whose exact composite key was not present in admin1CodesASCII.
+- **161,172** allCountries rows had a non-empty admin2 reference whose exact composite key was not present in admin2Codes.
+- **0** alternate-name rows pointed to a GeoNames ID absent from this allCountries source snapshot.
+
+These are raw candidate/reference metrics. A missing administrative key is not automatically an invalid place; codes such as country-specific legacy/placeholder values require their own evidence-based disposition. Keep those rows searchable only when place identity/type and country context are supported, and do not fabricate parent links.
 
 ## Source fingerprints captured by CI
 
@@ -36,6 +45,10 @@ Official download source: [GeoNames export dump](https://download.geonames.org/e
 | `admin2Codes.txt` | 2,366,368 | 2,366,368 | Size match only |
 
 The authoring workspace could not calculate SHA-256 for the uploaded raw attachments. Equal text-file size does **not** prove identical bytes, and the two ZIP archives are demonstrably not the same lengths as the CI downloads. Therefore, the row counts above are verified for the CI-downloaded current source snapshot; the exact row counts inside the uploaded ZIP byte streams remain unverified. The captured SHA-256 values above must not be labelled as hashes of the uploaded attachments.
+
+## CI artifact
+
+The full JSON and Markdown generated report is attached to the successful full-source audit job in [Phase 0 CI run 38314963388](https://github.com/job-grid/job-grid/actions/runs/38314963388). The workflow did not upload the large source archives themselves.
 
 ## How this moves Job Grid forward
 
