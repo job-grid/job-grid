@@ -18,6 +18,10 @@ Administrative levels are **optional display metadata**, not a parent-child grap
 - The two-letter country check verifies shape only. It does **not** certify official ISO status, legal geography, residence or employment eligibility.
 - A provider ID is not an internal Job Grid place ID. Before using this data for authoritative job filtering, a trusted server endpoint must resolve and validate the provider identity against the approved catalog. Do not trust a browser-sent country/provider pairing as proof.
 
+## RLS review test
+
+A non-destructive structural test is provided at `supabase/tests/location_preference_rls_contract.sql`. It checks that RLS is enabled, the four expected policies exist, each applies only to the authenticated role, and the policy command has the appropriate `USING` / `WITH CHECK` shape. It does not claim to replace the two-user runtime isolation test; run both only against the verified Job Grid project after the reviewed migration is applied.
+
 ## Migration handling
 
 Migration: `supabase/migrations/20261012183500_add_user_location_preferences.sql`.
