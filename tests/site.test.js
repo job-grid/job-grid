@@ -147,18 +147,27 @@ test("selected location emits a versioned country-scoped integration payload wit
 
 test("proposed profile-location migration enforces owner-scoped RLS and safe coordinates", async () => {
   const migration = await readFile(new URL("../supabase/migrations/20261012183500_add_user_location_preferences.sql", import.meta.url), "utf8");
-  assert.match(migration, /CREATE TABLE public\\.user_location_preferences/);
-  assert.match(migration, /REFERENCES auth\\.users \\(id\\) ON DELETE CASCADE/);
-  assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
-  assert.match(migration, /REVOKE ALL ON TABLE public\\.user_location_preferences FROM PUBLIC, anon/);
-  assert.match(migration, /TO authenticated/);
-  assert.match(migration, /auth\\.uid\\(\\) = user_id/);
-  assert.match(migration, /WITH CHECK \\(auth\\.uid\\(\\) = user_id\\)/);
-  assert.match(migration, /latitude BETWEEN -90 AND 90/);
-  assert.match(migration, /longitude BETWEEN -180 AND 180/);
-  assert.match(migration, /NOT NULL DEFAULT '\[\]'::jsonb/);
-  assert.match(migration, /DO NOT APPLY/);
+  for (const fragment of [
+    "CREATE TABLE public.user_location_preferences",
+    "REFERENCES auth.users (id) ON DELETE CASCADE",
+    "ENABLE ROW LEVEL SECURITY",
+    "REVOKE ALL ON TABLE public.user_location_preferences FROM PUBLIC, anon",
+    "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_location_preferences TO authenticated",
+    "CREATE POLICY user_location_preferences_select_own",
+    "CREATE POLICY user_location_preferences_insert_own",
+    "CREATE POLICY user_location_preferences_update_own",
+    "CREATE POLICY user_location_preferences_delete_own",
+    "auth.uid() = user_id",
+    "WITH CHECK (auth.uid() = user_id)",
+    "latitude BETWEEN -90 AND 90",
+    "longitude BETWEEN -180 AND 180",
+    "jsonb_typeof(admin_areas) = 'array'",
+    "DO NOT APPLY"
+  ]) {
+    assert.ok(migration.includes(fragment), `Expected migration to include: ${fragment}`);
+  }
 });
+
 
 test("remote place text is escaped before HTML insertion", () => {
   assert.equal(escapeLocationText('<img src="x" onerror="bad">'), "&lt;img src=&quot;x&quot; onerror=&quot;bad&quot;&gt;");
