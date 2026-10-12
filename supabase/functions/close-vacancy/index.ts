@@ -194,6 +194,6 @@ export default {
       return jsonResponse({ error: code, request_id: requestId }, errorStatus(code), headers);
     }
 
-    return jsonResponse({ ...result, request_id: requestId }, 200, headers);
+    return jsonResponse({ ...result, response_request_id: requestId }, 200, headers);
   },
 };

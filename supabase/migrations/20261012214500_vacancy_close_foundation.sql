@@ -102,7 +102,7 @@ CREATE TABLE public.vacancy_audit_events (
 CREATE TABLE public.vacancy_closure_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   vacancy_id uuid NOT NULL REFERENCES public.vacancies(id) ON DELETE RESTRICT,
-  actor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  actor_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   idempotency_key text NOT NULL
     CHECK (idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'),
   reason_code text NOT NULL REFERENCES public.vacancy_closure_reason_codes(code) ON DELETE RESTRICT,
@@ -305,6 +305,12 @@ BEGIN
   END IF;
 
   IF v_vacancy.status <> 'published' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'INVALID_STATE');
+  END IF;
+
+  IF v_vacancy.published_at IS NULL
+     OR v_vacancy.published_at > now()
+     OR (v_vacancy.expires_at IS NOT NULL AND v_vacancy.expires_at <= now()) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'INVALID_STATE');
   END IF;
 
