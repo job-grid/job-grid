@@ -6,6 +6,10 @@ const migration = await readFile(
   new URL("../supabase/migrations/20261012214500_vacancy_close_foundation.sql", import.meta.url),
   "utf8",
 );
+const coreSchema = await readFile(
+  new URL("../supabase/tests/phase2a_schema_contract.sql", import.meta.url),
+  "utf8",
+);
 const handler = await readFile(
   new URL("../supabase/functions/close-vacancy/index.ts", import.meta.url),
   "utf8",
@@ -95,8 +99,25 @@ test("gateway JWT verification is enabled and live-release gates remain explicit
   assert.ok(docs.includes("No migration was executed"));
 });
 
+test("Close Job migration is additive and does not create a competing core schema", () => {
+  for (const table of ["organizations", "organization_memberships", "platform_roles", "vacancies"]) {
+    assert.equal(
+      new RegExp("CREATE\\s+TABLE\\s+(?:public\\.)?" + table + "\\b", "i").test(migration),
+      false,
+      "Close Job migration must not create canonical core table " + table,
+    );
+  }
+  assert.ok(migration.includes("ADD COLUMN IF NOT EXISTS closed_at"));
+  assert.ok(migration.includes("ADD COLUMN IF NOT EXISTS closure_reason_code"));
+  assert.ok(coreSchema.includes("CREATE TABLE public.organizations"));
+  assert.ok(coreSchema.includes("CREATE TABLE public.organization_memberships"));
+  assert.ok(coreSchema.includes("CREATE TABLE public.vacancies"));
+});
+
 test("anonymous and authenticated table grants do not expose internal creator identity", () => {
   assert.ok(migration.includes("GRANT SELECT ("));
-  assert.equal(/GRANT SELECT ON public\.vacancies TO authenticated/i.test(migration), false);
-  assert.ok(migration.includes("created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL"));
+  assert.equal(/GRANT SELECT ON public\\.vacancies TO authenticated/i.test(migration), false);
+  assert.ok(coreSchema.includes("created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL"));
+  assert.equal(/created_by[\\s,)]/.test(migration.split("GRANT SELECT (")[1] ?? ""), true);
+  assert.equal(/REVOKE ALL ON public\\.organizations|REVOKE ALL ON public\\.organization_memberships/i.test(migration), false);
 });
