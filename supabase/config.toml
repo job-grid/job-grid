@@ -1,0 +1,5 @@
+# Proposed Edge Function configuration for the reviewed Close Job backend.
+# Deploy only after runtime, secrets, migration and recovery gates are approved.
+
+[functions.close-vacancy]
+verify_jwt = true

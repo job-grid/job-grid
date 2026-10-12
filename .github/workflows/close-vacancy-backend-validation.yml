@@ -1,0 +1,38 @@
+name: Close Job backend validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/close-vacancy/**"
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - "tests/close-vacancy-backend-contract.test.js"
+      - "docs/close-vacancy-supabase-integration.md"
+      - ".github/workflows/close-vacancy-backend-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  edge-function-typecheck:
+    name: Close Job / Edge Function typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check trusted Edge Function
+        run: deno check --no-lock supabase/functions/close-vacancy/index.ts
+      - name: Check proposed config and test files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f supabase/config.toml
+          test -f supabase/functions/close-vacancy/deno.json
+          test -f supabase/migrations/20261012214500_vacancy_close_foundation.sql
+          test -f tests/close-vacancy-backend-contract.test.js
