@@ -85,6 +85,14 @@ INSERT INTO public.vacancies (
     'JOB-B002', 'viewer-close', 'Viewer Permission Test',
     'Support business operations and maintain regular status reporting.',
     'Kisumu', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000009',
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'JOB-A007', 'concurrent-close', 'Concurrent Close Test',
+    'Coordinate a test vacancy used for concurrent idempotency regression checks.',
+    'Nairobi', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   );
 
 DO $column_grant_test$
@@ -98,16 +106,29 @@ BEGIN
 END;
 $column_grant_test$;
 
--- Test-only stand-in for a future applications table. A closure must retain the
--- vacancy row and must not delete any rows related to it.
-CREATE TABLE public.__vacancy_applications_probe (
+-- Disposable contract fixture using the Phase 2A canonical job_applications name.
+-- The live project has no recruitment schema yet; this fixture does not claim to be a production table.
+CREATE TABLE public.job_applications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  vacancy_id uuid NOT NULL REFERENCES public.vacancies(id) ON DELETE RESTRICT
+  vacancy_id uuid NOT NULL REFERENCES public.vacancies(id) ON DELETE RESTRICT,
+  candidate_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'submitted',
+  submitted_at timestamptz NOT NULL DEFAULT now(),
+  withdrawn_at timestamptz,
+  candidate_snapshot_ref text,
+  idempotency_key_ref text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
-INSERT INTO public.__vacancy_applications_probe (id, vacancy_id)
-VALUES (
+INSERT INTO public.job_applications (
+  id, vacancy_id, candidate_user_id, status, candidate_snapshot_ref, idempotency_key_ref
+) VALUES (
   '30000000-0000-4000-8000-000000000001',
-  '20000000-0000-4000-8000-000000000001'
+  '20000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000002',
+  'submitted',
+  'candidate-snapshot-fixture-001',
+  'application-idempotency-fixture-001'
 );
 
 SET ROLE service_role;
@@ -292,6 +313,75 @@ END;
 $test$;
 RESET ROLE;
 
+-- Force the audit insert to fail for one eligible published vacancy and prove
+-- the vacancy update and idempotency row roll back with the audit event.
+CREATE OR REPLACE FUNCTION public.__test_fail_vacancy_audit_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $function$
+BEGIN
+  IF NEW.vacancy_id = '20000000-0000-4000-8000-000000000003'::uuid THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'forced audit insert failure for atomicity test';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER __test_fail_vacancy_audit_insert
+  BEFORE INSERT ON public.vacancy_audit_events
+  FOR EACH ROW EXECUTE FUNCTION public.__test_fail_vacancy_audit_insert();
+
+SET ROLE service_role;
+DO $atomicity_test$
+DECLARE
+  row_status text;
+  row_version integer;
+  result_count integer;
+BEGIN
+  BEGIN
+    PERFORM public.close_published_vacancy(
+      '20000000-0000-4000-8000-000000000003',
+      '00000000-0000-4000-8000-000000000001',
+      'filled',
+      2,
+      '40000000-0000-4000-8000-000000000020',
+      'atomicity-request-0001'
+    );
+    RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'expected audit insert failure did not occur';
+  EXCEPTION
+    WHEN SQLSTATE 'P0001' THEN
+      NULL;
+  END;
+
+  SELECT status, version INTO row_status, row_version
+    FROM public.vacancies
+   WHERE id = '20000000-0000-4000-8000-000000000003';
+  IF row_status <> 'published' OR row_version <> 2 THEN
+    RAISE EXCEPTION 'vacancy transition was not rolled back after audit failure';
+  END IF;
+
+  SELECT count(*) INTO result_count
+    FROM public.vacancy_audit_events
+   WHERE vacancy_id = '20000000-0000-4000-8000-000000000003';
+  IF result_count <> 0 THEN
+    RAISE EXCEPTION 'audit event persisted despite failed transactional closure';
+  END IF;
+
+  SELECT count(*) INTO result_count
+    FROM public.vacancy_closure_requests
+   WHERE vacancy_id = '20000000-0000-4000-8000-000000000003'
+     AND idempotency_key = 'atomicity-request-0001';
+  IF result_count <> 0 THEN
+    RAISE EXCEPTION 'idempotency record persisted despite failed transactional closure';
+  END IF;
+END;
+$atomicity_test$;
+RESET ROLE;
+
+DROP TRIGGER __test_fail_vacancy_audit_insert ON public.vacancy_audit_events;
+DROP FUNCTION public.__test_fail_vacancy_audit_insert();
+
 DO $public_read_test$
 DECLARE
   row_count integer;
@@ -315,7 +405,7 @@ BEGIN
     RAISE EXCEPTION 'expected exactly one durable idempotency row, found %', row_count;
   END IF;
   SELECT count(*) INTO row_count
-    FROM public.__vacancy_applications_probe
+    FROM public.job_applications
    WHERE vacancy_id = '20000000-0000-4000-8000-000000000001';
   IF row_count <> 1 THEN
     RAISE EXCEPTION 'closure modified related application probe row';
@@ -340,6 +430,9 @@ DO $anon_test$
 DECLARE
   row_count integer;
 BEGIN
+  IF has_function_privilege('anon', 'public.is_active_org_member(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anonymous role can execute the membership helper';
+  END IF;
   SELECT count(*) INTO row_count
     FROM public.vacancies
    WHERE id = '20000000-0000-4000-8000-000000000001';
@@ -378,6 +471,9 @@ DO $member_test$
 DECLARE
   row_count integer;
 BEGIN
+  IF NOT has_function_privilege('authenticated', 'public.is_active_org_member(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated role cannot execute the membership helper';
+  END IF;
   SELECT count(*) INTO row_count
     FROM public.vacancies
    WHERE id = '20000000-0000-4000-8000-000000000001';
