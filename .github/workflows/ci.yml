@@ -1880,6 +1880,7 @@ jobs:
             --country-info "$work/countryInfo.txt" \
             --m49-html "$work/un-m49-overview.html" \
             --source-manifest "$work/source-manifest.json" \
+            --exception-dispositions docs/geonames-un-m49-exception-dispositions-2026-10-12.json \
             --output-dir "$work/output"
           python3 - "$work/output/country-area-code-crosswalk-aggregate.json" <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import json,sys
@@ -1893,12 +1894,19 @@ jobs:
           print("- Automatic code replacement: not authorized.")
           rows_path = Path(sys.argv[1]).with_name("country-area-code-crosswalk-rows.json")
           rows = json.loads(rows_path.read_text(encoding="utf-8"))
-          review_rows = [row for row in rows if row.get("source_side") == "GeoNames countryInfo" and row.get("match_status") != "MATCHED_ALPHA2_ALPHA3_PAIR"]
-          print("### GeoNames source-code rows for manual review")
-          if not review_rows:
-              print("- None.")
-          for row in review_rows:
-              print(f"- {row.get('name')} — {row.get('alpha2')}/{row.get('alpha3')}; GeoNames ID {row.get('geonames_id')}; {row.get('match_status')}")
+          exception_rows = [row for row in rows if row.get("source_side") == "GeoNames countryInfo" and row.get("match_status") != "MATCHED_ALPHA2_ALPHA3_PAIR"]
+          undocumented = [row for row in exception_rows if row.get("exception_disposition_status") != "DOCUMENTED"]
+          print("### GeoNames source-code exception dispositions")
+          if undocumented:
+              for row in undocumented:
+                  print(f"- BLOCKED: {row.get('name')} — {row.get('alpha2')}/{row.get('alpha3')}; GeoNames ID {row.get('geonames_id')}; disposition missing")
+              raise SystemExit("Undocumented source-code exception detected.")
+          if not exception_rows:
+              print("- No non-M49 GeoNames source rows.")
+          for row in exception_rows:
+              print(f"- {row.get('name')} — {row.get('canonical_display_name')}; role={row.get('catalog_role')}; status={row.get('catalog_status')}; selectable_as_destination={row.get('selectable_as_destination')}; source tuple preserved; no automatic replacement")
+          print("- Current destination areas are kept independently searchable without making a sovereignty claim.")
+          print("- Historical former entities remain inactive/nonselectable and are retained for historical reference.")
           PY
 
       - name: Upload country/area code crosswalk evidence
@@ -1910,5 +1918,6 @@ jobs:
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-aggregate.json
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.csv
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.json
+            docs/geonames-un-m49-exception-dispositions-2026-10-12.json
           if-no-files-found: error
           retention-days: 7
