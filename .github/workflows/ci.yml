@@ -2421,3 +2421,59 @@ jobs:
             docs/geonames-un-m49-exception-dispositions-2026-10-12.json
           if-no-files-found: error
           retention-days: 7
+
+  geonames-full-source-audit:
+    name: Phase 0 CI / Full GeoNames source audit
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Download the four official GeoNames source files
+        shell: bash
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/geonames-full-source
+        run: |
+          set -euo pipefail
+          mkdir -p "$SOURCE_DIR"
+          for filename in allCountries.zip alternateNamesV2.zip admin1CodesASCII.txt admin2Codes.txt; do
+            url="https://download.geonames.org/export/dump/$filename"
+            status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors --output "$SOURCE_DIR/$filename" --write-out '%{http_code}' "$url")"
+            test "$status" = "200"
+            test -s "$SOURCE_DIR/$filename"
+            echo "Fetched $filename ($(wc -c < "$SOURCE_DIR/$filename") bytes) from the official GeoNames dump directory."
+          done
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > "$SOURCE_DIR/retrieved-at.txt"
+
+      - name: Test source auditor on small synthetic fixtures
+        shell: bash
+        run: python3 -m unittest discover -s tests -p 'test_geonames_full_source_audit.py' -v
+
+      - name: Measure full files, verify ZIP CRCs, and calculate source fingerprints
+        shell: bash
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/geonames-full-source
+          OUTPUT_DIR: ${{ runner.temp }}/geonames-full-source-audit
+        run: |
+          set -euo pipefail
+          retrieved_at="$(cat "$SOURCE_DIR/retrieved-at.txt")"
+          python3 scripts/geonames-full-source-audit.py --source-dir "$SOURCE_DIR" --output-dir "$OUTPUT_DIR" --retrieved-at-utc "$retrieved_at" | tee "$OUTPUT_DIR/console-summary.json"
+          cat "$OUTPUT_DIR/geonames-full-source-audit.md" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload compact measurements and row-count report (not the large source archives)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-full-source-audit-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-full-source-audit/geonames-full-source-audit.json
+            ${{ runner.temp }}/geonames-full-source-audit/geonames-full-source-audit.md
+            ${{ runner.temp }}/geonames-full-source-audit/console-summary.json
+          if-no-files-found: error
+          retention-days: 14
