@@ -110,14 +110,14 @@ def codes_for(row):
 
 def key_for(country_code: str, codes: list[str], level: int):
     """Return an exact composite key or an explicit raw-code failure status."""
-    if not country_code:
+    if not country_code.strip():
         return None, "BLOCKED_COUNTRY_CODE_MISSING"
     prefix = codes[:level]
     if len(prefix) != level:
         return None, "BLOCKED_ADMIN_CODE_DEPTH_UNAVAILABLE"
     if any(code.strip() == "00" for code in prefix):
         return None, "BLOCKED_RAW_ADMIN_CODE_00_SENTINEL"
-    if any(not code for code in prefix):
+    if any(not code.strip() for code in prefix):
         return None, "BLOCKED_RAW_ADMIN_CODE_GAP"
     return tuple([country_code, *prefix]), "KEY_READY"
 
