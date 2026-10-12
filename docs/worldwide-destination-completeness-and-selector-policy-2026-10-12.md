@@ -22,9 +22,9 @@ The read-only UN M49 alpha-code audit currently measures:
 - 4 GeoNames alpha-code pairs not present in that UN table;
 - zero alpha-code conflicts and zero duplicate code groups.
 
-See [measured code cross-check report](geonames-un-m49-crosswalk-audit-2026-10-12.md) and its [short-lived source-pinned row-level artifact](https://github.com/job-grid/job-grid/actions/runs/38186018959/artifacts/11719920819). The four unmatched rows are intentionally shown in the CI job summary and artifact for human disposition. Do not infer their identity or replacement code from similar names, and do not remove them automatically.
+See [the measured code cross-check report](geonames-un-m49-crosswalk-audit-2026-10-12.md) and [country/area candidate package in CI](https://github.com/job-grid/job-grid/actions/runs/38190820033/artifacts/11721722211). All four rows absent from the live M49 table now have versioned, machine-checked dispositions in [the exception manifest](geonames-un-m49-exception-dispositions-2026-10-12.json): Kosovo and Taiwan are proposed as current geographic destination areas, while Serbia and Montenegro and Netherlands Antilles are historical-only references. Their raw source tuples are retained, with no code replacements or live selector changes. The test fails closed if a new source tuple lacks a disposition, or if a documented exception disappears or becomes matched in the live comparison.
 
-The UN M49 page displays ISO-assigned alpha codes but its numerical code is maintained for UN statistical use. This audit does not constitute a direct ISO Country Codes Collection snapshot and does not establish ISO numeric-3 conformance. Where a country/area lacks an ISO code in the approved source, keep nullable ISO fields and a separate internal UUID/source identifier; use an explicit reviewed entity kind and selectability decision.
+The UN M49 page displays ISO-assigned alpha codes but its numerical code is maintained for UN statistical use. This audit does not constitute a direct current ISO Country Codes Collection/OBP snapshot and does not establish ISO numeric-3 conformance for ordinary rows. Where an ISO code is unverified or not assigned, keep nullable ISO fields and a separate internal UUID/source identifier. A geographic destination being searchable is not a sovereignty or visa-eligibility determination.
 
 ## 3. Candidate destinations from GeoNames
 
@@ -32,7 +32,8 @@ The source audit is pinned to GeoNames `allCountries.zip`, whose 19-field lines 
 - a country/source identity aggregate report;
 - an aggregate destination feature coverage JSON;
 - a per-source-country-code CSV showing counts of all source records, feature class, candidate populated places and administrative levels;
-- a short-lived source manifest and the existing crosswalk exception audit rows.
+- a short-lived source manifest and the existing crosswalk exception audit rows;
+- a country/area candidate master CSV/JSON that accounts for all 252 `countryInfo` entries by exact UN M49 alpha-code pair or explicit exception disposition.
 
 The proposed current populated-place candidate feature-code set is explicitly limited to:
 `PPL`, `PPLA`, `PPLA2`, `PPLA3`, `PPLA4`, `PPLA5`, `PPLC`, `PPLCD`, `PPLF`, `PPLG`, `PPLL`, `PPLR`, `PPLS`.
@@ -82,14 +83,13 @@ See [the current evidence report](geonames-kenya-githunguri-parent-candidate-sea
 
 ## 7. Required implementation order
 
-1. Finish the current code cross-check and individually disposition its four unmatched GeoNames rows.
-2. Review the new all-country destination feature coverage artifact and per-country zero/gap counts.
-3. Resolve country/area classification and selectability policy, including temporary/non-standard codes.
-4. Choose the initial selector feature scope and approve the populated-place code mapping.
-5. Produce a row-level destination reconciliation for that source snapshot, including duplicate/ambiguous IDs and all unresolved country/parent exceptions.
-6. Finish source-specific parent-path reviews without fabricating edges.
-7. Review the logical schema, source-match states, relationship history, RLS and admin permissions in a separate implementation PR.
-8. Independently verify backup/restore readiness before authorizing any database schema/import work.
-9. Only then implement and validate the schema/import through the reviewed migration path; keep production execution under its own authorization.
+1. **Completed for the current country/area source:** the live source-code comparison and exception disposition now pass CI; the row-level 252-record candidate package is emitted from the current source snapshot.
+2. Review the candidate country/area package labels, proposed 250 current destination options and two historical-only references. The artifact explicitly has zero operationally enabled rows.
+3. Review the all-country destination feature coverage artifact and per-country zero/gap counts; approve the city/town/locality and administrative-level feature scope.
+4. Produce a row-level destination reconciliation from the pinned global place snapshot, including country-code assignment, duplicate/ambiguous IDs, alias/language coverage, and unresolved parent paths.
+5. Finish source-specific parent-path reviews without fabricating edges. The country-area code cross-check does not clear the 128-record administrative parent-path review.
+6. Review the logical schema, source-match states, relationship history, RLS and admin permissions in a separate implementation PR.
+7. Independently verify backup/restore readiness before authorizing any database schema/import work.
+8. Only then implement and validate the schema/import through the reviewed migration path; keep production execution under its own authorization.
 
-PR #27 remains a draft. The destination coverage additions remain evidence tooling until CI has successfully exercised the latest changes and the resulting gaps have received review.
+PR #27 remains a draft. The country/area candidate package is review/import-planning evidence, not a live database seed or selector. Destination feature-scope completeness and production acceptance remain open.
