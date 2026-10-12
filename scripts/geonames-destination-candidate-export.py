@@ -216,17 +216,20 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
             name = fields[1].strip()
             coordinates = coordinate_status(fields[4], fields[5])
             coordinate_status_counts[coordinates] += 1
+            row_quality_hold = False
             if coordinates == "INVALID_WGS84":
                 invalid_coordinate_rows += 1
                 disposition = "HELD_INVALID_WGS84_COORDINATES"
                 proposed_status = "review_required"
-                record_quality_hold_rows += 1
+                row_quality_hold = True
             elif coordinates == "MISSING_WGS84":
                 missing_coordinate_rows += 1
             if not name:
                 empty_canonical_name_rows += 1
                 disposition = "HELD_MISSING_CANONICAL_NAME"
                 proposed_status = "review_required"
+                row_quality_hold = True
+            if row_quality_hold:
                 record_quality_hold_rows += 1
             source_country = fields[8].strip()
             country, country_status = classify_country(source_country, country_by_code, exception_by_id)
