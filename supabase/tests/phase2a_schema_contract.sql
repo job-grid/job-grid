@@ -91,3 +91,7 @@ ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vacancies ENABLE ROW LEVEL SECURITY;
+
+-- Baseline tenant-read grants from the Phase 2A core contract; RLS is added
+-- and tested by the lifecycle integration migration below.
+GRANT SELECT ON public.organizations, public.organization_memberships TO authenticated;
