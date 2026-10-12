@@ -674,3 +674,11 @@ A reproducible CI audit now compares GeoNames countryInfo alpha-2/alpha-3 pairs 
 
 This public cross-check is not a direct ISO Country Codes Collection download. The direct ISO-package provenance question is not falsely marked closed. UN M49 numeric codes are statistical identifiers, not treated as ISO numeric-3 proof. No codes, schema, database, migrations, seeds, imports, production or deployment state were changed. Worldwide destination completeness and the remaining hierarchy/association review gates remain open.
 
+## 5R. Destination-source feature coverage audit — 2026-10-12
+
+The source-pinned GeoNames country-master audit has been extended to measure, from the same streamed `allCountries.zip` snapshot, feature coverage by raw GeoNames source-country code. It records current populated-place candidates using a conservative documented feature-code set; records held out as historical/abandoned/destroyed; other `PPL*` types; and administrative `ADM1`–`ADM5` row totals. The row-level coverage export is a source-code-keyed CSV plus JSON in the CI artifact, while the aggregate remains free of place names and source IDs.
+
+Candidate place IDs and current administrative IDs are now checked for source identity shape and duplicate groups. Duplicate or malformed candidate identities make the source audit block rather than be silently dropped. The output explicitly keeps `selectable_destinations_approved=false` and `worldwide_destination_completeness=NOT_ESTABLISHED_BY_SOURCE_COUNTS_ALONE`: source counts are not an assertion that each place is current, unique at the internal identity level, or parent-linked correctly.
+
+The acceptance rules and feature-code boundary are documented in [Worldwide destination completeness and selector policy](worldwide-destination-completeness-and-selector-policy-2026-10-12.md). Latest source-feature coverage counts remain pending the Phase 0 run triggered by the current audit changes. No data, schema, parent path, migration, seed, import or production state was changed.
+
