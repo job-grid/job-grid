@@ -285,6 +285,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
         "status": "PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED",
         "scope": {
             "candidate_export": candidate_gzip.name,
+            "country_area_source": "pinned GeoNames countryInfo.txt; country source identifiers only",
             "candidate_ids_are_internal_catalog_ids": False,
             "candidate_ids_are_source_geonames_ids": True,
             "raw_language_names_flags_dates_preserved": True,
@@ -294,8 +295,9 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "alternate_names_source": source_meta,
             "alternate_names_member_name": member_name,
             "alternate_names_member_sha256": member_sha,
-            "candidate_export_size_bytes": candidate_gzip.stat().st_size,
-            "candidate_export_sha256": sha256_path(candidate_gzip)[1],
+            "country_info_source": country_area_source,
+            "destination_candidate_export_size_bytes": candidate_gzip.stat().st_size,
+            "destination_candidate_export_sha256": sha256_path(candidate_gzip)[1],
         },
         "counts": {
             "alternate_names_source_rows_scanned": source_rows,
