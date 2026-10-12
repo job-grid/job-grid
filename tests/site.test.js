@@ -113,9 +113,11 @@ test("place normalization keeps the selected country and allows missing parent l
     { id: 2, name: "Paris", country_code: "FR", country: "France", feature_code: "PPLA" },
     { id: 1, name: "Kisumu duplicate", country_code: "KE", feature_code: "PPL" },
     { id: 3, name: "Not a place", country_code: "KE", feature_code: "STM" },
+    { id: 4, name: "Unknown feature type", country_code: "KE" },
     { name: "Missing identifier", country_code: "KE", feature_code: "PPL" }
   ] }, "KE");
-  assert.equal(result.length, 1);
+  assert.equal(result.length, 1, "unclassified feature types must stay review-only");
+  assert.equal(result.some((place) => place.name === "Unknown feature type"), false);
   assert.equal(result[0].name, "Kisumu");
   assert.equal(result[0].admin2, "");
   assert.equal(buildPlaceLabel(result[0]), "Kisumu, Kisumu County, Kenya");
