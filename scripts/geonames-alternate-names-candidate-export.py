@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Stream GeoNames alternateNamesV2 into a source-pinned destination alias review package.
+"""Stream GeoNames alternateNamesV2 into a source-pinned country/destination alias package.
 
-Only aliases whose GeoNames ID exists in the source-pinned destination candidate CSV
-are exported. Raw values, language, flags and effective dates are preserved. This
-does not approve aliases, internal identity matches, selectability, or database writes.
+Aliases are joined only by exact GeoNames ID to either the pinned countryInfo source
+IDs or the source-pinned place/admin candidate export. Raw values, language, flags
+and effective dates are preserved. This does not approve internal identity matches,
+selectability, administrative parentage, or database writes.
 """
 from __future__ import annotations
 
@@ -242,9 +243,9 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     if flag_malformed_rows:
         raise ValueError(f"Source alias boolean flags invalid in {flag_malformed_rows} row(s); export blocked.")
     if duplicate_alias_ids:
-        raise ValueError(f"Duplicate alternateName IDs within destination scope: {duplicate_alias_ids}.")
+        raise ValueError(f"Duplicate alternateName IDs within country/area and destination scope: {duplicate_alias_ids}.")
     if exported_rows == 0:
-        raise ValueError("No alternate-name rows matched the destination candidate IDs.")
+        raise ValueError("No alternate-name rows matched the country/area or destination source IDs.")
     if exported_rows != len(alias_ids_seen):
         raise ValueError("Exported alias rows do not reconcile to unique scoped alternate-name IDs.")
     if not candidate_ids_with_aliases.issubset(candidate_country):
