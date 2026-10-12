@@ -25,7 +25,7 @@ export function normalizeEmployerConfig(config = {}) {
   } catch {
     return { configured: false, error: "INVALID_BACKEND_URL" };
   }
-  if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) {
+  if (base.protocol !== "https:" || base.pathname !== "/" || base.username || base.password || base.search || base.hash) {
     return { configured: false, error: "INVALID_BACKEND_URL" };
   }
 
