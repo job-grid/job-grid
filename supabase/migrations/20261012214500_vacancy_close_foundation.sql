@@ -136,7 +136,7 @@ CREATE OR REPLACE FUNCTION public.is_active_org_member(p_organization_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = pg_catalog
 AS $function$
   SELECT auth.uid() IS NOT NULL AND EXISTS (
@@ -148,8 +148,8 @@ AS $function$
   );
 $function$;
 
-REVOKE ALL ON FUNCTION public.is_active_org_member(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_active_org_member(uuid) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.is_active_org_member(uuid) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_active_org_member(uuid) TO authenticated;
 
 CREATE POLICY organizations_member_read
   ON public.organizations FOR SELECT TO authenticated
@@ -165,8 +165,17 @@ CREATE POLICY vacancy_closure_reasons_active_read
 
 -- Anonymous callers see only currently published vacancies. Active organization
 -- members can view their own organization's vacancies in employer management.
+CREATE POLICY vacancies_public_read
+  ON public.vacancies FOR SELECT TO anon
+  USING (
+    status = 'published'
+    AND published_at IS NOT NULL
+    AND published_at <= now()
+    AND (expires_at IS NULL OR expires_at > now())
+  );
+
 CREATE POLICY vacancies_public_or_member_read
-  ON public.vacancies FOR SELECT TO anon, authenticated
+  ON public.vacancies FOR SELECT TO authenticated
   USING (
     (
       status = 'published'
