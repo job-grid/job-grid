@@ -37,10 +37,28 @@ BEGIN
         AND p.roles::text[] @> ARRAY['authenticated']::text[]
         AND NOT (p.roles::text[] && ARRAY['anon', 'public']::text[])
         AND CASE p.cmd
-          WHEN 'SELECT' THEN p.qual IS NOT NULL AND p.with_check IS NULL
-          WHEN 'INSERT' THEN p.qual IS NULL AND p.with_check IS NOT NULL
-          WHEN 'UPDATE' THEN p.qual IS NOT NULL AND p.with_check IS NOT NULL
-          WHEN 'DELETE' THEN p.qual IS NOT NULL AND p.with_check IS NULL
+          WHEN 'SELECT' THEN
+            p.qual IS NOT NULL
+            AND position('auth.uid()' IN p.qual) > 0
+            AND position('user_id' IN p.qual) > 0
+            AND p.with_check IS NULL
+          WHEN 'INSERT' THEN
+            p.qual IS NULL
+            AND p.with_check IS NOT NULL
+            AND position('auth.uid()' IN p.with_check) > 0
+            AND position('user_id' IN p.with_check) > 0
+          WHEN 'UPDATE' THEN
+            p.qual IS NOT NULL
+            AND position('auth.uid()' IN p.qual) > 0
+            AND position('user_id' IN p.qual) > 0
+            AND p.with_check IS NOT NULL
+            AND position('auth.uid()' IN p.with_check) > 0
+            AND position('user_id' IN p.with_check) > 0
+          WHEN 'DELETE' THEN
+            p.qual IS NOT NULL
+            AND position('auth.uid()' IN p.qual) > 0
+            AND position('user_id' IN p.qual) > 0
+            AND p.with_check IS NULL
           ELSE false
         END
     ) THEN
