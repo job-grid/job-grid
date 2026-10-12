@@ -169,7 +169,7 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
                     "is_historic": flags[3],
                     "valid_from": fields[8],
                     "valid_to": fields[9],
-                    "source_snapshot_sha256": "PENDING_MEMBER_SHA256",
+                    "source_snapshot_sha256": source_meta["archive_sha256"],
                 })
                 exported_rows += 1
 
@@ -186,22 +186,6 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
     if not candidate_ids_with_aliases.issubset(candidate_country):
         raise ValueError("Alias coverage includes a GeoNames ID outside the candidate scope.")
     member_sha = member_digest.hexdigest()
-
-    # Re-stream and set the exact uncompressed-member digest on each output row is not
-    # necessary: the manifest and summary bind the complete export to this source member.
-    # The source_snapshot_sha256 column stores the archive digest as the import join anchor.
-    temp_path = aliases_path.with_suffix(".csv.gz.tmp")
-    # Replace the placeholder with the real archive digest without holding the full export in memory.
-    with gzip.open(aliases_path, "rt", encoding="utf-8", newline="") as src, gzip.open(
-        temp_path, "wt", encoding="utf-8", newline="", compresslevel=6
-    ) as dst:
-        reader = csv.DictReader(src)
-        writer = csv.DictWriter(dst, fieldnames=OUTPUT_FIELDS, extrasaction="raise", lineterminator="\n")
-        writer.writeheader()
-        for row in reader:
-            row["source_snapshot_sha256"] = source_meta["archive_sha256"]
-            writer.writerow(row)
-    temp_path.replace(aliases_path)
 
     per_country = []
     for code, total in sorted(country_totals.items()):
