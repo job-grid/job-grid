@@ -64,7 +64,9 @@ jobs:
           sudo apt-get install -y postgresql-client
       - name: Bootstrap isolated test roles
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/vacancy_close_bootstrap.sql
-      - name: Parse and execute proposed migration against disposable PostgreSQL
+      - name: Create disposable Phase 2A core-schema contract
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/phase2a_schema_contract.sql
+      - name: Apply additive Close Job lifecycle extension to disposable PostgreSQL
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261012214500_vacancy_close_foundation.sql
       - name: Exercise authorization, transitions, audit, idempotency and RLS
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/vacancy_close_integration.sql
