@@ -8,11 +8,26 @@ Use Supabase Auth to verify the employer/moderator session, a Supabase Edge Func
 
 This is a proposed default because it uses the already selected Supabase data platform and avoids treating the static website or browser as a trusted runtime. It still needs explicit owner review before merge or deployment.
 
+## Additive schema contract — still subject to owner approval
+
+The migration now assumes a Phase 2A core schema exists. It must **not** be applied to the current empty public schema by itself.
+
+CI first creates `supabase/tests/phase2a_schema_contract.sql`, a disposable structural contract based on the Phase 2A logical data dictionary, and then applies the lifecycle migration against it. This proves the extension does not create a second `organizations`, `organization_memberships`, `platform_roles` or `vacancies` table. The fixture contains only the minimum columns and role/grant behavior the lifecycle slice depends on; it is not a substitute for an approved canonical migration or evidence about production.
+
+Before execution, the owner-approved Phase 2A migration must provide compatible types and constraints for:
+- organization tenant identity and membership/role state;
+- canonical `vacancies` identity, `organization_id`, `created_by`, geography/worksite, state, version and publication window;
+- a `status` vocabulary containing `published` and `closed`;
+- Row Level Security and the intended visibility policy baseline;
+- restricted public/authenticated column grants that do not expose creator identity or privileged moderation internals through table-wide SELECT.
+
+The lifecycle migration adds only closure fields and lifecycle-owned catalog/audit/idempotency objects, policy/function integration and minimum RPC privileges. It fails if existing closure states conflict with the new closure metadata constraint. A reviewer must still compare every identifier, state rule, grant and RLS policy with the owner-approved physical core schema and handle any existing vacancy records before approving execution.
+
 ## What this proposal contains
 
-- A small, controlled organization/membership and platform-role model for authorization.
-- A vacancy foundation with versioning and explicit status.
-- A controlled closure-reason catalog.
+- An additive lifecycle extension against the proposed Phase 2A core entities `organizations`, `organization_memberships`, `platform_roles` and `vacancies`. This change no longer creates those core tables.
+- Two vacancy closure metadata fields (`closed_at`, `closure_reason_code`) with a foreign key and a consistency constraint; the core schema retains ownership of organization, identity, geography, vacancy content, moderation and application columns.
+- A controlled closure-reason catalog, append-only lifecycle audit events and durable idempotency records.
 - Row-level security that exposes only in-window published vacancies to anonymous callers, while active organization members can view vacancies in their own organization.
 - An append-only vacancy audit table.
 - Durable idempotency records and a PostgreSQL function that locks the vacancy row, authorizes an active organization owner/admin/recruiter or active moderator/admin, requires the exact expected version, updates published to closed, increments the version, and inserts the audit event and idempotency record in the same transaction.
