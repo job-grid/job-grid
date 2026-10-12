@@ -20,10 +20,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SOURCE_URL = "https://download.geonames.org/export/dump/alternateNamesV2.zip"
+COUNTRY_INFO_URL = "https://download.geonames.org/export/dump/countryInfo.txt"
 ID_RE = re.compile(r"^[0-9]+$")
 SOURCE_FIELDS = 10
 OUTPUT_FIELDS = [
-    "alternate_name_id", "geonames_id", "language_code", "alternate_name",
+    "alternate_name_id", "geonames_id", "record_scope_kind", "source_country_code_raw", "language_code", "alternate_name",
     "is_preferred_name", "is_short_name", "is_colloquial", "is_historic",
     "valid_from", "valid_to", "source_snapshot_sha256",
 ]
@@ -70,6 +71,50 @@ def read_candidate_scope(path: Path):
     return candidate_country, country_totals
 
 
+def read_country_area_scope(country_info_path: Path, country_manifest_path: Path):
+    """Read fingerprinted countryInfo IDs without treating codes as internal IDs."""
+    manifest = json.loads(country_manifest_path.read_text(encoding="utf-8"))
+    rows = [x for x in manifest.get("remote_sources", []) if x.get("source_role") == "country-metadata"]
+    if len(rows) != 1:
+        raise ValueError("Expected exactly one country-metadata source manifest entry.")
+    source = rows[0]
+    size, digest = sha256_path(country_info_path)
+    if source.get("source_url") != COUNTRY_INFO_URL or source.get("http_status") != 200:
+        raise ValueError("CountryInfo source provenance is invalid.")
+    if source.get("size_bytes") != size or source.get("sha256") != digest:
+        raise ValueError("CountryInfo source bytes do not match the pinned manifest.")
+    result = {}
+    seen_codes = set()
+    row_count = 0
+    malformed = 0
+    with country_info_path.open("r", encoding="utf-8-sig", newline="") as stream:
+        for line in stream:
+            if not line or line.startswith("#"):
+                continue
+            fields = line.rstrip("\r\n").split("\t")
+            if (len(fields) != 19 or not fields[4].strip()
+                    or not ID_RE.fullmatch(fields[16].strip())
+                    or not re.fullmatch(r"[A-Z]{2}", fields[0].strip().upper())):
+                malformed += 1
+                continue
+            row_count += 1
+            gid, code = fields[16].strip(), fields[0].strip().upper()
+            if gid in result or code in seen_codes:
+                raise ValueError("CountryInfo contains duplicate source IDs or alpha-2 codes.")
+            result[gid] = code
+            seen_codes.add(code)
+    if malformed or row_count == 0:
+        raise ValueError(f"CountryInfo malformed rows={malformed} or empty.")
+    return result, {
+        "source_url": COUNTRY_INFO_URL,
+        "retrieved_at_utc": source.get("retrieved_at_utc"),
+        "http_status": 200,
+        "size_bytes": size,
+        "sha256": digest,
+        "rows": row_count,
+    }
+
+
 def source_manifest_record(manifest_path: Path, archive_path: Path):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     source = manifest.get("remote_source", {})
@@ -95,12 +140,17 @@ def source_manifest_record(manifest_path: Path, archive_path: Path):
     }
 
 
-def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path, output_dir: Path):
+def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_manifest_path: Path,
+                   archive_path: Path, manifest_path: Path, output_dir: Path):
     candidate_country, country_totals = read_candidate_scope(candidate_gzip)
+    country_area_country, country_area_source = read_country_area_scope(country_info_path, country_info_manifest_path)
+    if set(candidate_country).intersection(country_area_country):
+        raise ValueError("A GeoNames ID appears in both country/area and destination candidate scopes.")
     source_meta = source_manifest_record(manifest_path, archive_path)
     output_dir.mkdir(parents=True, exist_ok=True)
-    aliases_path = output_dir / "worldwide-geonames-destination-alternate-names.csv.gz"
+    aliases_path = output_dir / "worldwide-geonames-country-and-destination-alternate-names.csv.gz"
     candidate_ids_with_aliases = set()
+    country_area_ids_with_aliases = set()
     alias_ids_seen = set()
     duplicate_alias_ids = 0
     malformed_rows = 0
@@ -142,14 +192,21 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
                 flags = [str(x).strip() for x in fields[4:8]]
                 if any(x not in {"", "0", "1"} for x in flags):
                     flag_malformed_rows += 1
-                if geonames_id not in candidate_country:
+                if geonames_id in candidate_country:
+                    record_scope_kind = "destination_place_or_admin"
+                    source_country_code = candidate_country[geonames_id]
+                    candidate_ids_with_aliases.add(geonames_id)
+                elif geonames_id in country_area_country:
+                    record_scope_kind = "country_area"
+                    source_country_code = country_area_country[geonames_id]
+                    country_area_ids_with_aliases.add(geonames_id)
+                else:
                     continue
                 if alias_id in alias_ids_seen:
                     duplicate_alias_ids += 1
                 else:
                     alias_ids_seen.add(alias_id)
-                candidate_ids_with_aliases.add(geonames_id)
-                country_code = candidate_country[geonames_id]
+                country_code = source_country_code
                 alias_country_rows[country_code] += 1
                 language = language.strip()
                 if language:
@@ -159,6 +216,8 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
                 writer.writerow({
                     "alternate_name_id": alias_id,
                     "geonames_id": geonames_id,
+                    "record_scope_kind": record_scope_kind,
+                    "source_country_code_raw": source_country_code,
                     "language_code": language,
                     "alternate_name": name,
                     "is_preferred_name": flags[0],
@@ -222,9 +281,15 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
             "malformed_or_invalid_source_rows": malformed_rows,
             "invalid_boolean_flag_rows": flag_malformed_rows,
             "destination_candidate_ids": len(candidate_country),
+            "country_area_source_ids": len(country_area_country),
+            "source_scope_record_ids": len(candidate_country) + len(country_area_country),
             "candidate_ids_with_aliases": len(candidate_ids_with_aliases),
             "candidate_ids_without_aliases": len(candidate_country) - len(candidate_ids_with_aliases),
             "candidate_id_alias_coverage_ratio": round(len(candidate_ids_with_aliases) / len(candidate_country), 6),
+            "country_area_source_ids_with_aliases": len(country_area_ids_with_aliases),
+            "country_area_source_ids_without_aliases": len(country_area_country) - len(country_area_ids_with_aliases),
+            "source_scope_ids_with_aliases": len(candidate_ids_with_aliases | country_area_ids_with_aliases),
+            "source_scope_ids_without_aliases": len(candidate_country) + len(country_area_country) - len(candidate_ids_with_aliases | country_area_ids_with_aliases),
             "matching_alias_rows_exported": exported_rows,
             "unique_matching_alternate_name_ids": len(alias_ids_seen),
             "duplicate_matching_alternate_name_ids": duplicate_alias_ids,
@@ -242,13 +307,13 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
             "language_code_policy": "Preserve original language code; do not translate or relabel language",
             "effective_dates": "Preserve raw from/to values; blank values remain blank and are not interpreted as timeless legal truth",
             "canonical_names": "Original allCountries name and alternateNamesV2 remain separate fields/sources",
-            "country_assignment": "Inherits the destination exporter source-code bucket only; no approved internal country mapping is implied",
+            "country_assignment": "Destination rows retain raw source codes and country/area rows retain countryInfo alpha-2 codes; neither implies an approved internal country mapping",
             "source_completeness": "All rows in alternateNamesV2 are scanned and every valid matching alias row is exported; this says nothing about names missing from GeoNames",
             "operational_selectability": False,
             "database_or_production_changes": False,
         },
     }
-    summary_path = output_dir / "worldwide-geonames-destination-alternate-name-summary.json"
+    summary_path = output_dir / "worldwide-geonames-country-and-destination-alternate-name-summary.json"
     summary_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return report, aliases_path, summary_path
 
@@ -256,12 +321,14 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate-gzip", required=True, type=Path)
+    parser.add_argument("--country-info", required=True, type=Path)
+    parser.add_argument("--country-info-manifest", required=True, type=Path)
     parser.add_argument("--archive", required=True, type=Path)
     parser.add_argument("--source-manifest", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        report, output, summary = export_aliases(args.candidate_gzip, args.archive, args.source_manifest, args.output_dir)
+        report, output, summary = export_aliases(args.candidate_gzip, args.country_info, args.country_info_manifest, args.archive, args.source_manifest, args.output_dir)
     except (OSError, UnicodeError, json.JSONDecodeError, zipfile.BadZipFile, ValueError) as exc:
         print(f"BLOCKED_ALTERNATE_NAME_CANDIDATE_EXPORT: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
