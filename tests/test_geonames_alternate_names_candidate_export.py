@@ -142,7 +142,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             raw=archive.read_bytes()
             manifest=p/"manifest.json"
             manifest.write_text(json.dumps({"remote_source":{"source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now","http_status":200,"size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
-            ci,cm=write_country_info_sources(p,[country_info_row("GB","GBR","826","United Kingdom","2")])
+            ci,cm=write_country_info_sources(p,[country_info_row("GB","GBR","826","United Kingdom","99")])
             report,out,summary=exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
             self.assertEqual(report["status"],"PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED")
             self.assertEqual(report["counts"]["invalid_boolean_flag_rows"],1)
