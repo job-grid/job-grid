@@ -116,6 +116,12 @@ BEGIN
   IF has_column_privilege('authenticated', 'public.vacancies', 'created_by', 'SELECT') THEN
     RAISE EXCEPTION 'authenticated role has access to internal created_by column';
   END IF;
+  IF has_column_privilege('anon', 'public.vacancies', 'branch_id', 'SELECT') THEN
+    RAISE EXCEPTION 'anonymous role retained an unexpected branch_id column grant';
+  END IF;
+  IF has_column_privilege('authenticated', 'public.vacancies', 'sector_id', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated role retained an unexpected sector_id column grant';
+  END IF;
 END;
 $column_grant_test$;
 
