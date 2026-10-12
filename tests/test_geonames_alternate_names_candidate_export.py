@@ -158,6 +158,42 @@ class AlternateNameExporterTests(unittest.TestCase):
             self.assertEqual(rows[0]["geonames_id_candidate"],"1")
             self.assertEqual(base64.b64decode(rows[0]["raw_line_base64"]).decode("utf-8").strip(),alt_row(1,1,"en","A",("yes","0","0","0")))
 
+
+    def test_quarantines_wrong_width_and_invalid_utf8_rows_with_exact_source_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp); cand=p/"c.csv.gz"
+            with gzip.open(cand,"wt",encoding="utf-8",newline="") as f:
+                w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"])
+                w.writeheader(); w.writerows([candidate_row(1,"Valid","KE")])
+            member_bytes = (alt_row(10,1,"en","Valid")+"\n").encode("utf-8") + b"11\t1\ten\n" + bytes([255]) + b"\tbad-row\n"
+            archive=p/"alternateNamesV2.zip"
+            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
+                z.writestr("alternateNamesV2.txt",member_bytes)
+            raw=archive.read_bytes()
+            manifest=p/"manifest.json"
+            manifest.write_text(json.dumps({"remote_source":{"source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now",
+                "http_status":200,"size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
+            ci,cm=write_country_info_sources(p,[country_info_row("KE","KEN","404","Kenya","192950")])
+            report,out,summary=exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
+            counts=report["counts"]
+            self.assertEqual(report["status"],"PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED")
+            self.assertEqual(counts["alternate_names_source_rows_scanned"],3)
+            self.assertEqual(counts["malformed_or_invalid_source_rows"],2)
+            self.assertEqual(counts["invalid_boolean_flag_rows"],0)
+            self.assertEqual(counts["quarantined_source_rows"],2)
+            self.assertEqual(counts["quarantine_rows_by_reason"],{"INVALID_UTF8":1,"WRONG_FIELD_COUNT":1})
+            with gzip.open(out,"rt",encoding="utf-8",newline="") as stream:
+                exported=list(csv.DictReader(stream))
+            self.assertEqual(len(exported),1)
+            quarantine_path=p/"out"/"worldwide-geonames-country-and-destination-alternate-name-quarantine.csv"
+            with quarantine_path.open(encoding="utf-8",newline="") as stream:
+                quarantined=list(csv.DictReader(stream))
+            self.assertEqual(len(quarantined),2)
+            recovered={base64.b64decode(row["raw_line_base64"]) for row in quarantined}
+            self.assertIn(b"11\t1\ten\n",recovered)
+            self.assertIn(bytes([255])+b"\tbad-row\n",recovered)
+            self.assertEqual(report["sources"]["quarantine_file_sha256"],hashlib.sha256(quarantine_path.read_bytes()).hexdigest())
+
     def test_rejects_duplicate_alternate_name_ids_in_destination_scope(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp); cand=p/"c.csv.gz"
