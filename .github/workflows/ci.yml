@@ -1561,6 +1561,9 @@ jobs:
           set -euo pipefail
           bash scripts/geonames-country-master-ci-audit.sh "$RUNNER_TEMP_DIR/geonames-world-source"
 
+      - name: Test worldwide exact-code parent index
+        run: python3 -m unittest discover -s tests -p "test_geonames_destination_parent_code_index.py" -v
+
       - name: Test worldwide destination candidate exporter
         run: python3 -m unittest discover -s tests -p "test_geonames_destination_candidate_export.py" -v
 
@@ -1605,6 +1608,49 @@ jobs:
           print(f"- Source rows held for explicit review: {sum(v for k,v in counts['disposition_totals'].items() if k not in {'CURRENT_PLACE_CANDIDATE','CURRENT_ADMINISTRATIVE_AREA_CANDIDATE'})}")
           print("- Country assignment and parent links remain unapproved; operationally selectable rows: 0.")
           print("- The compressed row-level candidate file is a review/import artifact, not a database seed.")
+          PY
+
+      - name: Export source-pinned worldwide administrative parent code candidates
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          output="$work/country-master-audit/destination-candidates"
+          python3 scripts/geonames-destination-parent-code-index.py \
+            --candidate-gzip "$output/worldwide-geonames-destination-candidates.csv.gz" \
+            --candidate-summary "$output/worldwide-geonames-destination-candidate-export-summary.json" \
+            --output-dir "$output" \
+            | tee "$work/parent-code-index.stdout.json"
+          python3 - "$output/worldwide-geonames-admin-parent-code-candidate-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json,sys
+          from pathlib import Path
+          report=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          candidates=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          c=report["counts"]
+          if report.get("status")!="PASS_SOURCE_CODE_PARENT_CANDIDATES_EXPORTED__REVIEW_ONLY__NO_LINKS":
+              raise SystemExit("Admin parent code-index status is not a review-only pass.")
+          if c.get("candidate_source_rows")!=candidates.get("counts",{}).get("candidate_file_rows"):
+              raise SystemExit("Parent resolver input count does not equal the candidate export.")
+          if c.get("parent_resolution_rows_written")!=c.get("candidate_source_rows") or c.get("rows_not_accounted_for")!=0:
+              raise SystemExit("Parent resolver failed to account for every candidate row.")
+          if sum(c.get("direct_parent_resolution_status_totals",{}).values())!=c.get("candidate_source_rows"):
+              raise SystemExit("Direct parent status totals do not reconcile.")
+          if sum(c.get("parent_path_status_totals",{}).values())!=c.get("candidate_source_rows"):
+              raise SystemExit("Parent path status totals do not reconcile.")
+          if report.get("sources",{}).get("candidate_export_sha256")!=candidates.get("sources",{}).get("candidate_export_sha256"):
+              raise SystemExit("Parent resolver candidate SHA-256 differs from the source-pinned candidate export.")
+          if c.get("operational_parent_links_created")!=0 or c.get("operational_selectable_rows")!=0 or report.get("interpretation",{}).get("database_or_production_changes") is not False:
+              raise SystemExit("Parent-code audit crossed the no-write boundary.")
+          print("## Worldwide source-code parent path candidates")
+          print(f"- Candidate rows and parent-resolution rows: {c['candidate_source_rows']} / {c['parent_resolution_rows_written']}")
+          print(f"- Current ADM1–ADM4 source rows indexed: {c['admin_rows_indexed']}")
+          print(f"- Unique direct source-code parent candidates: {c['rows_with_unique_direct_parent_candidate']}")
+          print(f"- Ambiguous direct composite keys: {c['rows_with_ambiguous_direct_parent_key']}")
+          print(f"- Missing/blocked direct composite keys: {c['rows_with_missing_or_blocked_direct_parent_key']}")
+          print(f"- Rows with a complete source-code chain candidate: {sum(v for k,v in c['parent_path_status_totals'].items() if k.startswith('SOURCE_CODE_CHAIN_COMPLETE'))}")
+          print("- All hierarchy results remain candidate evidence; operational parent links and selectable rows remain zero.")
           PY
 
       - name: Test worldwide destination alias exporter
@@ -1790,6 +1836,9 @@ jobs:
             ${{ runner.temp }}/geonames-world-source/country-master-audit/country-master-source-manifest.json
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-candidates.csv.gz
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-candidate-export-summary.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-admin-code-parent-index.csv.gz
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-parent-code-resolutions.csv.gz
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-admin-parent-code-candidate-summary.json
             ${{ runner.temp }}/geonames-world-source/alternate-names/source-manifest.json
             ${{ runner.temp }}/geonames-world-source/alternate-names/alternate-name-export.stdout.json
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-names.csv.gz
