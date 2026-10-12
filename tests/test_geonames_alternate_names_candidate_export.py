@@ -51,7 +51,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             candidates=tmp/"candidates.csv.gz"
             with gzip.open(candidates,"wt",encoding="utf-8",newline="") as f:
                 w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"]); w.writeheader()
-                w.writerows([candidate_row(100,"Nairobi","KE"),candidate_row(101,"Kisumu","KE"),candidate_row(102,"Unaliased Place","KE"),candidate_row(200,"London","GB")])
+                w.writerows([candidate_row(100,"Nairobi","KE"),candidate_row(101,"Kisumu","KE"),candidate_row(102,"Unaliased Place","KE"),candidate_row(200,"London","GB"),candidate_row(300,"Unknown Code Locality","")])
             country_info,country_manifest=write_country_info_sources(tmp,[
                 country_info_row("KE","KEN","404","Kenya","192950"),
                 country_info_row("XK","XKX","0","Kosovo","831053"),
@@ -64,6 +64,7 @@ class AlternateNameExporterTests(unittest.TestCase):
                 alt_row(4,831053,"sq","Kosova"),
                 alt_row(5,999,"en","not in scope"),
                 alt_row(6,200,"en","London"),
+                alt_row(7,300,"und","Unknown Code Locality"),
             ]
             archive=tmp/"alternateNamesV2.zip"
             member="\n".join(aliases)+"\n"
@@ -78,18 +79,18 @@ class AlternateNameExporterTests(unittest.TestCase):
             }}),encoding="utf-8")
             report, out, summary = exporter.export_aliases(candidates,country_info,country_manifest,archive,manifest,tmp/"out")
             self.assertEqual(report["status"],"PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED")
-            self.assertEqual(report["counts"]["alternate_names_source_rows_scanned"],6)
-            self.assertEqual(report["counts"]["destination_candidate_ids"],4)
+            self.assertEqual(report["counts"]["alternate_names_source_rows_scanned"],7)
+            self.assertEqual(report["counts"]["destination_candidate_ids"],5)
             self.assertEqual(report["counts"]["country_area_source_ids"],3)
-            self.assertEqual(report["counts"]["source_scope_record_ids"],7)
-            self.assertEqual(report["counts"]["candidate_ids_with_aliases"],3)
+            self.assertEqual(report["counts"]["source_scope_record_ids"],8)
+            self.assertEqual(report["counts"]["candidate_ids_with_aliases"],4)
             self.assertEqual(report["counts"]["candidate_ids_without_aliases"],1)
             self.assertEqual(report["counts"]["country_area_source_ids_with_aliases"],1)
             self.assertEqual(report["counts"]["country_area_source_ids_without_aliases"],2)
-            self.assertEqual(report["counts"]["source_scope_ids_with_aliases"],4)
+            self.assertEqual(report["counts"]["source_scope_ids_with_aliases"],5)
             self.assertEqual(report["counts"]["source_scope_ids_without_aliases"],3)
-            self.assertEqual(report["counts"]["matching_alias_rows_exported"],5)
-            self.assertEqual(report["counts"]["language_codes_in_export"],3)
+            self.assertEqual(report["counts"]["matching_alias_rows_exported"],6)
+            self.assertEqual(report["counts"]["language_codes_in_export"],4)
             country_coverage={r["source_country_alpha2_raw"]:r for r in report["per_country_area_alpha2"]}
             self.assertEqual(set(country_coverage),{"KE","XK","AN"})
             self.assertEqual(country_coverage["XK"]["source_scope_records_with_aliases"],1)
@@ -97,7 +98,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             self.assertEqual(country_coverage["AN"]["alias_coverage_ratio"],0.0)
             with gzip.open(out,"rt",encoding="utf-8",newline="") as f:
                 rows=list(csv.DictReader(f))
-            self.assertEqual(len(rows),5)
+            self.assertEqual(len(rows),6)
             self.assertNotIn("999",{r["geonames_id"] for r in rows})
             sw=next(r for r in rows if r["language_code"]=="sw")
             self.assertEqual(sw["alternate_name"],"Nairobi")
@@ -105,6 +106,12 @@ class AlternateNameExporterTests(unittest.TestCase):
             country_alias=next(r for r in rows if r["geonames_id"]=="831053")
             self.assertEqual(country_alias["record_scope_kind"],"country_area")
             self.assertEqual(country_alias["source_country_code_raw"],"XK")
+            blank_code_alias=next(r for r in rows if r["geonames_id"]=="300")
+            self.assertEqual(blank_code_alias["record_scope_kind"],"destination_place_or_admin")
+            self.assertEqual(blank_code_alias["source_country_code_raw"],"")
+            blank_bucket=next(r for r in report["per_source_country_code"] if r["source_country_code_bucket"]=="(blank)")
+            self.assertEqual(blank_bucket["source_country_code_raw"],"")
+            self.assertEqual(blank_bucket["source_scope_records_with_aliases"],1)
             kisumu=next(r for r in rows if r["geonames_id"]=="101")
             self.assertEqual(kisumu["record_scope_kind"],"destination_place_or_admin")
             self.assertEqual(kisumu["valid_from"],"2000")
