@@ -1580,15 +1580,16 @@ jobs:
             --exception-dispositions docs/geonames-un-m49-exception-dispositions-2026-10-12.json \
             --output-dir "$audit/destination-candidates" \
             | tee "$audit/destination-candidate-export.stdout.json"
-          python3 - "$audit/destination-candidates/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          python3 - "$audit/destination-candidates/worldwide-geonames-destination-candidate-export-summary.json" "$audit/geonames-country-catalog-aggregate.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import json,sys
           from pathlib import Path
           report=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          master=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
           counts=report["counts"]
           if report.get("status")!="PASS_SOURCE_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED":
               raise SystemExit("Worldwide destination candidate package did not pass.")
-          if counts.get("allcountries_source_rows_scanned") != 13472324:
-              raise SystemExit("Expected the current source audit's 13,472,324-row snapshot.")
+          if counts.get("allcountries_source_rows_scanned") != master.get("counts",{}).get("all_countries_rows_scanned"):
+              raise SystemExit("Destination exporter row count does not match the pinned source audit.")
           if counts.get("candidate_file_rows") != counts.get("destination_scope_rows"):
               raise SystemExit("Destination candidate scope rows do not reconcile to the output file.")
           if counts.get("duplicate_candidate_geonames_ids") != 0 or counts.get("invalid_candidate_ids") != 0 or counts.get("malformed_source_lines") != 0:
