@@ -50,7 +50,8 @@ export function normalizeLocations(payload, countryCode) {
     const id = item?.id == null ? "" : String(item.id);
     const featureCode = String(item?.feature_code ?? "").trim().toUpperCase();
     if (code !== selectedCode || !name || !id) continue;
-    if (featureCode && !featureCode.startsWith("PPL") && !featureCode.startsWith("ADM")) continue;
+    // A missing/unknown feature type is review-only; do not turn it into a place by default.
+    if (!featureCode || (!featureCode.startsWith("PPL") && !featureCode.startsWith("ADM"))) continue;
     if (seen.has(id)) continue;
     seen.add(id);
     results.push({
