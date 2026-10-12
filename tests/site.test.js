@@ -124,6 +124,20 @@ test("place normalization keeps the selected country and allows missing parent l
   assert.deepEqual(normalizeLocations({ results: [{ id: 2, name: "Paris", country_code: "FR" }] }, "KE"), []);
 });
 
+test("historical, abandoned, destroyed and sub-place feature codes are not selectable", () => {
+  const sourceResponse = { results: [
+    { id: 200, name: "Current county", country_code: "KE", country: "Kenya", feature_code: "ADM2" },
+    { id: 201, name: "Former county", country_code: "KE", country: "Kenya", feature_code: "ADM2H" },
+    { id: 202, name: "Former town", country_code: "KE", country: "Kenya", feature_code: "PPLH" },
+    { id: 203, name: "Abandoned town", country_code: "KE", country: "Kenya", feature_code: "PPLQ" },
+    { id: 204, name: "Destroyed town", country_code: "KE", country: "Kenya", feature_code: "PPLW" },
+    { id: 205, name: "City section", country_code: "KE", country: "Kenya", feature_code: "PPLX" }
+  ] };
+
+  const results = normalizeLocations(sourceResponse, "KE");
+  assert.deepEqual(results.map((place) => [place.id, place.featureCode]), [["200", "ADM2"]]);
+});
+
 test("same-named places in different countries remain distinct by country and source ID", () => {
   const sourceResponse = { results: [
     { id: 501, name: "Springfield", country_code: "US", country: "United States", feature_code: "PPL" },
