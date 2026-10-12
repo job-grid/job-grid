@@ -137,6 +137,18 @@ BEGIN
   END IF;
 
   result := public.close_published_vacancy(
+    '20000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'filled',
+    1,
+    '40000000-0000-4000-8000-000000000010',
+    'close-org2-request-01'
+  );
+  IF result->>'ok' <> 'true' OR result->>'status' <> 'closed' THEN
+    RAISE EXCEPTION 'authorized Employer Two close failed: %', result;
+  END IF;
+
+  result := public.close_published_vacancy(
     '20000000-0000-4000-8000-000000000003',
     '00000000-0000-4000-8000-000000000001',
     'filled',
@@ -244,8 +256,14 @@ BEGIN
   SELECT count(*) INTO row_count
     FROM public.vacancies
    WHERE id = '20000000-0000-4000-8000-000000000002';
+  IF row_count <> 0 THEN
+    RAISE EXCEPTION 'anonymous callers can still see another organization closed vacancy';
+  END IF;
+  SELECT count(*) INTO row_count
+    FROM public.vacancies
+   WHERE id = '20000000-0000-4000-8000-000000000003';
   IF row_count <> 1 THEN
-    RAISE EXCEPTION 'anonymous callers cannot see a valid published vacancy';
+    RAISE EXCEPTION 'anonymous callers cannot see an active published vacancy';
   END IF;
 END;
 $anon_test$;
@@ -267,7 +285,13 @@ BEGIN
     FROM public.vacancies
    WHERE id = '20000000-0000-4000-8000-000000000002';
   IF row_count <> 0 THEN
-    RAISE EXCEPTION 'employer can see another organization vacancy outside public scope';
+    RAISE EXCEPTION 'employer can see another organization closed vacancy';
+  END IF;
+  SELECT count(*) INTO row_count
+    FROM public.vacancies
+   WHERE id = '20000000-0000-4000-8000-000000000003';
+  IF row_count <> 1 THEN
+    RAISE EXCEPTION 'published vacancy should remain publicly visible';
   END IF;
 END;
 $member_test$;
