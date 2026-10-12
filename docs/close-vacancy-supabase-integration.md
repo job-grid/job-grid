@@ -33,7 +33,7 @@ The lifecycle migration adds only closure fields and lifecycle-owned catalog/aud
 - An Edge Function that validates the bearer session with Supabase Auth, derives the actor from that verified session, enforces an explicit origin allowlist, limits payload size, rejects client-supplied actor/role/status fields, and calls the database function using server-side credentials.
 - A pinned SDK dependency and a CI type-check workflow.
 
-The implementation has no vacancy-create, independent moderation, employer portal, or application-submission workflow. Consequently it is **not by itself the full recruitment marketplace** and no real Close Job button has been added to the public website. Existing applications are not modified or deleted by closure; the vacancy row itself is retained.
+This branch now includes a gated employer workspace at `/employer-jobs.html` and a browser client for the Close Job API contract. It is **not yet an operational employer portal**: runtime configuration remains blank by default, the approved auth adapter is not installed, and the live canonical Phase 2A schema/backend have not been verified from this session. It displays no sample vacancy data and stays disabled until a valid public project configuration and authenticated session adapter are present. Vacancy creation, independent moderation, candidate application submission and the full recruitment marketplace remain unimplemented. Existing applications are not modified or deleted by closure; the vacancy row itself is retained.
 
 ## Phase 2A schema compatibility — owner approval still required
 
@@ -51,6 +51,18 @@ The current CI workflow creates `supabase/tests/phase2a_schema_contract.sql` in 
 Before execution, the owner-approved core migration must provide the compatible canonical tables/columns, constraints, RLS and base grants. The lifecycle extension adds only `closed_at`, `closure_reason_code`, the controlled closure-reason catalog, append-only closure audit events, durable idempotency records, and lifecycle policy/function integration. It also removes table-wide and stale per-column `SELECT` grants from `vacancies` before granting the explicit reviewed column projections.
 
 A reviewer must still compare every identifier, status rule, existing RLS policy, granted column and any existing closed-row data against the approved core schema. If pre-existing rows violate the new closure metadata invariant, the migration intentionally stops and requires reconciliation rather than silently rewriting records. The current project-connection mismatch and separate recovery-readiness gate remain unresolved. No live migration or deployment is authorized by this proposal.
+
+## Employer workspace — API contract and release gate
+
+The employer workspace is a static page and embeds no credentials. `scripts/runtime-config.js` starts with empty `supabaseUrl` and `publishableKey`; when approved, it should contain only the HTTPS project URL and a public publishable key. Never place the Supabase service-role key or another server secret in this file or any static artifact.
+
+The page expects the approved identity integration to provide `window.jobGridAuth.getSession()`, returning a verified session shaped as `{ accessToken, user: { id } }`. The page does not ask a user to paste an access token or collect passwords, and it does not own session persistence/refresh. Until the approved auth adapter is connected, it displays a setup message and stays disabled.
+
+When configured, the client reads active memberships, organization display names and vacancies with the session bearer token and public publishable key. It only offers Close Job for owner/admin/recruiter membership roles and currently published vacancies within their publication window. That is UI guidance only: the Edge Function and database remain responsible for the final authorization decision. Close requests send only `vacancy_id`, `reason_code` and `expected_version`, plus an `Idempotency-Key` header; the actor is derived server-side from Supabase Auth. The endpoint is constrained to the configured Supabase project origin.
+
+The static build includes `employer-jobs.html`, `styles/employer.css`, `scripts/runtime-config.js` and `scripts/employer-jobs.js`. The route uses `noindex, nofollow` and must remain out of the public sitemap while this is a management-only feature.
+
+**Still required for operational use:** owner-approved physical Phase 2A schema, confirmed access to the intended Supabase project, independently approved recovery readiness, approved runtime configuration and CORS origin, deployed Edge Function, approved authentication adapter, and real authenticated tenant/role end-to-end tests. Current tests use mocked browser requests and disposable PostgreSQL; they are not live project tests.
 
 ## Security boundaries
 
