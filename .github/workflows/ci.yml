@@ -1673,11 +1673,13 @@ jobs:
           output="$audit/destination-candidates"
           python3 scripts/geonames-alternate-names-candidate-export.py \
             --candidate-gzip "$output/worldwide-geonames-destination-candidates.csv.gz" \
+            --country-info "$work/countryInfo.txt" \
+            --country-info-manifest "$audit/country-master-source-manifest.json" \
             --archive "$alias_work/alternateNamesV2.zip" \
             --source-manifest "$alias_work/source-manifest.json" \
             --output-dir "$output" \
             | tee "$alias_work/alternate-name-export.stdout.json"
-          python3 - "$output/worldwide-geonames-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          python3 - "$output/worldwide-geonames-country-and-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import json,sys
           from pathlib import Path
           aliases=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -1687,6 +1689,10 @@ jobs:
               raise SystemExit("Destination alias export did not pass.")
           if c.get("destination_candidate_ids")!=candidates.get("counts",{}).get("candidate_file_rows"):
               raise SystemExit("Alias destination IDs do not equal unique destination candidate input.")
+          if c.get("country_area_source_ids")!=252:
+              raise SystemExit("Alternate-name audit must include all 252 country/area source identities.")
+          if c.get("source_scope_record_ids")!=c.get("destination_candidate_ids",0)+c.get("country_area_source_ids",0):
+              raise SystemExit("Combined alias source scope does not reconcile.")
           if c.get("malformed_or_invalid_source_rows")!=0 or c.get("invalid_boolean_flag_rows")!=0:
               raise SystemExit("Alternate-name source contains malformed rows/flags.")
           if c.get("duplicate_matching_alternate_name_ids")!=0:
@@ -1697,8 +1703,11 @@ jobs:
               raise SystemExit("Alias export violated no-production-write boundary.")
           print("## Worldwide destination alternate-name coverage")
           print(f"- Destination candidates checked: {c['destination_candidate_ids']}")
-          print(f"- Candidates with one or more source aliases: {c['candidate_ids_with_aliases']}")
-          print(f"- Candidates without aliases in this snapshot: {c['candidate_ids_without_aliases']}")
+          print(f"- Destination candidates with aliases: {c['candidate_ids_with_aliases']}")
+          print(f"- Destination candidates without aliases: {c['candidate_ids_without_aliases']}")
+          print(f"- Country/area source records: {c['country_area_source_ids']}")
+          print(f"- Country/area source records with aliases: {c['country_area_source_ids_with_aliases']}")
+          print(f"- Country/area source records without aliases: {c['country_area_source_ids_without_aliases']}")
           print(f"- Alias rows exported: {c['matching_alias_rows_exported']}")
           print(f"- Language codes represented: {c['language_codes_in_export']}")
           print(f"- Malformed rows/flags and duplicate alias IDs: {c['malformed_or_invalid_source_rows']} / {c['invalid_boolean_flag_rows']} / {c['duplicate_matching_alternate_name_ids']}")
@@ -1766,8 +1775,8 @@ jobs:
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-candidate-export-summary.json
             ${{ runner.temp }}/geonames-world-source/alternate-names/source-manifest.json
             ${{ runner.temp }}/geonames-world-source/alternate-names/alternate-name-export.stdout.json
-            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-alternate-names.csv.gz
-            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-alternate-name-summary.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-names.csv.gz
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-name-summary.json
           if-no-files-found: error
           retention-days: 7
 
