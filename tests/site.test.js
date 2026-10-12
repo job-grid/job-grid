@@ -73,7 +73,7 @@ test("employer portal route is present, noindexed, and never uses fake vacancy d
   assert.ok(employerHtml.includes('id="close-vacancy-dialog"'));
   assert.ok(employerHtml.includes('id="confirm-close"'));
   assert.ok(employerHtml.includes('id="portal-notice"'));
-  assert.ok(employerHtml.includes("Close requests are re-authorized by the database"));
+  assert.ok(employerHtml.includes("Close permission is verified again by the backend"));
   assert.equal(employerHtml.includes("Sample employer"), false);
   assert.equal(employerHtml.includes("Operations Coordinator"), false);
   assert.ok(runtimeConfig.includes('supabaseUrl: ""'));
