@@ -77,7 +77,7 @@ test("detail normalization adds bounded public text only", () => {
   const normalized = normalizePublicJob(visibleJob(), now, true);
   assert.equal(normalized.description, "Public role summary.");
   assert.equal(normalized.applicationInstructions, "Use the employer's official application channel.");
-  assert.equal(cleanPublicText("hello\\u0000world"), "");
+  assert.equal(cleanPublicText("hello" + String.fromCharCode(0) + "world"), "");
   assert.equal(normalizePublicJob({ ...visibleJob(), title: "   " }, now), null);
 });
 
