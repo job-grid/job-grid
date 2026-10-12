@@ -9,12 +9,13 @@ claim of worldwide product completeness.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
 import sys
 import zipfile
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -359,6 +360,13 @@ def main() -> int:
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     coverage_path = args.output.with_name("geonames-destination-source-coverage.json")
     coverage_path.write_text(json.dumps(destination_coverage, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    coverage_rows = destination_coverage["country_coverage_rows"]
+    csv_fields = sorted({key for row in coverage_rows for key in row})
+    coverage_csv_path = args.output.with_name("geonames-destination-coverage-by-source-country.csv")
+    with coverage_csv_path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=csv_fields)
+        writer.writeheader()
+        writer.writerows(coverage_rows)
     print(json.dumps({"status": report["status"], "counts": counts, "report_path": str(args.output)}, indent=2))
     return 1 if structural_issues else 0
 
