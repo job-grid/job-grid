@@ -76,6 +76,35 @@ test("approved dispositions separate current hierarchy blockers from other entit
   assert.equal(summary.unique_record_dispositions.PRESERVE_HISTORICAL_NOT_CURRENT_ADMIN_SELECTOR, 1030);
   assert.equal(summary.unique_record_dispositions.PRESERVE_UNDIFFERENTIATED_NOT_CURRENT_ADMIN_SELECTOR, 1109);
   assert.equal(summary.non_country_references_still_needing_hierarchy_or_association_review, 2568);
+
+  const destinationReview = summary.country_scoped_destination_review;
+  assert.equal(destinationReview.scope, "five-country crosswalk-exception union only; not a worldwide catalogue total");
+  assert.equal(destinationReview.current_populated_place_candidate_unique_ids, 58);
+  assert.deepEqual(destinationReview.current_populated_place_candidate_ids_by_feature_code, { PPL: 54, PPLL: 4 });
+  assert.deepEqual(destinationReview.current_populated_place_candidate_ids_by_source_country_code, { SG: 58 });
+  assert.equal(destinationReview.other_populated_place_family_unique_ids_held_for_review, 81);
+  assert.equal(destinationReview.historical_or_noncurrent_place_unique_ids_held, 2);
+  assert.equal(destinationReview.country_area_entities_not_place_destinations, 5);
+  assert.equal(destinationReview.administrative_parent_required_for_country_only_search, false);
+  assert.equal(destinationReview.source_country_to_internal_country_mapping_approved, false);
+  assert.equal(destinationReview.current_place_candidates_waiting_for_country_mapping_review, 58);
+  assert.equal(destinationReview.operational_selectable_rows, 0);
+  assert.equal(destinationReview.parent_links_created, 0);
+
+  const countryOnlyCandidate = rows.find((row) => row.country_code === "SG" && row.feature_code === "PPL");
+  assert.ok(countryOnlyCandidate);
+  assert.equal(countryOnlyCandidate.current_admin_selector_treatment, "PLACE_ENTITY_NOT_ADMINISTRATIVE_SELECTOR");
+  assert.equal(
+    countryOnlyCandidate.country_scoped_destination_treatment,
+    "CURRENT_POPULATED_PLACE_CANDIDATE__ADMIN_PARENT_NOT_REQUIRED_FOR_COUNTRY_ONLY_SEARCH",
+  );
+  assert.equal(countryOnlyCandidate.country_scoped_destination_operational_selectable, false);
+  assert.equal(countryOnlyCandidate.parent_link_created, false);
+
+  const heldOtherPlace = rows.find((row) => row.country_code === "SG" && row.feature_code === "PPLX");
+  assert.equal(heldOtherPlace.country_scoped_destination_treatment, "OTHER_POPULATED_PLACE_FAMILY_TYPE_REQUIRES_REVIEW");
+  const historicalPlace = rows.find((row) => row.country_code === "SG" && row.feature_code === "PPLH");
+  assert.equal(historicalPlace.country_scoped_destination_treatment, "HISTORICAL_OR_NONCURRENT_POPULATED_PLACE_HELD_OUT");
 });
 
 test("raw codes and entity identities stay intact; no exception row creates a parent link", async () => {

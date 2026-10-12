@@ -59,6 +59,12 @@ A later implementation may set an internal place as selectable only after all of
 
 The country code and place-hierarchy crosswalks remain separate. A valid countryInfo alpha-2 match does not prove an approved internal-country link or immediate administrative parent. The compressed candidate export keeps these as evidence-only relationships, preserves raw admin1-admin4 values, and sets every `operational_selectable` field to false and every `parent_link_created` field to false. An unverified parent must not block independent, verified records elsewhere in the catalogue.
 
+### Country-only destination review inside unresolved association exceptions
+
+The exception disposition export now carries a separate `country_scoped_destination_treatment` so administrative-selector policy cannot be mistaken for populated-place destination policy. In the five-country crosswalk-exception union (not a worldwide count), 58 unique Singapore records use the approved current populated-place codes `PPL` (54) and `PPLL` (4). These are candidates for **country-only** destination review even though their immediate administrative association remains unresolved. A missing region/subdivision parent does not by itself disqualify a place from a country-only search; it does block claims that the place belongs to a particular administrative unit.
+
+The same exception set contains 81 `PPLX` records held for feature-type review, two historical `PPLH` records, and five country-level `PCLI` entities that are not place destinations. This classification does not approve an internal-country mapping: all 58 candidates remain nonselectable until their source-country-to-internal-country mapping is approved. No parent path is inferred, and no operational selector or database is changed.
+
 ## 5. Coverage report acceptance
 
 Before “destination scope complete” can be claimed, the country/source coverage run must report:

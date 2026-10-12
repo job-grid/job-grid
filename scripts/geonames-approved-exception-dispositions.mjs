@@ -21,6 +21,51 @@ export const POLICY_DOCUMENT =
 const HISTORICAL_ADMIN_CODES = new Set(["ADM1H", "ADM2H", "ADM3H", "ADM4H", "ADMDH"]);
 const HISTORICAL_PLACE_CODES = new Set(["PPLH"]);
 const PLACE_CODES = new Set(["PPL", "PPLX", "PPLL"]);
+const CURRENT_POPULATED_PLACE_CODES = new Set([
+  "PPL", "PPLA", "PPLA2", "PPLA3", "PPLA4", "PPLA5",
+  "PPLC", "PPLCD", "PPLF", "PPLG", "PPLL", "PPLR", "PPLS",
+]);
+const HISTORICAL_OR_NONCURRENT_POPULATED_PLACE_CODES = new Set([
+  "PPLCH", "PPLH", "PPLQ", "PPLW",
+]);
+
+function getCountryScopedDestinationTreatment(featureCode) {
+  if (featureCode === "PCLI") {
+    return {
+      country_scoped_destination_treatment: "COUNTRY_AREA_NOT_A_POPULATED_PLACE_DESTINATION",
+      country_scoped_destination_operational_selectable: false,
+    };
+  }
+  if (CURRENT_POPULATED_PLACE_CODES.has(featureCode)) {
+    return {
+      country_scoped_destination_treatment:
+        "CURRENT_POPULATED_PLACE_CANDIDATE__ADMIN_PARENT_NOT_REQUIRED_FOR_COUNTRY_ONLY_SEARCH",
+      country_scoped_destination_operational_selectable: false,
+    };
+  }
+  if (HISTORICAL_OR_NONCURRENT_POPULATED_PLACE_CODES.has(featureCode)) {
+    return {
+      country_scoped_destination_treatment: "HISTORICAL_OR_NONCURRENT_POPULATED_PLACE_HELD_OUT",
+      country_scoped_destination_operational_selectable: false,
+    };
+  }
+  if (featureCode.startsWith("PPL")) {
+    return {
+      country_scoped_destination_treatment: "OTHER_POPULATED_PLACE_FAMILY_TYPE_REQUIRES_REVIEW",
+      country_scoped_destination_operational_selectable: false,
+    };
+  }
+  if (/^ADM/.test(featureCode)) {
+    return {
+      country_scoped_destination_treatment: "ADMINISTRATIVE_ENTITY__USE_ADMIN_CATALOG_POLICY",
+      country_scoped_destination_operational_selectable: false,
+    };
+  }
+  return {
+    country_scoped_destination_treatment: "OUTSIDE_APPROVED_CURRENT_POPULATED_PLACE_SCOPE__REVIEW_REQUIRED",
+    country_scoped_destination_operational_selectable: false,
+  };
+}
 
 function getDisposition(featureCode) {
   if (featureCode === "PCLI") {
@@ -84,7 +129,7 @@ export function buildDispositionRows(admin1Rows, admin2Rows) {
     }
     if (!existing) uniqueIds.set(row.geonames_id, row);
     const disposition = getDisposition(row.feature_code);
-    Object.assign(row, disposition, {
+    Object.assign(row, disposition, getCountryScopedDestinationTreatment(row.feature_code), {
       owner_policy_approval_date: OWNER_POLICY_APPROVAL_DATE,
       parent_link_created: false,
     });
@@ -129,9 +174,21 @@ export function buildDispositionSummary(rows, sourceSummary) {
   const currentAdminFeatures = uniqueRows.filter(
     (row) => row.owner_approved_disposition === "PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED"
   ).length;
+  const countryScopedPlaceCandidates = uniqueRows.filter(
+    (row) => row.country_scoped_destination_treatment.startsWith("CURRENT_POPULATED_PLACE_CANDIDATE__")
+  );
+  const otherPplReviewRows = uniqueRows.filter(
+    (row) => row.country_scoped_destination_treatment === "OTHER_POPULATED_PLACE_FAMILY_TYPE_REQUIRES_REVIEW"
+  );
+  const historicalPlaceRows = uniqueRows.filter(
+    (row) => row.country_scoped_destination_treatment === "HISTORICAL_OR_NONCURRENT_POPULATED_PLACE_HELD_OUT"
+  );
+  const countryAreaRows = uniqueRows.filter(
+    (row) => row.country_scoped_destination_treatment === "COUNTRY_AREA_NOT_A_POPULATED_PLACE_DESTINATION"
+  );
 
   return {
-    report_version: "1.1",
+    report_version: "1.2",
     generated_on_utc_date: OWNER_POLICY_APPROVAL_DATE,
     decision_status: "OWNER_APPROVED_CONSERVATIVE_DEFAULTS",
     owner_policy_approval_date: OWNER_POLICY_APPROVAL_DATE,
@@ -157,6 +214,22 @@ export function buildDispositionSummary(rows, sourceSummary) {
     unique_record_dispositions: countBy(uniqueRows, "owner_approved_disposition"),
     country_level_records_no_admin_parent_required: countryRecords,
     current_admin_features_requiring_country_specific_parent_path: currentAdminFeatures,
+    country_scoped_destination_review: {
+      scope: "five-country crosswalk-exception union only; not a worldwide catalogue total",
+      unique_exception_records: uniqueRows.length,
+      current_populated_place_candidate_unique_ids: countryScopedPlaceCandidates.length,
+      current_populated_place_candidate_ids_by_feature_code: countBy(countryScopedPlaceCandidates, "feature_code"),
+      current_populated_place_candidate_ids_by_source_country_code: countBy(countryScopedPlaceCandidates, "country_code"),
+      other_populated_place_family_unique_ids_held_for_review: otherPplReviewRows.length,
+      historical_or_noncurrent_place_unique_ids_held: historicalPlaceRows.length,
+      country_area_entities_not_place_destinations: countryAreaRows.length,
+      administrative_parent_required_for_country_only_search: false,
+      source_country_to_internal_country_mapping_approved: false,
+      current_place_candidates_waiting_for_country_mapping_review: countryScopedPlaceCandidates.length,
+      operational_selectable_rows: 0,
+      parent_links_created: 0,
+      policy: "A verified current populated place may be considered for country-only search without an administrative parent, but it must not be assigned to a region/county or used in hierarchical filtering until that parent edge is verified.",
+    },
     initial_operational_admin_catalog: {
       source_exception_rows_preserved: true,
       current_admin_records_excluded_for_unresolved_parent_path: currentAdminFeatures,
@@ -173,6 +246,7 @@ export function buildDispositionSummary(rows, sourceSummary) {
       "Historical and undifferentiated entities are retained, not declared invalid, and are not current administrative selector options by default.",
       "Country-level PCLI entities require no administrative parent; their raw source codes are still preserved unchanged.",
       "Place/non-admin entities are preserved; their administrative association can remain unresolved.",
+      "Country-scoped current-place candidates are distinct from administrative-selector eligibility; their operational selection still requires an approved source-country-to-internal-country mapping, and no parent edge is inferred.",
       "No parent IDs, migrations, seeds, imports, database, deployment or production changes are performed.",
     ],
   };
@@ -183,7 +257,8 @@ const CSV_FIELDS = [
   "raw_admin1_code", "raw_admin2_code", "missing_reference_category",
   "proposed_review_classification", "crosswalk_lookup_key", "raw_missing_code",
   "owner_policy_approval_date", "owner_approved_disposition",
-  "current_admin_selector_treatment", "parent_link_created",
+  "current_admin_selector_treatment", "country_scoped_destination_treatment",
+  "country_scoped_destination_operational_selectable", "parent_link_created",
 ];
 
 function escapeCsv(value) {
@@ -287,6 +362,9 @@ async function main() {
       summary.initial_operational_admin_catalog.current_admin_records_eligible_from_this_exception_set,
     country_level_records_no_admin_parent_required:
       summary.country_level_records_no_admin_parent_required,
+    country_scoped_current_place_candidates:
+      summary.country_scoped_destination_review.current_populated_place_candidate_unique_ids,
+    country_scoped_candidates_operationally_selectable: 0,
     parent_ids_or_links_assigned: summary.parent_ids_or_links_assigned,
   }, null, 2));
 }
