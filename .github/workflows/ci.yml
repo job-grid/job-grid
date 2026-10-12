@@ -1881,7 +1881,7 @@ jobs:
             --m49-html "$work/un-m49-overview.html" \
             --source-manifest "$work/source-manifest.json" \
             --output-dir "$work/output"
-          python3 - "$work/output/country-area-code-crosswalk-aggregate.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          python3 - "$work/output/country-area-code-crosswalk-aggregate.json" <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import json,sys
           from pathlib import Path
           report=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
