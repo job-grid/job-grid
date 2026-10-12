@@ -19,9 +19,9 @@ test("a rewritten raw administrative code fails closed",()=>{
  assert.throws(()=>validateOverrideManifest(copy),/identity\/raw-code invariant failed/);
 });
 
-test("checked-in Japan override CSV preserves both verified parent IDs and types",()=>{
- const csv=readOverrideCsv();
- const lines=csv.trimEnd().split(/\\r?\\n/);
+test("checked-in Japan override CSV preserves both verified parent IDs and types",async()=>{
+ const csv=await readOverrideCsv();
+ const lines=csv.trimEnd().split(/\r?\n/);
  const header=lines[0].split(",");
  const rows=lines.slice(1).map(line=>line.split(","));
  const index=Object.fromEntries(header.map((key,i)=>[key,i]));
