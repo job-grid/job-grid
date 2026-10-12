@@ -30,7 +30,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             candidates=tmp/"candidates.csv.gz"
             with gzip.open(candidates,"wt",encoding="utf-8",newline="") as f:
                 w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"]); w.writeheader()
-                w.writerows([candidate_row(100,"Nairobi","KE"),candidate_row(101,"Kisumu","KE"),candidate_row(200,"London","GB")])
+                w.writerows([candidate_row(100,"Nairobi","KE"),candidate_row(101,"Kisumu","KE"),candidate_row(102,"Unaliased Place","KE"),candidate_row(200,"London","GB")])
             aliases=[
                 alt_row(1,100,"en","Nairobi"),
                 alt_row(2,100,"sw","Nairobi"),
@@ -53,7 +53,7 @@ class AlternateNameExporterTests(unittest.TestCase):
             self.assertEqual(report["status"],"PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED")
             self.assertEqual(report["counts"]["alternate_names_source_rows_scanned"],5)
             self.assertEqual(report["counts"]["candidate_ids_with_aliases"],3)
-            self.assertEqual(report["counts"]["candidate_ids_without_aliases"],0)
+            self.assertEqual(report["counts"]["candidate_ids_without_aliases"],1)
             self.assertEqual(report["counts"]["matching_alias_rows_exported"],4)
             self.assertEqual(report["counts"]["language_codes_in_export"],2)
             with gzip.open(out,"rt",encoding="utf-8",newline="") as f:
@@ -92,3 +92,23 @@ class AlternateNameExporterTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+
+    def test_rejects_duplicate_alternate_name_ids_in_destination_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp); cand=p/"c.csv.gz"
+            with gzip.open(cand,"wt",encoding="utf-8",newline="") as f:
+                w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"])
+                w.writeheader()
+                w.writerows([candidate_row(1,"A","KE")])
+            archive=p/"alternateNamesV2.zip"
+            payload="\n".join([alt_row(5,1,"en","A"),alt_row(5,1,"sw","A")])+"\n"
+            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
+                z.writestr("alternateNamesV2.txt",payload)
+            raw=archive.read_bytes()
+            manifest=p/"manifest.json"
+            manifest.write_text(json.dumps({"remote_source":{
+                "source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now","http_status":200,
+                "size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
+            with self.assertRaisesRegex(ValueError,"Duplicate matching alternateName IDs"):
+                exporter.export_aliases(cand,archive,manifest,p/"out")
