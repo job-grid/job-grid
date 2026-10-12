@@ -8,8 +8,10 @@ import { fileURLToPath } from "node:url";
 
 const script = fileURLToPath(new URL("../scripts/geonames-country-catalog-audit.py", import.meta.url));
 const python = process.platform === "win32" ? "python" : "python3";
-const row = (id, name, featureClass, featureCode) =>
-  [id, name, name, "", "0", "0", featureClass, featureCode, "", "", "", "", "", "", "0", "0", "UTC", "2026-01-01", ""].join("\t");
+const row = (id, name, featureClass, featureCode, { countryCode = "", admin1Code = "", admin2Code = "", admin3Code = "", admin4Code = "" } = {}) => {
+  const fields = [id, name, name, "", "0", "0", featureClass, featureCode, countryCode, "", admin1Code, admin2Code, admin3Code, admin4Code, "0", "0", "UTC", "2026-01-01", ""];
+  return fields.join("\t");
+};
 const countryInfo = ({ alpha2 = "AA", alpha3 = "AAA", numeric = "001", name = "Synthetic Country", id = "100" } = {}) =>
   [alpha2, alpha3, numeric, "", name, "", "1", "100", "EU", "", "", "", "", "", "", "en", id, "", ""].join("\t");
 
@@ -63,7 +65,9 @@ async function runFixture(t, infoRows, pcliRows) {
   ], { encoding: "utf8" });
   assert.equal(result.error, undefined, result.error?.message);
   const report = JSON.parse(await readFile(reportPath, "utf8"));
-  return { result, report };
+  const coveragePath = join(dir, "geonames-destination-source-coverage.json");
+  const destinationCoverage = JSON.parse(await readFile(coveragePath, "utf8"));
+  return { result, report, destinationCoverage };
 }
 
 test("countryInfo and PCLI IDs reconcile and the aggregate report contains no source rows", async (t) => {
@@ -167,4 +171,52 @@ test("malformed countryInfo and worldwide rows fail closed", async (t) => {
   assert.equal(report.status, "BLOCKED_REVIEW_REQUIRED");
   assert.equal(report.counts.country_info_malformed_rows, 1);
   assert.equal(report.counts.all_countries_malformed_rows, 1);
+});
+test("destination coverage distinguishes current place candidates, administrative levels, and historical places", async (t) => {
+  const { result, report, destinationCoverage } = await runFixture(
+    t,
+    [
+      countryInfo({ alpha2: "KE", alpha3: "KEN", numeric: "404", name: "Kenya", id: "100" }),
+      countryInfo({ alpha2: "GB", alpha3: "GBR", numeric: "826", name: "United Kingdom", id: "101" })
+    ],
+    [
+      row("100", "Kenya", "A", "PCLI"),
+      row("101", "United Kingdom", "A", "PCLI"),
+      row("200", "Nairobi", "P", "PPLC", { countryCode: "KE", admin1Code: "05" }),
+      row("201", "Kisumu", "P", "PPL", { countryCode: "KE", admin1Code: "26", admin2Code: "KIS" }),
+      row("202", "Historic Kenya Place", "P", "PPLH", { countryCode: "KE" }),
+      row("203", "London", "P", "PPL", { countryCode: "GB", admin1Code: "ENG" }),
+      row("204", "Kenya first-level unit", "A", "ADM1", { countryCode: "KE", admin1Code: "05" }),
+      row("205", "Kenya second-level unit", "A", "ADM2", { countryCode: "KE", admin1Code: "05", admin2Code: "KIS" })
+    ]
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(destinationCoverage.current_place_candidate_rows, 3);
+  assert.equal(destinationCoverage.historical_or_noncurrent_place_rows, 1);
+  assert.equal(destinationCoverage.current_admin1_rows, 1);
+  assert.equal(destinationCoverage.current_admin2_rows, 1);
+  assert.equal(destinationCoverage.country_info_alpha2_code_rows, 2);
+  assert.equal(destinationCoverage.country_info_alpha2_codes_with_current_place_candidates, 2);
+  assert.equal(destinationCoverage.country_info_alpha2_codes_without_current_place_candidates, 0);
+  assert.equal(destinationCoverage.selectable_destinations_approved, false);
+  assert.equal(destinationCoverage.worldwide_destination_completeness, "NOT_ESTABLISHED_BY_SOURCE_COUNTS_ALONE");
+  assert.equal(report.interpretation.destination_coverage, "SOURCE_FEATURE_DISTRIBUTION_AUDITED_NOT_WORLDWIDE_PRODUCT_COMPLETENESS");
+  assert.equal(report.interpretation.destination_candidate_rows, 3);
+});
+
+test("a country with only historical/abandoned places is surfaced without auto-selection", async (t) => {
+  const { result, destinationCoverage } = await runFixture(
+    t,
+    [countryInfo({ alpha2: "KE", alpha3: "KEN", numeric: "404", name: "Kenya", id: "100" })],
+    [
+      row("100", "Kenya", "A", "PCLI"),
+      row("202", "Historic Kenya Place", "P", "PPLH", { countryCode: "KE" }),
+      row("203", "Abandoned Kenya Place", "P", "PPLQ", { countryCode: "KE" })
+    ]
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(destinationCoverage.current_place_candidate_rows, 0);
+  assert.equal(destinationCoverage.historical_or_noncurrent_place_rows, 2);
+  assert.equal(destinationCoverage.country_info_alpha2_codes_without_current_place_candidates, 1);
+  assert.equal(destinationCoverage.selectable_destinations_approved, false);
 });
