@@ -266,9 +266,11 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
       this.selected = null;
       this.selectionContainer.replaceChildren();
       if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+      // A new query invalidates the previous selection and its suggestions immediately.
+      // Do not let a user click a result that no longer matches the text in the input.
+      this.matches = [];
+      this.resultsContainer.replaceChildren();
       if (!this.selectedCountry || query.length < 2) {
-        this.matches = [];
-        this.resultsContainer.replaceChildren();
         this.status.textContent = query.length === 1 ? "Enter at least 2 letters to search." : "Type a place name to see suggestions.";
         return;
       }
