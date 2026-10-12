@@ -1641,7 +1641,10 @@ jobs:
                   k,v=line.split(":",1); current[k.strip().lower()]=v.strip()
           if code=="200": blocks.append(current)
           h=blocks[-1] if blocks else {}
-          p=Path(archive_path); raw=p.read_bytes()
+          p=Path(archive_path); source_digest=hashlib.sha256()
+          with p.open("rb") as stream:
+              for chunk in iter(lambda: stream.read(1024*1024), b""):
+                  source_digest.update(chunk)
           with zipfile.ZipFile(p,"r") as z:
               hits=[n for n in z.namelist() if n=="alternateNamesV2.txt" or n.endswith("/alternateNamesV2.txt")]
               if len(hits)!=1:
@@ -1652,7 +1655,7 @@ jobs:
               info=z.getinfo(hits[0])
           record={"source_url":url,"retrieved_at_utc":retrieved,"http_status":int(status),
               "http_last_modified_header":h.get("last-modified"),"etag":h.get("etag"),
-              "size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),
+              "size_bytes":p.stat().st_size,"sha256":source_digest.hexdigest(),
               "zip_crc_validation":"PASS","member_name":info.filename,"member_uncompressed_size_bytes":info.file_size}
           Path(manifest_path).write_text(json.dumps({"manifest_version":1,"remote_source":record},indent=2)+"\n",encoding="utf-8")
           print(json.dumps(record,indent=2))
