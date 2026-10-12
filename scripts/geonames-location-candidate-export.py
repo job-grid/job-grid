@@ -87,7 +87,7 @@ def open_zip_member(path: Path, member_name: str):
     return archive, matches[0]
 
 
-def gzip_csv_writer(path: Path, fieldnames: list[str]) -> tuple[Any, Any]:
+def gzip_csv_writer(path: Path, fieldnames: list[str]) -> tuple[Any, Any, Any]:
     raw = path.open("wb")
     stream = gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=6, mtime=0)
     text_stream = __import__("io").TextIOWrapper(stream, encoding="utf-8", newline="")
@@ -190,7 +190,6 @@ def parse_place_rows(
     stats = {
         "source_member": member.filename,
         "source_member_bytes": member.file_size,
-        "source_member_sha256": sha256_member(candidates_path=None, source_archive=source, member_name=member.filename),
         "rows_read": rows_read,
         "candidate_rows_written": len(candidate_ids),
         "excluded_non_candidate_features": excluded_features,
@@ -203,18 +202,6 @@ def parse_place_rows(
         "candidate_rows_by_feature_code": dict(sorted(feature_counts.items())),
     }
     return candidate_ids, stats
-
-
-def sha256_member(candidates_path: Path | None, source_archive: Path, member_name: str) -> str:
-    digest = hashlib.sha256()
-    archive, member = open_zip_member(source_archive, member_name)
-    try:
-        with archive.open(member, "r") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-    finally:
-        archive.close()
-    return digest.hexdigest()
 
 
 def parse_alias_rows(
@@ -277,7 +264,6 @@ def parse_alias_rows(
     return {
         "source_member": member.filename,
         "source_member_bytes": member.file_size,
-        "source_member_sha256": sha256_member(candidates_path=None, source_archive=source, member_name=member.filename),
         "rows_read": rows_read,
         "alias_rows_for_candidate_places_written": rows_written,
         "rows_skipped_because_target_not_in_place_candidates": not_candidate_targets,
