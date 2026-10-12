@@ -125,7 +125,78 @@ def idx(rows, field):
     return out
 
 
-def reconcile(geo, m49, sources):
+
+
+EXPECTED_SOURCE_EXCEPTIONS = {
+    "831053": {"name": "Kosovo", "alpha2": "XK", "alpha3": "XKX", "numeric3": "0", "role": "current_destination_area"},
+    "1668284": {"name": "Taiwan", "alpha2": "TW", "alpha3": "TWN", "numeric3": "158", "role": "current_destination_area"},
+    "8505033": {"name": "Serbia and Montenegro", "alpha2": "CS", "alpha3": "SCG", "numeric3": "891", "role": "historical_reference"},
+    "8505032": {"name": "Netherlands Antilles", "alpha2": "AN", "alpha3": "ANT", "numeric3": "530", "role": "historical_reference"},
+}
+
+
+def validate_exception_dispositions(manifest, geo_rows):
+    """Fail closed if live out-of-M49 GeoNames rows lack exact curated dispositions."""
+    if manifest.get("schema_version") != 1 or not isinstance(manifest.get("records"), list):
+        raise ValueError("Exception disposition manifest schema is invalid.")
+    records = manifest["records"]
+    by_id = {str(row.get("geonames_id", "")): row for row in records}
+    if len(by_id) != len(records) or set(by_id) != set(EXPECTED_SOURCE_EXCEPTIONS):
+        raise ValueError("Exception manifest must contain each of the four reviewed source IDs exactly once.")
+    geo_by_id = {str(row["geonames_id"]): row for row in geo_rows}
+    if len(geo_by_id) != len(geo_rows):
+        raise ValueError("GeoNames countryInfo contains duplicate source IDs.")
+    for geonames_id, expected in EXPECTED_SOURCE_EXCEPTIONS.items():
+        record = by_id[geonames_id]
+        source_codes = record.get("source_codes", {})
+        actual = geo_by_id.get(geonames_id)
+        if not actual:
+            raise ValueError(f"Expected exception ID {geonames_id} is absent from live GeoNames countryInfo.")
+        if actual["name"] != expected["name"] or any(
+            str(actual[field]) != expected[field] for field in ("alpha2", "alpha3", "numeric3")
+        ):
+            raise ValueError(f"Live source identity/code tuple changed for exception ID {geonames_id}; review required.")
+        if record.get("geonames_name") != expected["name"] or record.get("catalog_role") != expected["role"]:
+            raise ValueError(f"Curated exception identity/role mismatch for ID {geonames_id}.")
+        if any(str(source_codes.get(field, "")) != expected[field]
+               for field in ("alpha2", "alpha3", "numeric3")):
+            raise ValueError(f"Curated raw source-code tuple changed for ID {geonames_id}.")
+        if not record.get("source_urls") or not any("unstats.un.org/unsd/methodology/m49" in u for u in record["source_urls"]):
+            raise ValueError(f"Official UN M49 context source is required for exception ID {geonames_id}.")
+        if record.get("sovereignty_claim") is not False:
+            raise ValueError(f"Destination/historical catalog treatment must not imply a sovereignty claim: {geonames_id}.")
+        if record.get("catalog_role") == "current_destination_area":
+            if record.get("status") != "active" or record.get("selectable_as_destination") is not True:
+                raise ValueError(f"Current destination area must stay searchable/selectable under the approved geography-default policy: {geonames_id}.")
+            if not record.get("canonical_display_name"):
+                raise ValueError(f"Current destination area needs a display label: {geonames_id}.")
+            iso = record.get("iso_codes", {})
+            if not isinstance(iso, dict):
+                raise ValueError(f"ISO fields must be explicitly represented for {geonames_id}.")
+            if geonames_id == "831053":
+                if any(iso.get(k) is not None for k in ("alpha2", "alpha3", "numeric3")):
+                    raise ValueError("Kosovo's GeoNames XK/XKX/0 source values must not be populated as ISO fields.")
+                if "412" not in record.get("m49_disposition", ""):
+                    raise ValueError("Kosovo disposition must preserve the distinct M49 statistical-code caveat.")
+            if geonames_id == "1668284":
+                if (iso.get("alpha2"), iso.get("alpha3"), iso.get("numeric3")) != ("TW", "TWN", "158"):
+                    raise ValueError("Taiwan ISO tuple/source corroboration must be explicit and exact.")
+                if not any("iso.org" in u and "newsletter.pdf" in u for u in record.get("source_urls", [])):
+                    raise ValueError("Taiwan code corroboration must reference the official ISO newsletter evidence.")
+                if "not downloaded" not in record.get("iso_code_policy", "").lower():
+                    raise ValueError("Current ISO catalogue snapshot limitation must remain explicit for Taiwan.")
+        elif record.get("catalog_role") == "historical_reference":
+            if record.get("status") != "historical_inactive" or record.get("selectable_as_destination") is not False:
+                raise ValueError(f"Historical entity must be inactive and nonselectable: {geonames_id}.")
+            if not record.get("valid_to") or any(record.get("iso_codes", {}).get(k) is not None
+                                                 for k in ("alpha2", "alpha3", "numeric3")):
+                raise ValueError(f"Historical identifiers must not be exposed as current ISO fields: {geonames_id}.")
+            if not record.get("historical_successor_context"):
+                raise ValueError(f"Historical successor context is required for ID {geonames_id}.")
+    return by_id
+
+
+def reconcile(geo, m49, sources, dispositions=None):
     m49_pairs = {(r["alpha2"], r["alpha3"]): r for r in m49}
     geo_pairs = {(r["alpha2"], r["alpha3"]): r for r in geo
                  if A2.fullmatch(r["alpha2"]) and A3.fullmatch(r["alpha3"])}
@@ -172,14 +243,48 @@ def reconcile(geo, m49, sources):
     pairs = Counter((r["alpha2"], r["alpha3"]) for r in geo)
     dup_pairs = sum(n > 1 for n in pairs.values())
     duplicates = dup_pairs + dup(geo,"alpha2") + dup(geo,"alpha3") + dup(m49,"alpha2") + dup(m49,"alpha3")
-    review = missing + a2conf + a3conf + mmissing
+    disposition_by_id = dispositions or {}
+    documented = 0
+    undocumented = 0
+    current_destination_exceptions = 0
+    historical_exceptions = 0
+    for row in detail:
+        if row.get("source_side") != "GeoNames countryInfo" or row.get("match_status") == "MATCHED_ALPHA2_ALPHA3_PAIR":
+            continue
+        decision = disposition_by_id.get(str(row.get("geonames_id", "")))
+        if decision:
+            row["exception_disposition_status"] = "DOCUMENTED"
+            row["catalog_role"] = decision["catalog_role"]
+            row["catalog_status"] = decision["status"]
+            row["selectable_as_destination"] = decision["selectable_as_destination"]
+            row["canonical_display_name"] = decision["canonical_display_name"]
+            row["exception_source_codes_preserved"] = True
+            documented += 1
+            if decision["catalog_role"] == "current_destination_area":
+                current_destination_exceptions += 1
+            elif decision["catalog_role"] == "historical_reference":
+                historical_exceptions += 1
+        else:
+            row["exception_disposition_status"] = "UNDOCUMENTED_REQUIRES_REVIEW"
+            undocumented += 1
+    structural = duplicates > 0
+    code_conflicts = a2conf + a3conf + mmissing
+    unresolved = undocumented + code_conflicts
     verified = all(x.get("http_status") == 200 and re.fullmatch(r"[a-f0-9]{64}", x.get("sha256",""))
                    for x in sources.values())
+    if structural:
+        status = "BLOCKED_STRUCTURAL_SOURCE_ISSUES"
+    elif unresolved:
+        status = "BLOCKED_UNDOCUMENTED_OR_CONFLICTING_CODE_ROWS"
+    elif missing and dispositions:
+        status = "PASS_ALPHA_CODE_CROSSCHECK_WITH_DOCUMENTED_EXCEPTIONS"
+    elif missing or code_conflicts:
+        status = "PASS_ALPHA_CODE_CROSSCHECK_WITH_REVIEW_ITEMS"
+    else:
+        status = "PASS_ALPHA_CODE_CROSSCHECK"
     report = {
       "schema_version":1, "audit":"geonames-country-info-vs-official-un-m49-iso-alpha-codes",
-      "generated_at_utc":now(),
-      "status":"BLOCKED_STRUCTURAL_SOURCE_ISSUES" if duplicates else
-               ("PASS_ALPHA_CODE_CROSSCHECK_WITH_REVIEW_ITEMS" if review else "PASS_ALPHA_CODE_CROSSCHECK"),
+      "generated_at_utc":now(), "status":status,
       "sources":sources,
       "counts":{
         "geonames_country_info_rows":len(geo), "un_m49_country_area_rows":len(m49),
@@ -187,20 +292,26 @@ def reconcile(geo, m49, sources):
         "geonames_pairs_not_present_in_un_m49":missing, "geonames_alpha2_match_alpha3_conflicts":a2conf,
         "geonames_alpha3_match_alpha2_conflicts":a3conf, "un_m49_pairs_missing_or_conflicting":mmissing,
         "numeric3_equals_m49_code_diagnostic_only":int(numeric_equal), "duplicate_code_groups":duplicates,
-        "review_items":review},
+        "documented_exception_rows":documented, "undocumented_exception_rows":undocumented,
+        "current_destination_area_exceptions":current_destination_exceptions,
+        "historical_reference_exceptions":historical_exceptions,
+        "unresolved_code_review_items":unresolved,
+        "review_items":unresolved},
       "interpretation":{
         "source_retrieval_metadata_verified":verified,
         "identity_join":"exact alpha-2 + alpha-3 pair; names are not identity keys",
         "un_m49_numeric_code_is_iso_numeric3":False,
         "direct_iso_country_codes_collection_snapshot":"NOT_CAPTURED_BY_THIS_AUDIT",
         "automatic_code_replacement_authorized":False,
-        "catalog_acceptance":"BLOCKED_PENDING_REVIEW_ITEMS_AND_OTHER_CATALOG_GATES",
+        "source_code_exception_dispositions":"PASS" if dispositions and undocumented == 0 else "NOT_PERFORMED",
+        "catalog_acceptance":"CODE_EXCEPTIONS_ACCOUNTED_FOR; PLACE_HIERARCHY_AND_WORLDWIDE_DESTINATION_COVERAGE_REMAIN_OPEN",
         "worldwide_destination_completeness":"NOT_ESTABLISHED",
         "database_or_production_changes":False},
       "limitations":[
         "UN M49 is an official UN reference that displays ISO-assigned alpha-2/alpha-3 codes; it is not an ISO Country Codes Collection download.",
         "M49 numeric identifiers are not treated as proof of ISO numeric-3 conformity.",
-        "Unmatched tuples are review cases, not automatic proof of invalidity or permission to replace codes.",
+        "The four non-matching tuples are accounted for by a versioned conservative disposition file; source tuples are not rewritten.",
+        "Taiwan's ISO tuple has older official ISO-newsletter corroboration; a live ISO OBP/collection snapshot is not included in this audit.",
         "Code reconciliation does not establish administrative parentage or worldwide destination completeness."]}
     return report, detail
 
@@ -238,13 +349,19 @@ def main(argv=None):
     p.add_argument("--country-info",required=True,type=Path)
     p.add_argument("--m49-html",required=True,type=Path)
     p.add_argument("--source-manifest",required=True,type=Path)
+    p.add_argument("--exception-dispositions",required=True,type=Path)
     p.add_argument("--output-dir",required=True,type=Path)
     a=p.parse_args(argv)
     try:
         sources=check_manifest(a.source_manifest,a.country_info,a.m49_html)
         geo=parse_geonames(a.country_info.read_text(encoding="utf-8-sig"))
         m49=parse_m49(a.m49_html.read_text(encoding="utf-8"))
-        report,rows=reconcile(geo,m49,sources)
+        exception_manifest=json.loads(a.exception_dispositions.read_text(encoding="utf-8"))
+        dispositions=validate_exception_dispositions(exception_manifest,geo)
+        live_missing = {r["geonames_id"] for r in geo if (r["alpha2"],r["alpha3"]) not in {(x["alpha2"],x["alpha3"]) for x in m49}}
+        if live_missing != {gid for gid, item in dispositions.items() if (item["source_codes"]["alpha2"],item["source_codes"]["alpha3"]) not in {(x["alpha2"],x["alpha3"]) for x in m49}}:
+            raise ValueError("Every live source pair outside M49 must be accounted for, and no expected exception may silently disappear.")
+        report,rows=reconcile(geo,m49,sources,dispositions)
     except (OSError,UnicodeError,json.JSONDecodeError,ValueError) as exc:
         print(f"BLOCKED_COUNTRY_AREA_CODE_AUDIT: {type(exc).__name__}: {exc}",file=sys.stderr); return 2
     write_report(report,rows,a.output_dir)
