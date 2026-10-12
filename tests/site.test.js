@@ -122,6 +122,51 @@ test("place normalization keeps the selected country and allows missing parent l
   assert.deepEqual(normalizeLocations({ results: [{ id: 2, name: "Paris", country_code: "FR" }] }, "KE"), []);
 });
 
+test("Kenya and Japan locations remain selectable when administrative parents are incomplete", () => {
+  const sourceResponse = { results: [
+    {
+      id: 4101, name: "Central", country_code: "KE", country: "Kenya",
+      admin2: "County A", feature_code: "PPL", latitude: null, longitude: null
+    },
+    {
+      id: 8102, name: "Central", country_code: "JP", country: "Japan",
+      admin3: "District A", feature_code: "PPL", latitude: null, longitude: null
+    }
+  ] };
+
+  const kenya = normalizeLocations(sourceResponse, "KE");
+  const japan = normalizeLocations(sourceResponse, "JP");
+
+  assert.equal(kenya.length, 1);
+  assert.equal(japan.length, 1);
+  assert.equal(kenya[0].id, "4101");
+  assert.equal(japan[0].id, "8102");
+  assert.equal(kenya[0].admin1, "");
+  assert.equal(kenya[0].admin2, "County A");
+  assert.equal(japan[0].admin1, "");
+  assert.equal(japan[0].admin2, "");
+  assert.equal(japan[0].admin3, "District A");
+  assert.equal(buildPlaceLabel(kenya[0]), "Central, County A, Kenya");
+  assert.equal(buildPlaceLabel(japan[0]), "Central, District A, Japan");
+
+  const japanPayload = buildLocationSelectionPayload(japan[0], "JP", [{ code: "JP", name: "Japan" }]);
+  assert.deepEqual(japanPayload.place.adminAreas, [{ level: "admin3", name: "District A" }]);
+  assert.equal(japanPayload.place.coordinates, null);
+
+  const kenyaPayload = buildLocationSelectionPayload(kenya[0], "KE", [{ code: "KE", name: "Kenya" }]);
+  assert.deepEqual(kenyaPayload.place.adminAreas, [{ level: "admin2", name: "County A" }]);
+  assert.equal(kenyaPayload.place.coordinates, null);
+});
+
+test("invalid or out-of-range coordinates are never emitted as a valid location point", () => {
+  const place = normalizeLocations({ results: [{
+    id: 9999, name: "Outside", country_code: "KE", country: "Kenya",
+    feature_code: "PPL", latitude: 91, longitude: 181
+  }] }, "KE")[0];
+  const payload = buildLocationSelectionPayload(place, "KE", [{ code: "KE", name: "Kenya" }]);
+  assert.deepEqual(payload.place.coordinates, null);
+});
+
 test("selected location emits a versioned country-scoped integration payload with optional admin levels", () => {
   const place = normalizeLocations({ results: [{
     id: 314159,
