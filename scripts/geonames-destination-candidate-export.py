@@ -16,6 +16,7 @@ import csv
 import gzip
 import hashlib
 import json
+import math
 import re
 import sys
 from collections import Counter, defaultdict
@@ -32,7 +33,7 @@ CURRENT_ADMIN_CODES = {"ADM1", "ADM2", "ADM3", "ADM4", "ADM5"}
 FIELD_COUNT = 19
 OUTPUT_FIELDS = [
     "geonames_id", "name", "ascii_name", "alternate_names_inline",
-    "latitude_raw", "longitude_raw", "feature_class", "feature_code",
+    "latitude_raw", "longitude_raw", "coordinate_validation_status", "feature_class", "feature_code",
     "source_country_code_raw", "country_info_geonames_id",
     "country_info_name", "country_info_alpha3_raw", "country_info_numeric3_raw",
     "country_assignment_status", "candidate_kind", "source_disposition",
@@ -100,6 +101,22 @@ def verify_country_info(path: Path, manifest_path: Path):
     return by_alpha2, by_id, {"rows": rows, "bytes": size, "sha256": digest, **source}
 
 
+def coordinate_status(latitude: str, longitude: str):
+    """Classify coordinates without dropping any source row."""
+    lat, lon = (latitude or "").strip(), (longitude or "").strip()
+    if not lat or not lon:
+        return "MISSING_WGS84"
+    try:
+        lat_value, lon_value = float(lat), float(lon)
+    except (TypeError, ValueError, OverflowError):
+        return "INVALID_WGS84"
+    if not math.isfinite(lat_value) or not math.isfinite(lon_value):
+        return "INVALID_WGS84"
+    if not (-90 <= lat_value <= 90 and -180 <= lon_value <= 180):
+        return "INVALID_WGS84"
+    return "VALID_WGS84"
+
+
 def classify_country(code: str, country_by_code: dict, exception_by_id: dict):
     raw = (code or "").strip().upper()
     if not raw:
@@ -159,6 +176,11 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
     duplicate_ids = 0
     disposition_counts = Counter()
     country_assignment_counts = Counter()
+    coordinate_status_counts = Counter()
+    empty_canonical_name_rows = 0
+    invalid_coordinate_rows = 0
+    missing_coordinate_rows = 0
+    record_quality_hold_rows = 0
     by_code = defaultdict(Counter)
     seen_ids = set()
 
@@ -191,6 +213,21 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
                 seen_ids.add(geonames_id)
 
             kind, disposition, proposed_status = classified
+            name = fields[1].strip()
+            coordinates = coordinate_status(fields[4], fields[5])
+            coordinate_status_counts[coordinates] += 1
+            if coordinates == "INVALID_WGS84":
+                invalid_coordinate_rows += 1
+                disposition = "HELD_INVALID_WGS84_COORDINATES"
+                proposed_status = "review_required"
+                record_quality_hold_rows += 1
+            elif coordinates == "MISSING_WGS84":
+                missing_coordinate_rows += 1
+            if not name:
+                empty_canonical_name_rows += 1
+                disposition = "HELD_MISSING_CANONICAL_NAME"
+                proposed_status = "review_required"
+                record_quality_hold_rows += 1
             source_country = fields[8].strip()
             country, country_status = classify_country(source_country, country_by_code, exception_by_id)
             if country_status == "SOURCE_CODE_MATCHES_HISTORICAL_ENTITY__HOLD":
@@ -212,6 +249,7 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
                 "name": fields[1], "ascii_name": fields[2],
                 "alternate_names_inline": fields[3],
                 "latitude_raw": fields[4], "longitude_raw": fields[5],
+                "coordinate_validation_status": coordinates,
                 "feature_class": fc, "feature_code": code,
                 "source_country_code_raw": source_country,
                 "country_info_geonames_id": country["geonames_id"] if country else "",
@@ -229,7 +267,7 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
                 "raw_admin3_code": fields[12], "raw_admin4_code": fields[13],
                 "population_raw": fields[14],
                 "source_modified_date": fields[18],
-                "source_record_identity_status": "SOURCE_ID_SHAPE_VALID__IDENTITY_REVIEW_PENDING",
+                "source_record_identity_status": "BLOCKED_EMPTY_CANONICAL_NAME" if not name else "SOURCE_ID_SHAPE_VALID__IDENTITY_REVIEW_PENDING",
                 "parent_link_created": "false",
             }
             writer.writerow(out)
@@ -293,6 +331,11 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
             "duplicate_candidate_geonames_ids": duplicate_ids,
             "invalid_candidate_ids": invalid_id_rows,
             "malformed_source_lines": malformed_rows,
+            "empty_canonical_name_rows": empty_canonical_name_rows,
+            "invalid_coordinate_rows": invalid_coordinate_rows,
+            "missing_coordinate_rows": missing_coordinate_rows,
+            "coordinate_validation_status_totals": dict(sorted(coordinate_status_counts.items())),
+            "record_quality_hold_rows": record_quality_hold_rows,
             "unique_candidate_source_ids": len(seen_ids),
             "operational_selectable_rows": 0,
             "parent_links_created": 0,
