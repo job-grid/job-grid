@@ -215,7 +215,7 @@ def validate_complete_reconciliation(geo_rows, m49_rows, dispositions):
 
 
 
-def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sources):
+def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sources, require_full_source_counts=True):
     """Build a source-reconciled candidate package; it is never operationally enabled."""
     m49_by_pair = {(r["alpha2"], r["alpha3"]): r for r in m49_rows}
     records = []
@@ -279,8 +279,10 @@ def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sourc
         raise ValueError("Candidate package must contain each source countryInfo ID exactly once.")
     current = [r for r in records if r["record_status_candidate"] == "active"]
     historic = [r for r in records if r["record_status_candidate"] == "historical_inactive"]
-    if len(current) != 250 or len(historic) != 2 or sum(r["m49_current_row_present"] for r in records) != len(m49_rows):
-        raise ValueError("Unexpected country/area package counts; the source reconciliation needs review.")
+    if sum(r["m49_current_row_present"] for r in records) != len(m49_rows):
+        raise ValueError("Not all UN M49 coded country/area rows joined to exactly one candidate source record.")
+    if require_full_source_counts and (len(geo_rows) != 252 or len(m49_rows) != 248 or len(current) != 250 or len(historic) != 2):
+        raise ValueError("Unexpected live country/area package counts; full-source reconciliation needs review.")
     return {
         "schema_version": 1,
         "package_type": "country-area-destination-catalog-candidate",
