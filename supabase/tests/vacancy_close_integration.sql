@@ -6,9 +6,16 @@ INSERT INTO auth.users (id) VALUES
   ('00000000-0000-4000-8000-000000000003'),
   ('00000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.organizations (id, legal_name, display_name, status) VALUES
-  ('10000000-0000-4000-8000-000000000001', 'Example Employer One Ltd', 'Employer One', 'verified'),
-  ('10000000-0000-4000-8000-000000000002', 'Example Employer Two Ltd', 'Employer Two', 'verified');
+INSERT INTO public.organizations (
+  id, legal_name, display_name, type, status, verification_status
+) VALUES
+  ('10000000-0000-4000-8000-000000000001', 'Example Employer One Ltd', 'Employer One', 'employer', 'verified', 'verified'),
+  ('10000000-0000-4000-8000-000000000002', 'Example Employer Two Ltd', 'Employer Two', 'employer', 'verified', 'verified');
+
+INSERT INTO public.geography (id, country_code, level, canonical_name) VALUES
+  ('90000000-0000-4000-8000-000000000001', 'KE', 'city', 'Nairobi'),
+  ('90000000-0000-4000-8000-000000000002', 'KE', 'city', 'Kisumu'),
+  ('90000000-0000-4000-8000-000000000003', 'KE', 'city', 'Mombasa');
 
 INSERT INTO public.organization_memberships (organization_id, user_id, role, status) VALUES
   ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'recruiter', 'active'),
@@ -20,7 +27,7 @@ INSERT INTO public.platform_roles (user_id, role, active) VALUES
 
 INSERT INTO public.vacancies (
   id, organization_id, created_by, reference_code, slug, title, description,
-  work_location, country_code, status, version, published_at, expires_at
+  geography_id, worksite_text, status, version, published_at, expires_at
 ) VALUES
   (
     '20000000-0000-4000-8000-000000000001',
@@ -28,7 +35,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A001', 'operations-manager', 'Operations Manager',
     'Manage daily operations and coordinate the service delivery team.',
-    'Nairobi', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   ),
   (
     '20000000-0000-4000-8000-000000000002',
@@ -36,7 +43,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000002',
     'JOB-B001', 'finance-officer', 'Finance Officer',
     'Maintain accounting records and prepare monthly management reports.',
-    'Kisumu', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000002', 'Kisumu', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   ),
   (
     '20000000-0000-4000-8000-000000000003',
@@ -44,7 +51,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A002', 'project-coordinator', 'Project Coordinator',
     'Coordinate project activities, reporting and cross-team delivery.',
-    'Mombasa', 'KE', 'published', 2, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000003', 'Mombasa', 'published', 2, now() - interval '1 day', now() + interval '30 days'
   ),
   (
     '20000000-0000-4000-8000-000000000004',
@@ -52,7 +59,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A003', 'draft-analyst', 'Draft Analyst',
     'Prepare and maintain project information for an internal analysis team.',
-    'Nairobi', 'KE', 'draft', 1, NULL, NULL
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'draft', 1, NULL, NULL
   ),
   (
     '20000000-0000-4000-8000-000000000005',
@@ -60,7 +67,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A004', 'expired-engineer', 'Expired Engineer',
     'Maintain engineering records and support operational reliability.',
-    'Nairobi', 'KE', 'published', 1, now() - interval '30 days', now() - interval '1 hour'
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'published', 1, now() - interval '30 days', now() - interval '1 hour'
   ),
   (
     '20000000-0000-4000-8000-000000000006',
@@ -68,7 +75,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A005', 'future-analyst', 'Future Analyst',
     'Prepare forward-looking operational reports for a project team.',
-    'Nairobi', 'KE', 'published', 1, now() + interval '1 day', now() + interval '31 days'
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'published', 1, now() + interval '1 day', now() + interval '31 days'
   ),
   (
     '20000000-0000-4000-8000-000000000007',
@@ -76,7 +83,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A006', 'moderator-close', 'Moderator Close Test',
     'Coordinate quality reviews and provide oversight for teams.',
-    'Nairobi', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   ),
   (
     '20000000-0000-4000-8000-000000000008',
@@ -84,7 +91,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000002',
     'JOB-B002', 'viewer-close', 'Viewer Permission Test',
     'Support business operations and maintain regular status reporting.',
-    'Kisumu', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000002', 'Kisumu', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   ),
   (
     '20000000-0000-4000-8000-000000000009',
@@ -92,7 +99,7 @@ INSERT INTO public.vacancies (
     '00000000-0000-4000-8000-000000000001',
     'JOB-A007', 'concurrent-close', 'Concurrent Close Test',
     'Coordinate a test vacancy used for concurrent idempotency regression checks.',
-    'Nairobi', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+    '90000000-0000-4000-8000-000000000001', 'Nairobi', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   );
 
 DO $column_grant_test$
