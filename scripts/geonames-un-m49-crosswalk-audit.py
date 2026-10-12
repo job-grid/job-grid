@@ -295,6 +295,7 @@ def reconcile(geo, m49, sources, dispositions=None):
         "documented_exception_rows":documented, "undocumented_exception_rows":undocumented,
         "current_destination_area_exceptions":current_destination_exceptions,
         "historical_reference_exceptions":historical_exceptions,
+        "periodic_direct_iso_source_refresh_items":sum(1 for item in (dispositions or {}).values() if item.get("geonames_id") == "1668284"),
         "unresolved_code_review_items":unresolved,
         "review_items":unresolved},
       "interpretation":{
@@ -339,7 +340,12 @@ def write_report(report, rows, out):
     out.mkdir(parents=True, exist_ok=True)
     (out/"country-area-code-crosswalk-aggregate.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     (out/"country-area-code-crosswalk-rows.json").write_text(json.dumps(rows,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
-    fields=["source_side","name","geonames_id","alpha2","alpha3","numeric3","comparison_m49_code","comparison_name","match_status"]
+    fields=[
+        "source_side","name","geonames_id","alpha2","alpha3","numeric3",
+        "comparison_m49_code","comparison_name","match_status",
+        "exception_disposition_status","catalog_role","catalog_status",
+        "selectable_as_destination","canonical_display_name","exception_source_codes_preserved",
+    ]
     with (out/"country-area-code-crosswalk-rows.csv").open("w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
 
