@@ -1,0 +1,67 @@
+.employer-main { padding-block: 3.5rem 5rem; min-height: 65vh; }
+.employer-intro { max-width: 790px; padding-block: 1rem 2rem; }
+.employer-intro h1 { margin-bottom: 1rem; }
+.employer-lede { max-width: 740px; font-size: 1.02rem; line-height: 1.8; }
+.portal-state { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.2rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: white; }
+.portal-state-icon { display: grid; place-items: center; flex: 0 0 auto; width: 46px; height: 46px; border-radius: 0.9rem; color: var(--color-primary); background: var(--color-primary-soft); font-size: 1.5rem; }
+.portal-state-copy { flex: 1; min-width: 0; }
+.portal-state h2 { margin-bottom: 0.25rem; font-size: 1rem; letter-spacing: -0.015em; }
+.portal-state p { margin-bottom: 0; font-size: 0.84rem; }
+.portal-state[data-state="ready"] { border-color: #b8eadb; background: #fbfffd; }
+.portal-state[data-state="error"] { border-color: #f1c1bc; background: #fffafa; }
+.portal-notice { margin-top: 1.25rem; padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-subtle); }
+.portal-notice[hidden], .vacancy-workspace[hidden] { display: none; }
+.portal-notice h2 { margin-bottom: 0.55rem; font-size: 1.25rem; }
+.portal-notice p { max-width: 760px; }
+.portal-notice-note { padding-left: 0.9rem; border-left: 3px solid var(--color-primary); font-size: 0.82rem; }
+.workspace-heading { margin-block: 2.5rem 1.25rem; display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; }
+.workspace-heading .eyebrow { margin-bottom: 0.55rem; }
+.workspace-heading h2 { margin-bottom: 0.6rem; }
+.workspace-count { flex: 0 0 auto; margin-bottom: 0.3rem; padding: 0.4rem 0.7rem; border-radius: 999px; color: var(--color-secondary); background: var(--color-bg-subtle); border: 1px solid var(--color-border); font-size: 0.74rem; font-weight: 700; }
+.employer-vacancy-list { display: grid; gap: 0.9rem; }
+.employer-vacancy-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; padding: 1.25rem 1.35rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: white; }
+.employer-vacancy-main { min-width: 0; }
+.employer-vacancy-org { margin-bottom: 0.28rem; color: var(--color-text-muted); font-size: 0.74rem; font-weight: 700; }
+.employer-vacancy-card h3 { overflow-wrap: anywhere; margin-bottom: 0.45rem; }
+.employer-vacancy-meta { display: flex; flex-wrap: wrap; gap: 0.45rem 0.8rem; color: var(--color-text-muted); font-size: 0.75rem; }
+.vacancy-status { display: inline-flex; align-items: center; gap: 0.4rem; width: fit-content; padding: 0.3rem 0.6rem; margin-bottom: 0.6rem; border-radius: 999px; color: #59657e; background: #f0f3f8; font-size: 0.68rem; font-weight: 800; text-transform: capitalize; }
+.vacancy-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #8a96ab; }
+.vacancy-status[data-status="published"] { color: #146a50; background: #e6f8f1; }
+.vacancy-status[data-status="published"]::before { background: #209b73; }
+.vacancy-status[data-status="closed"] { color: #47536b; background: #eceff5; }
+.vacancy-status[data-status="closed"]::before { background: #737f95; }
+.vacancy-status[data-status="draft"], .vacancy-status[data-status="submitted"], .vacancy-status[data-status="under_review"] { color: #855515; background: #fff5db; }
+.vacancy-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.45rem; }
+.vacancy-actions .button { min-width: 126px; }
+.vacancy-locked-note { max-width: 180px; color: var(--color-text-muted); text-align: right; font-size: 0.68rem; line-height: 1.4; }
+.workspace-footnote { margin-top: 1.1rem; color: var(--color-text-muted); font-size: 0.76rem; }
+.empty-vacancies { padding: 2.5rem 1.5rem; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-lg); background: white; text-align: center; }
+.empty-vacancies h3 { margin-bottom: 0.45rem; }
+.empty-vacancies p { margin-bottom: 0; font-size: 0.84rem; }
+.close-dialog { width: min(100% - 2rem, 520px); max-height: min(85vh, 720px); padding: 0; overflow: auto; border: 1px solid var(--color-border); border-radius: 1.25rem; box-shadow: 0 24px 80px rgb(18 39 86 / 23%); }
+.close-dialog::backdrop { background: rgb(9 20 48 / 58%); backdrop-filter: blur(3px); }
+.close-dialog form { padding: 1.65rem; }
+.close-dialog .eyebrow { margin-bottom: 0.7rem; }
+.close-dialog h2 { margin-bottom: 0.65rem; font-size: 1.6rem; }
+.dialog-description { margin-bottom: 1.3rem; }
+.close-dialog label { display: block; margin-bottom: 0.45rem; color: var(--color-secondary); font-size: 0.82rem; font-weight: 800; }
+.close-dialog select { width: 100%; min-height: 48px; border: 1px solid var(--color-border-strong); border-radius: 0.7rem; padding: 0.7rem 0.8rem; color: var(--color-text); background: white; }
+.close-dialog select:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.dialog-warning { margin-block: 1rem; padding: 0.75rem 0.85rem; border-radius: 0.7rem; color: #775218; background: #fff6e3; font-size: 0.76rem; line-height: 1.6; }
+.form-error { margin-block: 0.75rem; color: #aa2520; font-size: 0.8rem; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.65rem; margin-top: 1.2rem; }
+.button:disabled { transform: none; cursor: not-allowed; opacity: 0.55; }
+@media (max-width: 740px) {
+  .employer-main { padding-block: 2.25rem 3.5rem; }
+  .portal-state { align-items: flex-start; flex-wrap: wrap; }
+  .portal-state-copy { flex-basis: calc(100% - 64px); }
+  .portal-state > .button { width: 100%; }
+  .workspace-heading { align-items: flex-start; flex-direction: column; gap: 0.7rem; }
+  .employer-vacancy-card { grid-template-columns: 1fr; }
+  .vacancy-actions { align-items: flex-start; }
+  .vacancy-actions .button { width: 100%; }
+  .vacancy-locked-note { max-width: none; text-align: left; }
+  .close-dialog form { padding: 1.2rem; }
+  .dialog-actions { flex-direction: column-reverse; }
+  .dialog-actions .button { width: 100%; }
+}
