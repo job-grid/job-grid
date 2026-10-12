@@ -1641,7 +1641,7 @@ jobs:
               raise SystemExit("Parent path status totals do not reconcile.")
           if report.get("sources",{}).get("candidate_export_sha256")!=candidates.get("sources",{}).get("candidate_export_sha256"):
               raise SystemExit("Parent resolver candidate SHA-256 differs from the source-pinned candidate export.")
-          if c.get("operational_parent_links_created")!=0 or c.get("operational_selectable_rows")!=0 or report.get("interpretation",{}).get("database_or_production_changes") is not False:
+          if c.get("operational_parent_links_created")!=0 or c.get("operational_selectable_rows")!=0 or c.get("database_or_production_changes") is not False:
               raise SystemExit("Parent-code audit crossed the no-write boundary.")
           print("## Worldwide source-code parent path candidates")
           print(f"- Candidate rows and parent-resolution rows: {c['candidate_source_rows']} / {c['parent_resolution_rows_written']}")
