@@ -7,6 +7,7 @@ on:
       - "supabase/functions/close-vacancy/**"
       - "supabase/migrations/**"
       - "supabase/config.toml"
+      - "supabase/tests/vacancy_close_*.sql"
       - "tests/close-vacancy-backend-contract.test.js"
       - "docs/close-vacancy-supabase-integration.md"
       - ".github/workflows/close-vacancy-backend-validation.yml"
@@ -16,9 +17,25 @@ permissions:
   contents: read
 
 jobs:
-  edge-function-typecheck:
-    name: Close Job / Edge Function typecheck
+  backend-validation:
+    name: Close Job / SQL and Edge Function validation
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_grid_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d job_grid_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/job_grid_test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -27,12 +44,25 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check trusted Edge Function
-        run: deno check --no-lock supabase/functions/close-vacancy/index.ts
-      - name: Check proposed config and test files exist
-        shell: bash
+        run: deno check --no-lock --config supabase/functions/close-vacancy/deno.json supabase/functions/close-vacancy/index.ts
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Run repository and backend-contract tests
+        run: npm test
+      - name: Validate migration naming and destructive-operation policy
+        run: bash scripts/validate-migrations.sh
+      - name: Install PostgreSQL client
         run: |
-          set -euo pipefail
-          test -f supabase/config.toml
-          test -f supabase/functions/close-vacancy/deno.json
-          test -f supabase/migrations/20261012214500_vacancy_close_foundation.sql
-          test -f tests/close-vacancy-backend-contract.test.js
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated test roles
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/vacancy_close_bootstrap.sql
+      - name: Parse and execute proposed migration against disposable PostgreSQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261012214500_vacancy_close_foundation.sql
+      - name: Exercise authorization, transitions, audit, idempotency and RLS
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/vacancy_close_integration.sql
