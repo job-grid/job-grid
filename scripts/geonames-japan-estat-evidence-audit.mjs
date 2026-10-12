@@ -504,15 +504,27 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
   if (englishResults.size !== EXPECTED_JAPAN_TARGETS) {
     throw new Error("English candidate report is incomplete; cannot define the Japanese-alternate review scope.");
   }
-  const unmatchedTargets = targets.filter((target) => {
+  const targetsWithoutUniqueEnglishCandidate = targets.filter((target) => {
     const english = englishResults.get(String(target.geonames_id));
     if (!english || english.source_identity_and_raw_codes_verified !== true ||
         target.source_identity_and_raw_codes_verified !== true) {
       throw new Error(`Unverified target in Japanese-alternate review: ${target.geonames_id}`);
     }
-    return english.exact_name_candidate_count === 0;
+    const candidateCount = english.exact_name_candidate_count;
+    if (!Number.isInteger(candidateCount) || candidateCount < 0) {
+      throw new Error(`Invalid English candidate count for Japanese-alternate review: ${target.geonames_id}`);
+    }
+    const englishCodes = uniqueStrings((english.candidates ?? []).map((candidate) => String(candidate.area_code ?? "")));
+    if (englishCodes.length !== candidateCount) {
+      throw new Error(`English candidate count/code list disagrees for Japanese-alternate review: ${target.geonames_id}`);
+    }
+    return candidateCount !== 1;
   });
-  const targetResults = unmatchedTargets.map((target) => {
+  const targetResults = targetsWithoutUniqueEnglishCandidate.map((target) => {
+    const english = englishResults.get(String(target.geonames_id));
+    const englishCandidateAreaCodes = uniqueStrings(
+      (english.candidates ?? []).map((candidate) => String(candidate.area_code ?? "")),
+    );
     const alternateNames = uniqueStrings(
       (target.source_alternate_names ?? []).map(normalizeJapaneseLabel).filter(Boolean),
     );
@@ -551,6 +563,7 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
         parentReferences.sort((a, b) => a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
         return {
           area_code: areaCode,
+          matches_exact_english_candidate_area_code: englishCandidateAreaCodes.includes(areaCode),
           exact_matching_japanese_label_period_count: matchingUris.length,
           exact_matching_period_uris: matchingUris,
           matched_official_japanese_labels: matchingLabels,
@@ -574,6 +587,12 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
       raw_admin1_code: target.raw_admin1_code,
       raw_admin2_code: target.raw_admin2_code ?? "",
       source_identity_and_raw_codes_verified: true,
+      english_exact_name_candidate_count: english.exact_name_candidate_count,
+      english_candidate_area_codes: englishCandidateAreaCodes,
+      japanese_candidate_area_codes_also_matching_english: uniqueStrings(
+        candidates.filter((candidate) => candidate.matches_exact_english_candidate_area_code)
+          .map((candidate) => candidate.area_code),
+      ),
       source_alternate_names: alternateNames,
       alternate_name_count: alternateNames.length,
       alternate_name_tokens_with_japanese_or_han_script: alternateNames.filter(containsJapaneseOrHanScript).length,
@@ -587,8 +606,15 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
   return {
     report_version: 1,
     status: "PASS_EXACT_JAPANESE_ALTERNATE_LABEL_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
-    matching_rule: "Only complete GeoNames alternate-name entries that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidates. No substring, transliteration, reading, fuzzy or proximity matching is used.",
+    matching_rule: "Review all source-verified Japan targets with zero or multiple distinct exact-English area-code candidates. Only complete GeoNames alternate-name entries that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidate evidence. Each Japanese candidate is flagged when its area code also appears in the exact-English candidate set. No substring, transliteration, reading, fuzzy or proximity matching is used; no candidate approves identity or parentage.",
     target_count: targetResults.length,
+    target_scope: "all source-verified Japan targets without exactly one English area-code candidate (zero or multiple); candidates only",
+    english_targets_with_zero_exact_area_code_candidates: targetResults.filter((target) => target.english_exact_name_candidate_count === 0).length,
+    english_targets_with_multiple_exact_area_code_candidates: targetResults.filter((target) => target.english_exact_name_candidate_count > 1).length,
+    targets_with_japanese_candidate_intersecting_english_candidates: targetResults.filter(
+      (target) => target.japanese_candidate_area_codes_also_matching_english.length > 0,
+    ).length,
+    targets_excluded_because_english_candidate_is_unique: EXPECTED_JAPAN_TARGETS - targetResults.length,
     targets_with_any_alternate_names: targetResults.filter((target) => target.alternate_name_count > 0).length,
     targets_with_japanese_or_han_script_alternate_names: targetResults.filter((target) => target.has_japanese_or_han_script_alternate_name).length,
     targets_with_script_alternate_names_but_no_exact_candidate: targetResults.filter((target) =>
@@ -611,10 +637,12 @@ export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSh
   const headers = [
     "geonames_id", "geonames_name", "source_country_code", "source_feature_code",
     "raw_admin1_code", "raw_admin2_code", "source_identity_and_raw_codes_verified",
+    "english_exact_name_candidate_count", "english_candidate_area_codes",
+    "japanese_candidate_area_codes_also_matching_english",
     "source_alternate_names", "alternate_name_count",
     "alternate_name_tokens_with_japanese_or_han_script", "has_japanese_or_han_script_alternate_name",
     "candidate_area_code_count", "review_status", "candidate_area_code",
-    "exact_matching_japanese_label_period_count",
+    "candidate_matches_exact_english_candidate_area_code", "exact_matching_japanese_label_period_count",
     "candidate_history_period_count", "matched_official_japanese_labels",
     "matching_period_uris", "matching_period_date_ranges", "history_parent_area_codes",
     "history_parent_labels_en", "history_parent_labels_ja", "source_snapshot_sha256",
@@ -634,7 +662,12 @@ export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSh
       const row = {
         ...target,
         source_alternate_names: target.source_alternate_names.join(";"),
+        english_candidate_area_codes: target.english_candidate_area_codes.join(";"),
+        japanese_candidate_area_codes_also_matching_english:
+          target.japanese_candidate_area_codes_also_matching_english.join(";"),
         candidate_area_code: candidate?.area_code ?? "",
+        candidate_matches_exact_english_candidate_area_code:
+          candidate ? String(candidate.matches_exact_english_candidate_area_code === true) : "",
         exact_matching_japanese_label_period_count: candidate?.exact_matching_japanese_label_period_count ?? "",
         candidate_history_period_count: candidate?.history_period_count ?? "",
         matched_official_japanese_labels: (candidate?.matched_official_japanese_labels ?? []).join(";"),

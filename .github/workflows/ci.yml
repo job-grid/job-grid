@@ -448,14 +448,18 @@ jobs:
           if len(english_targets) != 126:
               raise SystemExit("Row-level evidence must include all 126 Japan targets.")
           ja_audit = report.get("japanese_alternate_name_candidate_audit", {})
-          expected_unmatched_ids = {
+          expected_review_ids = {
               str(row["geonames_id"]) for row in english_targets
-              if row.get("exact_name_candidate_count") == 0
+              if row.get("exact_name_candidate_count") != 1
           }
           ja_rows = ja_audit.get("target_results", [])
-          actual_unmatched_ids = {str(row.get("geonames_id", "")) for row in ja_rows}
-          if ja_audit.get("target_count") != len(expected_unmatched_ids) or actual_unmatched_ids != expected_unmatched_ids:
-              raise SystemExit("Japanese alternate-name audit must include exactly the English-unmatched targets.")
+          actual_review_ids = {str(row.get("geonames_id", "")) for row in ja_rows}
+          if ja_audit.get("target_count") != len(expected_review_ids) or actual_review_ids != expected_review_ids:
+              raise SystemExit("Japanese alternate-name audit must include exactly targets with zero or multiple English candidates.")
+          if ja_audit.get("targets_with_japanese_candidate_intersecting_english_candidates", 0) > ja_audit.get("target_count", 0):
+              raise SystemExit("Japanese/English candidate intersection count exceeds reviewed target scope.")
+          if ja_audit.get("targets_excluded_because_english_candidate_is_unique", 0) != 126 - len(expected_review_ids):
+              raise SystemExit("Japanese fallback audit does not reconcile unique-English exclusions.")
           if ja_audit.get("operational_parent_links_created") != 0:
               raise SystemExit("Japanese alternate-name audit must not create parent links.")
           if (
@@ -479,8 +483,8 @@ jobs:
               raise SystemExit("Japanese alternate-name candidate CSV was not written.")
           with alt_csv_path.open(encoding="utf-8", newline="") as stream:
               alt_csv_rows = list(csv.DictReader(stream))
-          if {str(row.get("geonames_id", "")) for row in alt_csv_rows} != expected_unmatched_ids:
-              raise SystemExit("Japanese alternate-name CSV must retain every English-unmatched target.")
+          if {str(row.get("geonames_id", "")) for row in alt_csv_rows} != expected_review_ids:
+              raise SystemExit("Japanese alternate-name CSV must retain every target without a unique English candidate.")
           if any(str(row.get("operational_parent_link_created", "")).lower() != "false" for row in alt_csv_rows):
               raise SystemExit("Japanese alternate-name CSV violates zero-parent-write rule.")
           if any(row.get("candidate_area_code") and not __import__("re").fullmatch(r"\d{5}", row["candidate_area_code"]) for row in alt_csv_rows):
@@ -501,8 +505,11 @@ jobs:
           print(f"- Targets with no exact label candidate: {r['targets_without_exact_label_candidates']}")
           print("- Complete English-label historical period and parent-reference evidence is retained per candidate area code.")
           ja = r["japanese_alternate_name_candidate_audit"]
-          print("## Exact Japanese alternate-name candidates for English-unmatched targets")
-          print(f"- English-unmatched targets reviewed: {ja['target_count']}")
+          print("## Exact Japanese alternate-name candidates for targets without a unique English candidate")
+          print(f"- Targets with zero English area-code candidates reviewed: {ja['english_targets_with_zero_exact_area_code_candidates']}")
+          print(f"- Targets with multiple English area-code candidates reviewed: {ja['english_targets_with_multiple_exact_area_code_candidates']}")
+          print(f"- Targets excluded because one English area-code candidate was unique: {ja['targets_excluded_because_english_candidate_is_unique']}")
+          print(f"- Targets where Japanese candidate codes intersect English candidates: {ja['targets_with_japanese_candidate_intersecting_english_candidates']}")
           print(f"- Targets with at least one exact Japanese alternate-name candidate: {ja['targets_with_japanese_alternate_label_candidates']}")
           print(f"- Targets with no exact Japanese alternate-name candidate: {ja['targets_without_japanese_alternate_label_candidates']}")
           print(f"- Target-to-area-code candidate associations: {ja['target_to_area_code_candidate_associations']}")
@@ -516,9 +523,11 @@ jobs:
                       f"- GeoNames ID {target['geonames_id']} ({target['geonames_name']}) -> "
                       f"area code {candidate['area_code']}; exact Japanese label(s): {matched_labels}; "
                       f"matching period(s): {period_count}; history periods: {candidate['history_period_count']}; "
-                      f"parent-code reference(s): {parent_codes}; review only"
+                      f"parent-code reference(s): {parent_codes}; " 
+                  f"also in exact-English candidate set={candidate['matches_exact_english_candidate_area_code']}; review only"
                   )
           print("- Japanese alternate-name matching uses exact complete strings after Unicode NFC normalization and trimming only.")
+          print("- The audit includes targets with zero or multiple English candidates; a Japanese/English code intersection is corroboration only, not identity approval.")
           print("- Operational parent links created: 0")
           print("- Every candidate requires separate GeoNames entity identity, period, administrative-level and complete-chain review.")
           PY

@@ -361,6 +361,72 @@ test("matches Japanese alternate-name entries only by exact official Japanese la
   assert.match(csv, /NO_EXACT_JAPANESE_ALTERNATE_LABEL_MATCH/);
 });
 
+test("Japanese alternate-name review includes ambiguous English targets and records independent code intersection", () => {
+  const targets = makeTargets().map((target, index) => ({
+    ...target,
+    name: index === 0 ? "Ambiguous-chō" : index === 1 ? "Unique-cho" : target.name,
+    source_identity_and_raw_codes_verified: true,
+    source_alternate_names: index === 0 ? ["複合町"] : index === 1 ? ["唯一町"] : [],
+  }));
+  const sourceRows = [
+    estatRow(801, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27100-19700401",
+      area_code: "27100",
+      label_en: "Ambiguous-cho",
+      label_ja: "複合町",
+    }),
+    estatRow(802, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27101-19700401",
+      area_code: "27101",
+      label_en: "Ambiguous cho",
+      label_ja: "別町",
+    }),
+    estatRow(803, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27102-19700401",
+      area_code: "27102",
+      label_en: "Unique-cho",
+      label_ja: "唯一町",
+    }),
+    estatRow(804, {
+      period_uri: "http://data.e-stat.go.jp/lod/sac/C27103-19700401",
+      area_code: "27103",
+      label_en: "Different English label",
+      label_ja: "複合町",
+    }),
+  ];
+  const english = buildCandidateAudit(targets, sourceRows, "c".repeat(64));
+  const japanese = buildJapaneseAlternateNameCandidateAudit(targets, english, sourceRows);
+
+  assert.equal(english.target_results[0].exact_name_candidate_count, 2);
+  assert.equal(english.target_results[1].exact_name_candidate_count, 1);
+  assert.equal(japanese.target_count, 125);
+  assert.equal(japanese.english_targets_with_zero_exact_area_code_candidates, 124);
+  assert.equal(japanese.english_targets_with_multiple_exact_area_code_candidates, 1);
+  assert.equal(japanese.targets_excluded_because_english_candidate_is_unique, 1);
+  assert.equal(japanese.targets_with_japanese_candidate_intersecting_english_candidates, 1);
+  assert.equal(japanese.operational_parent_links_created, 0);
+
+  const ambiguous = japanese.target_results.find((row) => row.geonames_id === targets[0].geonames_id);
+  assert.deepEqual(ambiguous.english_candidate_area_codes, ["27100", "27101"]);
+  assert.deepEqual(ambiguous.japanese_candidate_area_codes_also_matching_english, ["27100"]);
+  assert.deepEqual(
+    ambiguous.candidates.map((candidate) => [candidate.area_code, candidate.matches_exact_english_candidate_area_code]),
+    [["27100", true], ["27103", false]],
+  );
+  assert.equal(ambiguous.operational_parent_link_created, false);
+
+  assert.equal(
+    japanese.target_results.some((row) => row.geonames_id === targets[1].geonames_id),
+    false,
+    "a target with one unique English candidate does not need this fallback review",
+  );
+  const csv = renderJapaneseAlternateNameCandidateCsv(japanese);
+  assert.match(csv, /english_candidate_area_codes/);
+  assert.match(csv, /japanese_candidate_area_codes_also_matching_english/);
+  assert.match(csv, /27100;27101/);
+  assert.match(csv, /true/);
+});
+
 test("does not use fuzzy name matching, parent reference, or approximate labels", () => {
   const targets = makeTargets().map((row) => ({
     ...row, source_modification_date: "2020-06-11", source_identity_and_raw_codes_verified: true,
