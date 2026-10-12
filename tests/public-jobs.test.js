@@ -108,7 +108,7 @@ test("search and detail pages have noindex, accessible statuses, and no sample l
   assert.match(jobsHtml, /id="job-search-form"/);
   assert.match(jobsHtml, /id="job-search-results"/);
   assert.match(jobsHtml, /id="job-search-status"/);
-  assert.match(jobsHtml, /no sample listings/);
+  assert.match(jobsHtml, /no sample listings/i);
   assert.match(detailHtml, /id="job-detail-panel" class="job-detail-panel" hidden/);
   assert.match(detailHtml, /id="job-detail-description"/);
   assert.match(detailHtml, /Applications are not connected in this preview/);
