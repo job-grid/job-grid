@@ -8,6 +8,7 @@ on:
       - "supabase/migrations/**"
       - "supabase/config.toml"
       - "supabase/tests/vacancy_close_*.sql"
+      - "supabase/tests/phase2a_schema_contract.sql"
       - "tests/close-vacancy-backend-contract.test.js"
       - "docs/close-vacancy-supabase-integration.md"
       - ".github/workflows/close-vacancy-backend-validation.yml"
