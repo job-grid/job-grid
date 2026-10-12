@@ -7,9 +7,27 @@ const REASON_PATTERN = /^[a-z][a-z0-9_]{1,63}$/;
 
 type JsonObject = Record<string, unknown>;
 
-function configuredOrigins(): Set<string> {
+type AdminClient = {
+  auth: {
+    getUser(token: string): Promise<{
+      data: { user: { id: string } | null };
+      error: { code?: string } | null;
+    }>;
+  };
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: { code?: string } | null }>;
+};
+
+type HandlerDependencies = {
+  getEnv?: (name: string) => string | undefined;
+  createAdminClient?: (url: string, serviceRoleKey: string) => AdminClient;
+};
+
+function configuredOrigins(getEnv: (name: string) => string | undefined): Set<string> {
   return new Set(
-    (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+    (getEnv("ALLOWED_ORIGINS") ?? "")
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
@@ -81,11 +99,18 @@ function errorStatus(code: string): number {
   }
 }
 
-export default {
+export function createCloseVacancyHandler(dependencies: HandlerDependencies = {}) {
+  const getEnv = dependencies.getEnv ?? ((name: string) => Deno.env.get(name));
+  const createAdminClient = dependencies.createAdminClient ?? ((url: string, serviceRoleKey: string) =>
+    createClient(url, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }) as unknown as AdminClient);
+
+  return {
   async fetch(request: Request): Promise<Response> {
     const requestId = crypto.randomUUID();
     const origin = request.headers.get("origin");
-    const origins = configuredOrigins();
+    const origins = configuredOrigins(getEnv);
     const headers = corsHeaders(origin, origins);
 
     if (origin && !origins.has(origin)) {
@@ -103,8 +128,8 @@ export default {
       return jsonResponse({ error: "METHOD_NOT_ALLOWED", request_id: requestId }, 405, headers);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = getEnv("SUPABASE_URL");
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
       return jsonResponse({ error: "BACKEND_NOT_CONFIGURED", request_id: requestId }, 500, headers);
     }
@@ -157,9 +182,7 @@ export default {
       return jsonResponse({ error: "INVALID_ARGUMENT", request_id: requestId }, 422, headers);
     }
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const admin = createAdminClient(supabaseUrl, serviceRoleKey);
 
     const { data: authData, error: authError } = await admin.auth.getUser(bearer[1]);
     if (authError || !authData.user) {
@@ -196,4 +219,7 @@ export default {
 
     return jsonResponse({ ...result, response_request_id: requestId }, 200, headers);
   },
-};
+  };
+}
+
+export default createCloseVacancyHandler();
