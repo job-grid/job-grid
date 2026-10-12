@@ -312,7 +312,7 @@ def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sourc
         },
         "policy": {
             "iso_alpha2_alpha3": "Use the exact alpha-code pair exposed in the UN M49 table only where that row exists; special-area records preserve their separately evidenced fields.",
-            "iso_numeric3": "Not independently refreshed from the current ISO source in this audit; candidate-only and nullable.",
+            "iso_numeric3": "Candidate is populated from the UN M49 numeric value for exact alpha-2/alpha-3 matches only when the GeoNames numeric tuple also agrees; source provenance is recorded. Kosovo remains null, Taiwan uses separately corroborated ISO newsletter evidence, historical rows remain null, and a current ISO OBP/Country Codes Collection refresh is still pending.",
             "historical_rows": "Retained for history/reference, never selectable as a current destination.",
             "destination_vs_sovereignty": "The destination selector is a geographic product behavior, not a sovereignty or immigration-eligibility decision.",
             "selectability_applied_to_live_system": False,
