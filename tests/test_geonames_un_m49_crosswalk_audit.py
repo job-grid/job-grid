@@ -12,6 +12,7 @@ spec.loader.exec_module(audit)
 parse_geonames, parse_m49, reconcile = audit.parse_geonames, audit.parse_m49, audit.reconcile
 validate_exception_dispositions = audit.validate_exception_dispositions
 validate_complete_reconciliation = audit.validate_complete_reconciliation
+build_country_destination_candidates = audit.build_country_destination_candidates
 write_report = audit.write_report
 EXCEPTION_MANIFEST = json.loads((Path(__file__).resolve().parents[1] / "docs" / "geonames-un-m49-exception-dispositions-2026-10-12.json").read_text(encoding="utf-8"))
 
@@ -109,6 +110,14 @@ class CrosswalkTests(unittest.TestCase):
             if r.get("source_side") == "GeoNames countryInfo" and r.get("geonames_id") in decisions:
                 self.assertEqual(r["exception_source_codes_preserved"], True)
 
+        catalog = build_country_destination_candidates(geo, m49, decisions, {}, require_full_source_counts=False)
+        self.assertEqual(catalog["counts"]["source_country_info_rows"], 6)
+        self.assertEqual(catalog["counts"]["m49_exact_pair_rows"], 2)
+        self.assertEqual(catalog["counts"]["current_destination_candidates"], 4)
+        self.assertEqual(catalog["counts"]["historical_reference_rows_nonselectable"], 2)
+        self.assertEqual(catalog["counts"]["operational_selectable_rows"], 0)
+        self.assertEqual(len(catalog["records"]), 6)
+
 
     def test_csv_export_preserves_disposition_columns(self):
         rows = [
@@ -121,14 +130,21 @@ class CrosswalkTests(unittest.TestCase):
         decisions = validate_exception_dispositions(EXCEPTION_MANIFEST, geo)
         m49 = []
         report, detail = reconcile(geo, m49, {}, decisions)
+        catalog = build_country_destination_candidates(geo, m49, decisions, {}, require_full_source_counts=False)
         with tempfile.TemporaryDirectory() as tmp:
-            write_report(report, detail, Path(tmp))
+            write_report(report, detail, Path(tmp), catalog)
             with (Path(tmp) / "country-area-code-crosswalk-rows.csv").open(encoding="utf-8", newline="") as f:
                 exported = list(csv.DictReader(f))
+            with (Path(tmp) / "country-area-destination-catalog-candidate.csv").open(encoding="utf-8", newline="") as f:
+                catalog_exported = list(csv.DictReader(f))
+            catalog_json = json.loads((Path(tmp) / "country-area-destination-catalog-candidate.json").read_text(encoding="utf-8"))
         self.assertEqual(len(exported), 4)
         self.assertIn("catalog_role", exported[0])
         self.assertIn("selectable_as_destination", exported[0])
         self.assertEqual({row["exception_disposition_status"] for row in exported}, {"DOCUMENTED"})
+        self.assertEqual(len(catalog_exported), 4)
+        self.assertEqual(len(catalog_json["records"]), 4)
+        self.assertEqual(catalog_json["counts"]["operational_selectable_rows"], 0)
 
 
     def test_new_unlisted_non_m49_tuple_blocks_completeness(self):
