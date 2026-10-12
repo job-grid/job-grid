@@ -90,6 +90,11 @@ class AlternateNameExporterTests(unittest.TestCase):
             self.assertEqual(report["counts"]["source_scope_ids_without_aliases"],3)
             self.assertEqual(report["counts"]["matching_alias_rows_exported"],5)
             self.assertEqual(report["counts"]["language_codes_in_export"],3)
+            country_coverage={r["source_country_alpha2_raw"]:r for r in report["per_country_area_alpha2"]}
+            self.assertEqual(set(country_coverage),{"KE","XK","AN"})
+            self.assertEqual(country_coverage["XK"]["source_scope_records_with_aliases"],1)
+            self.assertEqual(country_coverage["KE"]["source_scope_records_without_aliases"],1)
+            self.assertEqual(country_coverage["AN"]["alias_coverage_ratio"],0.0)
             with gzip.open(out,"rt",encoding="utf-8",newline="") as f:
                 rows=list(csv.DictReader(f))
             self.assertEqual(len(rows),5)
@@ -146,6 +151,29 @@ class AlternateNameExporterTests(unittest.TestCase):
                 "source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now","http_status":200,
                 "size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
             with self.assertRaisesRegex(ValueError,"Duplicate alternateName IDs"):
+                exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
+
+
+    def test_rejects_country_info_duplicate_alpha2_or_geonames_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp); cand=p/"c.csv.gz"
+            with gzip.open(cand,"wt",encoding="utf-8",newline="") as f:
+                w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"])
+                w.writeheader()
+                w.writerow(candidate_row(100,"Nairobi","KE"))
+            archive=p/"alternateNamesV2.zip"
+            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
+                z.writestr("alternateNamesV2.txt",alt_row(1,100,"en","Nairobi")+"\n")
+            raw=archive.read_bytes()
+            manifest=p/"manifest.json"
+            manifest.write_text(json.dumps({"remote_source":{
+                "source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now","http_status":200,
+                "size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
+            ci,cm=write_country_info_sources(p,[
+                country_info_row("KE","KEN","404","Kenya","192950"),
+                country_info_row("KE","KEX","405","Duplicate alpha 2","192951"),
+            ])
+            with self.assertRaisesRegex(ValueError,"duplicate source IDs or alpha-2 codes"):
                 exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
 
 
