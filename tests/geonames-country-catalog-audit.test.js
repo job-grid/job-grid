@@ -226,3 +226,20 @@ test("a country with only historical/abandoned places is surfaced without auto-s
   assert.equal(destinationCoverage.country_info_alpha2_codes_without_current_place_candidates, 1);
   assert.equal(destinationCoverage.selectable_destinations_approved, false);
 });
+
+test("duplicate current place candidate IDs block source coverage acceptance", async (t) => {
+  const { result, report, destinationCoverage } = await runFixture(
+    t,
+    [countryInfo({ alpha2: "KE", alpha3: "KEN", numeric: "404", name: "Kenya", id: "100" })],
+    [
+      row("100", "Kenya", "A", "PCLI"),
+      row("200", "Nairobi candidate one", "P", "PPLC", { countryCode: "KE" }),
+      row("200", "Duplicate Nairobi candidate", "P", "PPL", { countryCode: "KE" })
+    ]
+  );
+  assert.equal(result.status, 1);
+  assert.equal(report.status, "BLOCKED_REVIEW_REQUIRED");
+  assert.equal(report.counts.current_place_candidate_duplicate_geoname_id_groups, 1);
+  assert.equal(destinationCoverage.current_place_candidate_duplicate_id_groups, 1);
+  assert.equal(destinationCoverage.selectable_destinations_approved, false);
+});
