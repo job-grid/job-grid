@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { normalizeCountries, buildGeocodingUrl, normalizeLocations, buildPlaceLabel, escapeLocationText } from "../scripts/location-picker.js";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
@@ -60,4 +61,55 @@ test("vacancy cards are clearly marked sample content and no live features are c
   assert.match(html, /not live vacancies/);
   assert.match(html, /Search, filters, applications, and employer accounts are not connected yet/);
   assert.doesNotMatch(html, /action="https?:\/\//);
+});
+
+test("country selector is included in the homepage and shipped in the static build", async () => {
+  assert.match(html, /<job-grid-location-picker><\\/job-grid-location-picker>/);
+  assert.match(html, /scripts\\/location-picker\\.js/);
+  assert.match(buildScript, /"location-picker\\.js"/);
+  const pickerCss = await readFile(new URL("../styles/location-picker.css", import.meta.url), "utf8");
+  assert.match(pickerCss, /location-picker-fields/);
+  assert.match(pickerCss, /@media \\(max-width: 740px\\)/);
+});
+
+test("country list normalization discards invalid/duplicate codes and sorts labels", () => {
+  const result = normalizeCountries([
+    { cca2: "JP", name: { common: "Japan" } },
+    { cca2: "KE", name: { common: "Kenya" } },
+    { cca2: "KE", name: { common: "Kenya Duplicate" } },
+    { cca2: "X", name: { common: "Bad code" } },
+    { cca2: "GB", name: { common: "United Kingdom" } }
+  ]);
+  assert.deepEqual(result.map((country) => country.code), ["JP", "KE", "GB"].sort((a, b) => {
+    const names = { JP: "Japan", KE: "Kenya", GB: "United Kingdom" };
+    return names[a].localeCompare(names[b], "en");
+  }));
+  assert.equal(result.find((country) => country.code === "KE").name, "Kenya");
+});
+
+test("geocoding requests always constrain results to the selected country", () => {
+  const url = new URL(buildGeocodingUrl("Kisumu", "ke"));
+  assert.equal(url.searchParams.get("name"), "Kisumu");
+  assert.equal(url.searchParams.get("countryCode"), "KE");
+  assert.equal(url.searchParams.get("count"), "100");
+  assert.equal(url.searchParams.get("format"), "json");
+});
+
+test("place normalization keeps the selected country and allows missing parent levels", () => {
+  const result = normalizeLocations({ results: [
+    { id: 1, name: "Kisumu", country_code: "KE", country: "Kenya", admin1: "Kisumu County", feature_code: "PPLA" },
+    { id: 2, name: "Paris", country_code: "FR", country: "France", feature_code: "PPLA" },
+    { id: 1, name: "Kisumu duplicate", country_code: "KE", feature_code: "PPL" },
+    { id: 3, name: "Not a place", country_code: "KE", feature_code: "STM" },
+    { name: "Missing identifier", country_code: "KE", feature_code: "PPL" }
+  ] }, "KE");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].name, "Kisumu");
+  assert.equal(result[0].admin2, "");
+  assert.equal(buildPlaceLabel(result[0]), "Kisumu, Kisumu County, Kenya");
+  assert.deepEqual(normalizeLocations({ results: [{ id: 2, name: "Paris", country_code: "FR" }] }, "KE"), []);
+});
+
+test("remote place text is escaped before HTML insertion", () => {
+  assert.equal(escapeLocationText('<img src="x" onerror="bad">'), "&lt;img src=&quot;x&quot; onerror=&quot;bad&quot;&gt;");
 });

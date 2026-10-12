@@ -12,7 +12,7 @@ for (const name of ["index.html", "styles"]) {
 // Keep repository tooling, backup/recovery scripts, tests, and validation
 // utilities out of the downloadable website artifact.
 await mkdir(new URL("scripts/", output), { recursive: true });
-for (const name of ["components.js", "main.js"]) {
+for (const name of ["components.js", "main.js", "location-picker.js"]) {
   await cp(new URL(`../scripts/${name}`, import.meta.url), new URL(`scripts/${name}`, output));
 }
 
