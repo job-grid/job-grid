@@ -1894,6 +1894,20 @@ jobs:
           print("- Automatic code replacement: not authorized.")
           rows_path = Path(sys.argv[1]).with_name("country-area-code-crosswalk-rows.json")
           rows = json.loads(rows_path.read_text(encoding="utf-8"))
+          catalog_path = Path(sys.argv[1]).with_name("country-area-destination-catalog-candidate.json")
+          catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+          counts = catalog.get("counts", {})
+          required = {"source_country_info_rows": 252, "un_m49_coded_country_area_rows": 248, "m49_exact_pair_rows": 248, "current_destination_candidates": 250, "historical_reference_rows_nonselectable": 2, "total_source_records_accounted_for": 252, "source_tuple_exceptions_documented": 4, "operational_selectable_rows": 0, "unresolved_country_area_identities": 0}
+          for key,value in required.items():
+              if counts.get(key) != value:
+                  raise SystemExit(f"Destination candidate package {key} expected {value}, got {counts.get(key)}")
+          candidate_records = catalog.get("records", [])
+          if len(candidate_records) != 252 or len({str(r.get("geonames_id")) for r in candidate_records}) != 252:
+              raise SystemExit("Country/area destination candidate package must retain 252 unique source IDs exactly once.")
+          if catalog.get("status") != "SOURCE_RECONCILED_CANDIDATE_ONLY__NOT_IMPORTED":
+              raise SystemExit("Country/area candidate package has invalid operational status.")
+          if any(r.get("operational_selectable") is not False for r in candidate_records):
+              raise SystemExit("Candidate export must never claim that rows are already selectable in the live application.")
           exception_rows = [row for row in rows if row.get("source_side") == "GeoNames countryInfo" and row.get("match_status") != "MATCHED_ALPHA2_ALPHA3_PAIR"]
           undocumented = [row for row in exception_rows if row.get("exception_disposition_status") != "DOCUMENTED"]
           print("### GeoNames source-code exception dispositions")
@@ -1907,6 +1921,12 @@ jobs:
               print(f"- {row.get('name')} — {row.get('canonical_display_name')}; role={row.get('catalog_role')}; status={row.get('catalog_status')}; selectable_as_destination={row.get('selectable_as_destination')}; source tuple preserved; no automatic replacement")
           print("- Current destination areas are kept independently searchable without making a sovereignty claim.")
           print("- Historical former entities remain inactive/nonselectable and are retained for historical reference.")
+          print("\n## Country/area destination candidate package")
+          print(f"- Source records accounted for: {counts['total_source_records_accounted_for']}/252")
+          print(f"- Current destination candidates (proposal only): {counts['current_destination_candidates']}")
+          print(f"- Historical references (nonselectable): {counts['historical_reference_rows_nonselectable']}")
+          print("- Operational selection applied: no")
+          print("- Destination candidate CSV/JSON emitted for review/import planning; no database writes.")
           PY
 
       - name: Upload country/area code crosswalk evidence
@@ -1918,6 +1938,8 @@ jobs:
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-aggregate.json
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.csv
             ${{ runner.temp }}/country-area-code-audit/output/country-area-code-crosswalk-rows.json
+            ${{ runner.temp }}/country-area-code-audit/output/country-area-destination-catalog-candidate.csv
+            ${{ runner.temp }}/country-area-code-audit/output/country-area-destination-catalog-candidate.json
             docs/geonames-un-m49-exception-dispositions-2026-10-12.json
           if-no-files-found: error
           retention-days: 7
