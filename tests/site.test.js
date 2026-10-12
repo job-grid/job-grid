@@ -79,8 +79,8 @@ test("bundled country data covers a broad worldwide list and includes Kenya and 
   assert.equal(countryData.find((country) => country.code === "KE")?.name, "Kenya");
   assert.equal(countryData.find((country) => country.code === "JP")?.name, "Japan");
   assert.equal(new Set(countryData.map((country) => country.code)).size, countryData.length);
-  assert.match(buildScript, /public\\/data/);
-  assert.match(buildScript, /countries\\.en\\.json/);
+  assert.ok(buildScript.includes("public/data/"));
+  assert.ok(buildScript.includes("countries.en.json"));
 });
 
 test("country list normalization discards invalid/duplicate codes and sorts labels", () => {
