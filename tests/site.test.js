@@ -66,6 +66,7 @@ test("vacancy cards are clearly marked sample content and no live features are c
 test("country selector is included in the homepage and shipped in the static build", async () => {
   assert.ok(html.includes("<job-grid-location-picker></job-grid-location-picker>"));
   assert.ok(html.includes("/scripts/location-picker.js"));
+  assert.ok(html.includes("/styles/location-picker.css"));
   assert.ok(buildScript.includes('"location-picker.js"'));
   const pickerCss = await readFile(new URL("../styles/location-picker.css", import.meta.url), "utf8");
   assert.ok(pickerCss.includes("location-picker-fields"));
