@@ -298,6 +298,7 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
     bucket_rows = []
     for raw_code, values in sorted(by_code.items()):
         bucket_rows.append({"source_country_code": raw_code, **dict(sorted(values.items()))})
+    candidate_export_size_bytes, candidate_export_sha256 = sha256_path(gz_path)
     report = {
         "schema_version": 1,
         "audit": "geonames-global-destination-candidate-export",
@@ -322,6 +323,9 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
             "geonames_allcountries_retrieved_at_utc": source.get("retrieved_at_utc"),
             "country_info_sha256": country_source["sha256"],
             "country_info_source_url": country_source["source_url"],
+            "candidate_export_filename": gz_path.name,
+            "candidate_export_size_bytes": candidate_export_size_bytes,
+            "candidate_export_sha256": candidate_export_sha256,
             "exception_manifest": exception_manifest_path.name,
         },
         "counts": {
