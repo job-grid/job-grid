@@ -114,3 +114,8 @@ The non-operational fixture [Kenya native-unit overlay proposal](geonames-kenya-
 It uses explicit source-scoped **proposal keys**, not invented official IDs or production UUIDs. The reviewed GeoNames Kenya snapshot contains no exact Githunguri Sub-County feature; GeoNames ID 197219 is a Location-level feature and is not a valid substitute. GeoNames ID 192705 remains an unresolved review candidate because the 2024 Gazette labels Kiambururu as a Location while the GeoNames record labels it a Sub-Location (ADM3).
 
 The fixture and regressions only prove that the official native path can be represented without a false GeoNames mapping. They do **not** approve a crosswalk, add selectable entries, create operational relationships, or constitute a source-pinned dry run: the cited source bytes have not been captured and hashed by this fixture. The live selector remains unchanged. A later schema/implementation PR still requires source snapshot provenance, duplicate-prevention decisions and the backup/restore gate.
+
+
+## Japan application — e-Stat-native period graph proposal
+
+The source-native Japanese historical graph is described in [Japan native e-Stat period graph proposal](geonames-japan-native-estat-period-graph-design-2026-10-12.md). It separates exact e-Stat period identities and publisher-declared parent references from candidate GeoNames associations. The workflow output remains historical, review-only and non-selectable; it does not claim current nationwide coverage.
