@@ -9,6 +9,7 @@ selectability, administrative parentage, or database writes.
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import gzip
 import hashlib
@@ -28,6 +29,10 @@ OUTPUT_FIELDS = [
     "alternate_name_id", "geonames_id", "record_scope_kind", "source_country_code_raw", "language_code", "alternate_name",
     "is_preferred_name", "is_short_name", "is_colloquial", "is_historic",
     "valid_from", "valid_to", "source_snapshot_sha256",
+]
+QUARANTINE_FIELDS = [
+    "source_line_number", "reason_code", "field_count", "raw_byte_count",
+    "raw_line_sha256", "raw_line_base64", "alternate_name_id_candidate", "geonames_id_candidate",
 ]
 
 
@@ -152,6 +157,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     source_meta = source_manifest_record(manifest_path, archive_path)
     output_dir.mkdir(parents=True, exist_ok=True)
     aliases_path = output_dir / "worldwide-geonames-country-and-destination-alternate-names.csv.gz"
+    quarantine_path = output_dir / "worldwide-geonames-country-and-destination-alternate-name-quarantine.csv"
     candidate_ids_with_aliases = set()
     country_area_ids_with_aliases = set()
     alias_ids_seen = set()
@@ -163,6 +169,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     alias_country_rows = Counter()
     blank_language_rows = 0
     flag_malformed_rows = 0
+    quarantined_rows_by_reason = Counter()
     member_digest = hashlib.sha256()
     member_name = "alternateNamesV2.txt"
 
@@ -174,27 +181,65 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
         member_name = matches[0]
         with archive.open(member_name, "r") as raw_stream, gzip.open(
             aliases_path, "wt", encoding="utf-8", newline="", compresslevel=6
-        ) as output_stream:
+        ) as output_stream, quarantine_path.open("w", encoding="utf-8", newline="") as quarantine_stream:
             writer = csv.DictWriter(output_stream, fieldnames=OUTPUT_FIELDS, extrasaction="raise", lineterminator="\n")
             writer.writeheader()
-            for raw in raw_stream:
+            quarantine_writer = csv.DictWriter(
+                quarantine_stream, fieldnames=QUARANTINE_FIELDS, extrasaction="raise", lineterminator="\n"
+            )
+            quarantine_writer.writeheader()
+
+            def quarantine(raw_line, line_number, reason, field_count="", alias_id="", geonames_id=""):
+                quarantined_rows_by_reason[reason] += 1
+                quarantine_writer.writerow({
+                    "source_line_number": line_number,
+                    "reason_code": reason,
+                    "field_count": field_count,
+                    "raw_byte_count": len(raw_line),
+                    "raw_line_sha256": sha256_bytes(raw_line),
+                    "raw_line_base64": base64.b64encode(raw_line).decode("ascii"),
+                    "alternate_name_id_candidate": alias_id,
+                    "geonames_id_candidate": geonames_id,
+                })
+
+            for source_line_number, raw in enumerate(raw_stream, start=1):
                 member_digest.update(raw)
                 source_rows += 1
                 try:
-                    fields = raw.decode("utf-8").rstrip("\r\n").split("\t")
+                    decoded = raw.decode("utf-8").rstrip("\r\n")
                 except UnicodeDecodeError:
                     malformed_rows += 1
+                    quarantine(raw, source_line_number, "INVALID_UTF8")
                     continue
+                fields = decoded.split("\t")
                 if len(fields) != SOURCE_FIELDS:
                     malformed_rows += 1
+                    quarantine(raw, source_line_number, "WRONG_FIELD_COUNT", field_count=len(fields))
                     continue
                 alias_id, geonames_id, language, name = [str(x) for x in fields[:4]]
-                if not ID_RE.fullmatch(alias_id) or not ID_RE.fullmatch(geonames_id) or not name:
+                reason = ""
+                if not ID_RE.fullmatch(alias_id):
+                    reason = "INVALID_ALTERNATE_NAME_ID"
+                elif not ID_RE.fullmatch(geonames_id):
+                    reason = "INVALID_GEONAMES_ID"
+                elif not name:
+                    reason = "BLANK_ALTERNATE_NAME"
+                if reason:
                     malformed_rows += 1
+                    quarantine(
+                        raw, source_line_number, reason, field_count=len(fields),
+                        alias_id=alias_id if ID_RE.fullmatch(alias_id) else "",
+                        geonames_id=geonames_id if ID_RE.fullmatch(geonames_id) else "",
+                    )
                     continue
                 flags = [str(x).strip() for x in fields[4:8]]
                 if any(x not in {"", "0", "1"} for x in flags):
                     flag_malformed_rows += 1
+                    quarantine(
+                        raw, source_line_number, "INVALID_BOOLEAN_FLAGS",
+                        field_count=len(fields), alias_id=alias_id, geonames_id=geonames_id,
+                    )
+                    continue
                 if geonames_id in candidate_country:
                     record_scope_kind = "destination_place_or_admin"
                     source_country_code, country_code_bucket = candidate_country[geonames_id]
@@ -233,10 +278,9 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                 })
                 exported_rows += 1
 
-    if malformed_rows:
-        raise ValueError(f"Source alias rows malformed/invalid={malformed_rows}; export blocked.")
-    if flag_malformed_rows:
-        raise ValueError(f"Source alias boolean flags invalid in {flag_malformed_rows} row(s); export blocked.")
+    quarantined_source_rows = malformed_rows + flag_malformed_rows
+    if quarantined_source_rows != sum(quarantined_rows_by_reason.values()):
+        raise ValueError("Quarantined alternate-name source rows do not reconcile to recorded reasons.")
     if duplicate_alias_ids:
         raise ValueError(f"Duplicate alternateName IDs within country/area and destination scope: {duplicate_alias_ids}.")
     if exported_rows == 0:
@@ -246,6 +290,9 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     if not candidate_ids_with_aliases.issubset(candidate_country):
         raise ValueError("Alias coverage includes a GeoNames ID outside the candidate scope.")
     member_sha = member_digest.hexdigest()
+    quarantine_bytes, quarantine_sha = sha256_path(quarantine_path)
+    if quarantine_bytes < 0 or not quarantine_path.is_file():
+        raise ValueError("Quarantine evidence file was not retained.")
 
     aliases_by_destination_code = Counter(candidate_country[gid][1] for gid in candidate_ids_with_aliases)
     aliases_by_country_area_code = Counter(country_area_country[gid] for gid in country_area_ids_with_aliases)
@@ -280,7 +327,10 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
         "schema_version": 1,
         "audit": "geonames-alternateNamesV2-to-destination-candidate-crosswalk",
         "generated_at_utc": utc_now(),
-        "status": "PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED",
+        "status": (
+            "PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED"
+            if quarantined_source_rows else "PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED"
+        ),
         "scope": {
             "candidate_export": candidate_gzip.name,
             "country_area_source": "pinned GeoNames countryInfo.txt; country source identifiers only",
@@ -296,11 +346,16 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "country_info_source": country_area_source,
             "destination_candidate_export_size_bytes": candidate_gzip.stat().st_size,
             "destination_candidate_export_sha256": sha256_path(candidate_gzip)[1],
+            "quarantine_filename": quarantine_path.name,
+            "quarantine_file_size_bytes": quarantine_bytes,
+            "quarantine_file_sha256": quarantine_sha,
         },
         "counts": {
             "alternate_names_source_rows_scanned": source_rows,
             "malformed_or_invalid_source_rows": malformed_rows,
             "invalid_boolean_flag_rows": flag_malformed_rows,
+            "quarantined_source_rows": quarantined_source_rows,
+            "quarantine_rows_by_reason": dict(sorted(quarantined_rows_by_reason.items())),
             "destination_candidate_ids": len(candidate_country),
             "country_area_source_ids": len(country_area_country),
             "source_scope_record_ids": len(candidate_country) + len(country_area_country),
@@ -330,7 +385,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "effective_dates": "Preserve raw from/to values; blank values remain blank and are not interpreted as timeless legal truth",
             "canonical_names": "Original allCountries name and alternateNamesV2 remain separate fields/sources",
             "country_assignment": "Destination rows retain raw source codes and country/area rows retain countryInfo alpha-2 codes; neither implies an approved internal country mapping",
-            "source_completeness": "All rows in alternateNamesV2 are scanned and every valid matching alias row is exported; this says nothing about names missing from GeoNames",
+            "source_completeness": "All source rows are scanned; structurally invalid rows and rows with invalid boolean flags are preserved in a row-level quarantine; every valid matching alias row in the approved candidate scope is exported. Quarantined source rows may not be attributable to a catalog entity until corrected at source/reviewed.",
             "operational_selectability": False,
             "database_or_production_changes": False,
         },
@@ -354,7 +409,9 @@ def main(argv=None):
     except (OSError, UnicodeError, json.JSONDecodeError, zipfile.BadZipFile, ValueError) as exc:
         print(f"BLOCKED_ALTERNATE_NAME_CANDIDATE_EXPORT: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps({"status": report["status"], "summary_path": str(summary), "alias_file": str(output), **report["counts"]}, indent=2))
+    print(json.dumps({"status": report["status"], "summary_path": str(summary), "alias_file": str(output),
+                       "quarantine_file": str(Path(args.output_dir) / "worldwide-geonames-country-and-destination-alternate-name-quarantine.csv"),
+                       **report["counts"]}, indent=2))
     return 0
 
 
