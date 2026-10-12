@@ -1344,7 +1344,7 @@ jobs:
               csv_details = list(csv.DictReader(stream))
           if len(csv_details) != expected:
               raise SystemExit("Parent-period detail CSV does not retain every stub.")
-          if any(row["selectable"] != "False" or row["operational_parent_link_created"] != "False" for row in csv_details):
+          if any(row["selectable"].strip().lower() != "false" or row["operational_parent_link_created"].strip().lower() != "false" for row in csv_details):
               raise SystemExit("Parent-period detail CSV violates the non-operational boundary.")
           print("## Exact e-Stat parent-period detail supplement")
           print(f"- Parent-only period URIs requested: {expected}")
