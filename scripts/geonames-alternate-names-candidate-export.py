@@ -255,18 +255,6 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     aliases_by_destination_code = Counter(candidate_country[gid] for gid in candidate_ids_with_aliases)
     aliases_by_country_area_code = Counter(country_area_country[gid] for gid in country_area_ids_with_aliases)
     destination_per_code = []
-    country_area_per_code = []
-    for code, total in sorted(country_area_counts.items()):
-        ids_with_aliases = aliases_by_country_area_code[code]
-        country_area_per_code.append({
-            "source_country_alpha2_raw": code,
-            "record_scope_kind": "country_area",
-            "source_scope_records": total,
-            "source_scope_records_with_aliases": ids_with_aliases,
-            "source_scope_records_without_aliases": total - ids_with_aliases,
-            "matching_alias_rows": alias_country_rows[(code, "country_area")],
-            "alias_coverage_ratio": round(ids_with_aliases / total, 6) if total else 0.0,
-        })
     for code, total in sorted(country_totals.items()):
         ids_with_aliases = aliases_by_destination_code[code]
         destination_per_code.append({
@@ -278,11 +266,12 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "matching_alias_rows": alias_country_rows[(code, "destination_place_or_admin")],
             "alias_coverage_ratio": round(ids_with_aliases / total, 6) if total else 0.0,
         })
+
     country_area_per_code = []
     for code, total in sorted(country_area_counts.items()):
         ids_with_aliases = aliases_by_country_area_code[code]
         country_area_per_code.append({
-            "source_country_code_raw": code,
+            "source_country_alpha2_raw": code,
             "record_scope_kind": "country_area",
             "source_scope_records": total,
             "source_scope_records_with_aliases": ids_with_aliases,
@@ -334,12 +323,10 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "top_language_codes_by_alias_rows": [
                 {"language_code": code, "alias_rows": count} for code, count in aliases_by_language.most_common(50)
             ],
-            "destination_per_source_country_code": destination_per_code,
-            "country_area_per_source_alpha2": country_area_per_code,
             "operational_selectable_rows": 0,
             "database_or_production_changes": False,
         },
-        "per_source_country_code": per_country,
+        "per_source_country_code": destination_per_code,
         "per_country_area_alpha2": country_area_per_code,
         "interpretation": {
             "alias_relationship": "GeoNames source alternate-name ID linked to source GeoNames feature ID only; does not assert internal place identity",
