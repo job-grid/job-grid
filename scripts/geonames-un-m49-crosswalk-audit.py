@@ -469,9 +469,9 @@ def write_report(report, rows, out, catalog_package=None):
         catalog_fields=[
             "record_key","geonames_id","canonical_display_name_candidate","geonames_source_name",
             "catalog_role","entity_kind","record_status_candidate","proposed_selectable_as_destination",
-            "operational_selectable","sovereignty_claim","iso_alpha2_candidate","iso_alpha3_candidate",
-            "iso_numeric3_candidate","source_alpha2","source_alpha3","source_numeric3","m49_current_code",
-            "m49_current_row_present","source_identity_status","disposition_status","valid_to","classification_note"
+            "operational_selectable","sovereignty_claim","iso_alpha2","iso_alpha3","iso_numeric3",
+            "source_alpha2","source_alpha3","source_numeric3","iso_numeric3_candidate_from_geonames",
+            "m49_current_code","m49_current_row_present","source_identity_status","disposition_status","valid_to","classification_note"
         ]
         with (out/"country-area-destination-catalog-candidate.csv").open("w",newline="",encoding="utf-8") as f:
             writer=csv.DictWriter(f,fieldnames=catalog_fields); writer.writeheader()
@@ -483,9 +483,10 @@ def write_report(report, rows, out, catalog_package=None):
                     "entity_kind":r["entity_kind"],"record_status_candidate":r["record_status_candidate"],
                     "proposed_selectable_as_destination":r["proposed_selectable_as_destination"],
                     "operational_selectable":r["operational_selectable"],"sovereignty_claim":r["sovereignty_claim"],
-                    "iso_alpha2_candidate":r["iso_codes"].get("alpha2"),"iso_alpha3_candidate":r["iso_codes"].get("alpha3"),
-                    "iso_numeric3_candidate":r["iso_codes"].get("numeric3"),"source_alpha2":r["source_codes_preserved"]["alpha2"],
+                    "iso_alpha2":r["iso_codes"].get("alpha2"),"iso_alpha3":r["iso_codes"].get("alpha3"),
+                    "iso_numeric3":r["iso_codes"].get("numeric3"),"source_alpha2":r["source_codes_preserved"]["alpha2"],
                     "source_alpha3":r["source_codes_preserved"]["alpha3"],"source_numeric3":r["source_codes_preserved"]["numeric3"],
+                    "iso_numeric3_candidate_from_geonames":r["iso_numeric3_candidate_from_geonames"],
                     "m49_current_code":r["m49_current_code"],"m49_current_row_present":r["m49_current_row_present"],
                     "source_identity_status":r["source_identity_status"],"disposition_status":r["disposition_status"],
                     "valid_to":r["valid_to"],"classification_note":r["classification_note"]
