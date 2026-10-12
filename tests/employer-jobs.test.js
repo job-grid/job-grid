@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canCloseVacancy,
   closeVacancy,
+  getFreshEmployerSession,
   friendlyEmployerError,
   loadEmployerVacancies,
   normalizeEmployerConfig,
@@ -67,6 +68,31 @@ test("configured Close Job endpoint must remain on the approved project origin",
   );
 });
 
+test("employer session is refreshed and account changes fail closed", async () => {
+  let tokenNumber = 0;
+  const auth = {
+    getSession: async () => ({
+      accessToken: `access-${++tokenNumber}`,
+      user: { id: SESSION.user.id },
+    }),
+  };
+
+  const first = await getFreshEmployerSession(auth);
+  const second = await getFreshEmployerSession(auth, first);
+  assert.equal(first.accessToken, "access-1");
+  assert.equal(second.accessToken, "access-2");
+  assert.equal(second.user.id, SESSION.user.id);
+
+  const otherAccount = {
+    getSession: async () => ({
+      accessToken: "access-other",
+      user: { id: "00000000-0000-4000-8000-000000000002" },
+    }),
+  };
+  await assert.rejects(getFreshEmployerSession(otherAccount, first), /AUTH_REQUIRED/);
+  await assert.rejects(getFreshEmployerSession({ getSession: async () => null }), /AUTH_REQUIRED/);
+});
+
 test("vacancy closure eligibility requires a published, in-window version and an eligible tenant role", () => {
   assert.equal(canCloseVacancy(VACANCY, NOW), true);
   assert.equal(canCloseVacancy({ ...VACANCY, status: "draft" }, NOW), false);
@@ -126,6 +152,9 @@ test("vacancy list is loaded with the verified session and rendered only inside 
   assert.equal(membershipRequest.url.searchParams.get("status"), "eq.active");
   const vacancyRequest = calls.find((call) => call.url.pathname.endsWith("/vacancies"));
   assert.equal(vacancyRequest.url.searchParams.has("organization_id"), false, "client filter is not the tenant security boundary");
+  assert.equal(vacancyRequest.url.searchParams.get("select"), "id,organization_id,reference_code,title,status,version,published_at,expires_at,updated_at");
+  const organizationRequest = calls.find((call) => call.url.pathname.endsWith("/organizations"));
+  assert.equal(organizationRequest.url.searchParams.get("select"), "id,display_name", "load only organization fields the workspace displays");
 
   assert.deepEqual(vacancies.map((vacancy) => vacancy.title), ["Operations Coordinator", "Finance Officer"]);
   assert.equal(vacancies[0].organization.display_name, "Employer One");
