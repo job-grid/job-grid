@@ -66,3 +66,5 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261012214500_vacancy_close_foundation.sql
       - name: Exercise authorization, transitions, audit, idempotency and RLS
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/vacancy_close_integration.sql
+      - name: Exercise concurrent idempotent retries
+        run: bash supabase/tests/vacancy_close_concurrency.sh
