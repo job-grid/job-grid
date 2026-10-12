@@ -1726,7 +1726,7 @@ jobs:
             --output-dir "$output" \
             | tee "$alias_work/alternate-name-export.stdout.json"
           python3 - "$output/worldwide-geonames-country-and-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" "$audit/geonames-country-catalog-aggregate.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
-          import json,sys
+          import csv,hashlib,json,sys
           from pathlib import Path
           aliases=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           candidates=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
@@ -1735,8 +1735,12 @@ jobs:
           master_counts=country_master.get("counts",{})
           expected_country_area_rows=master_counts.get("country_info_rows")
           expected_country_sha=country_master.get("sources",{}).get("country_info",{}).get("sha256")
-          if aliases.get("status")!="PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED":
-              raise SystemExit("Destination alias export did not pass.")
+          allowed_alias_statuses = {
+              "PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED",
+              "PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED",
+          }
+          if aliases.get("status") not in allowed_alias_statuses:
+              raise SystemExit("Destination alias export did not pass an approved source-only status.")
           if c.get("destination_candidate_ids")!=candidates.get("counts",{}).get("candidate_file_rows"):
               raise SystemExit("Alias destination IDs do not equal unique destination candidate input.")
           if not isinstance(expected_country_area_rows,int) or expected_country_area_rows<=0:
@@ -1752,8 +1756,20 @@ jobs:
               raise SystemExit("Per-source-country destination coverage rows do not reconcile to candidate input.")
           if c.get("source_scope_record_ids")!=c.get("destination_candidate_ids",0)+c.get("country_area_source_ids",0):
               raise SystemExit("Combined alias source scope does not reconcile.")
-          if c.get("malformed_or_invalid_source_rows")!=0 or c.get("invalid_boolean_flag_rows")!=0:
-              raise SystemExit("Alternate-name source contains malformed rows/flags.")
+          quarantine_path = Path(sys.argv[2]).parent / "worldwide-geonames-country-and-destination-alternate-name-quarantine.csv"
+          with quarantine_path.open(encoding="utf-8", newline="") as stream:
+              quarantine_rows = list(csv.DictReader(stream))
+          expected_quarantined = c.get("malformed_or_invalid_source_rows", -1) + c.get("invalid_boolean_flag_rows", -1)
+          if c.get("quarantined_source_rows") != expected_quarantined or len(quarantine_rows) != expected_quarantined:
+              raise SystemExit("Alternate-name malformed/invalid row counts do not reconcile to row-level quarantine.")
+          if sum(c.get("quarantine_rows_by_reason", {}).values()) != expected_quarantined:
+              raise SystemExit("Alternate-name quarantine reason totals do not reconcile.")
+          if aliases.get("sources", {}).get("quarantine_file_sha256") != hashlib.sha256(quarantine_path.read_bytes()).hexdigest():
+              raise SystemExit("Alternate-name quarantine bytes do not match their source manifest hash.")
+          if expected_quarantined == 0 and aliases.get("status") != "PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED":
+              raise SystemExit("Clean alias source should use the no-quarantine pass status.")
+          if expected_quarantined > 0 and aliases.get("status") != "PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED":
+              raise SystemExit("Quarantined alias source must have an explicit quarantine status.")
           if c.get("duplicate_matching_alternate_name_ids")!=0:
               raise SystemExit("Duplicate matching alternateName IDs block alias acceptance.")
           destination_alias_rows=sum(int(row.get("matching_alias_rows",0)) for row in aliases.get("per_source_country_code",[]))
@@ -1843,6 +1859,7 @@ jobs:
             ${{ runner.temp }}/geonames-world-source/alternate-names/alternate-name-export.stdout.json
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-names.csv.gz
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-name-summary.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-country-and-destination-alternate-name-quarantine.csv
           if-no-files-found: error
           retention-days: 7
 
