@@ -209,9 +209,19 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
         this.renderCountryOptions();
         this.status.textContent = "Choose a country to begin.";
       } catch {
-        this.countries = normalizeCountries(FALLBACK_COUNTRIES);
-        this.renderCountryOptions();
-        this.status.innerHTML = 'The full country list could not be loaded. A limited fallback list is available; <button class="inline-retry" type="button" data-action="retry-countries">try loading all countries again</button>.';
+        try {
+          const response = await fetch("/data/countries.en.json", { headers: { Accept: "application/json" } });
+          if (!response.ok) throw new Error("Bundled country list unavailable.");
+          const bundledCountries = normalizeCountries(await response.json());
+          if (bundledCountries.length < 200) throw new Error("Bundled country list is incomplete.");
+          this.countries = bundledCountries;
+          this.renderCountryOptions();
+          this.status.textContent = "Country list loaded from the bundled backup. Place search still requires an internet connection.";
+        } catch {
+          this.countries = normalizeCountries(FALLBACK_COUNTRIES);
+          this.renderCountryOptions();
+          this.status.innerHTML = 'The full country list could not be loaded. A limited fallback list is available; <button class="inline-retry" type="button" data-action="retry-countries">try loading all countries again</button>.';
+        }
       }
     }
 
