@@ -204,8 +204,10 @@ test("destination coverage distinguishes current place candidates, administrativ
   assert.equal(destinationCoverage.worldwide_destination_completeness, "NOT_ESTABLISHED_BY_SOURCE_COUNTS_ALONE");
   assert.equal(report.interpretation.destination_coverage, "SOURCE_FEATURE_DISTRIBUTION_AUDITED_NOT_WORLDWIDE_PRODUCT_COMPLETENESS");
   assert.equal(report.interpretation.destination_candidate_rows, 3);
-  assert.ok(destinationCoverageCsv.includes("source_country_code"));
-  assert.ok(destinationCoverageCsv.split("\\n").some(line => line.endsWith(",KE")));
+  const coverageLines = destinationCoverageCsv.trim().split("\\n");
+  const countryCodeColumn = coverageLines[0].split(",").indexOf("source_country_code");
+  assert.ok(countryCodeColumn >= 0);
+  assert.ok(coverageLines.slice(1).some(line => line.split(",")[countryCodeColumn] === "KE"));
 });
 
 test("a country with only historical/abandoned places is surfaced without auto-selection", async (t) => {
