@@ -1,6 +1,6 @@
 # Worldwide country and destination catalogue — completeness and selector policy
 
-**Status:** Acceptance policy proposal; source coverage audit is being added to PR #27.  
+**Status:** Acceptance policy and candidate-export tooling implemented in draft PR #27; latest global-export CI result and per-country gap review are pending.  
 **Scope:** Country/area identity, destination candidate feature coverage, administrative hierarchy and selectable UI values.  
 **Write boundary:** No database migration, seed, import, production change or deployment is authorized by this document.
 
@@ -33,7 +33,8 @@ The source audit is pinned to GeoNames `allCountries.zip`, whose 19-field lines 
 - an aggregate destination feature coverage JSON;
 - a per-source-country-code CSV showing counts of all source records, feature class, candidate populated places and administrative levels;
 - a short-lived source manifest and the existing crosswalk exception audit rows;
-- a country/area candidate master CSV/JSON that accounts for all 252 `countryInfo` entries by exact UN M49 alpha-code pair or explicit exception disposition.
+- a country/area candidate master CSV/JSON that accounts for all 252 `countryInfo` entries by exact UN M49 alpha-code pair or explicit exception disposition;
+- a compressed worldwide place/admin candidate CSV containing every class-`P` row and every class-`A` `ADM*` row, each assigned one candidate/review-held disposition with raw country/admin codes, source IDs and modification date.
 
 The proposed current populated-place candidate feature-code set is explicitly limited to:
 `PPL`, `PPLA`, `PPLA2`, `PPLA3`, `PPLA4`, `PPLA5`, `PPLC`, `PPLCD`, `PPLF`, `PPLG`, `PPLL`, `PPLR`, `PPLS`.
@@ -56,7 +57,7 @@ A later implementation may set an internal place as selectable only after all of
 7. The UI can select the place by internal ID. A parent path may remain unresolved when the product only needs a country-scoped destination search; however, the place may not be represented as belonging to a specific region/county or used in hierarchical filtering unless that specific edge is verified.
 8. Parent edges, when approved, are same-country, cycle-free, period-aware and supported by cited source evidence. Unknown parents remain null/unresolved, never guessed.
 
-The country code and place-hierarchy crosswalks remain separate. A valid country match does not prove an immediate administrative parent, and an unverified parent must not block independent, verified records elsewhere in the catalogue.
+The country code and place-hierarchy crosswalks remain separate. A valid countryInfo alpha-2 match does not prove an approved internal-country link or immediate administrative parent. The compressed candidate export keeps these as evidence-only relationships, preserves raw admin1-admin4 values, and sets every `operational_selectable` field to false and every `parent_link_created` field to false. An unverified parent must not block independent, verified records elsewhere in the catalogue.
 
 ## 5. Coverage report acceptance
 
@@ -83,13 +84,14 @@ See [the current evidence report](geonames-kenya-githunguri-parent-candidate-sea
 
 ## 7. Required implementation order
 
-1. **Completed for the current country/area source:** the live source-code comparison and exception disposition now pass CI; the row-level 252-record candidate package is emitted from the current source snapshot.
-2. Review the candidate country/area package labels, proposed 250 current destination options and two historical-only references. The artifact explicitly has zero operationally enabled rows.
-3. Review the all-country destination feature coverage artifact and per-country zero/gap counts; approve the city/town/locality and administrative-level feature scope.
-4. Produce a row-level destination reconciliation from the pinned global place snapshot, including country-code assignment, duplicate/ambiguous IDs, alias/language coverage, and unresolved parent paths.
-5. Finish source-specific parent-path reviews without fabricating edges. The country-area code cross-check does not clear the 128-record administrative parent-path review.
-6. Review the logical schema, source-match states, relationship history, RLS and admin permissions in a separate implementation PR.
-7. Independently verify backup/restore readiness before authorizing any database schema/import work.
-8. Only then implement and validate the schema/import through the reviewed migration path; keep production execution under its own authorization.
+1. **Completed for the current country/area source:** exact alpha-code pairs and four documented exceptions pass the live UN M49 cross-check. A 252-row candidate country/area file is emitted; 250 entries are current-destination proposals, two are historical-only, and none are operationally enabled.
+2. **In progress:** generate and review the compressed row-level worldwide destination export from the pinned `allCountries.zip` snapshot. The exporter accounts for all class-`P` records and all class-`A` `ADM*` records in its defined scope, retaining raw IDs/codes and assigning exactly one candidate or review-held disposition. Every row is nonselectable and no parent links are created.
+3. Review the aggregate country/feature coverage counts and per-country code buckets after the new CI run; inspect empty-code/zero-candidate buckets and held feature types.
+4. Resolve the country-code assignment crosswalk for candidate place records, duplicate/ambiguous IDs, and parent paths as separate evidence layers. The export intentionally does not infer internal country links from names or source codes alone.
+5. Audit localized/alternate-name coverage with GeoNames `alternateNamesV2` source data. The inline alternate-name field is preserved for discovery but is not a substitute for a normalized, versioned alias table.
+6. Finish source-specific parent-path reviews without fabricating edges. The country-area code cross-check does not clear the 128-record administrative parent-path review.
+7. Review the logical schema, source-match states, relationship history, RLS and admin permissions in a separate implementation PR.
+8. Independently verify backup/restore readiness before authorizing any database schema/import work.
+9. Only then implement and validate the schema/import through the reviewed migration path; keep production execution under its own authorization.
 
 PR #27 remains a draft. The country/area candidate package is review/import-planning evidence, not a live database seed or selector. Destination feature-scope completeness and production acceptance remain open.
