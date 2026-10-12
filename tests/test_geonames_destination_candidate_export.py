@@ -91,6 +91,9 @@ class DestinationCandidateExportTests(unittest.TestCase):
             self.assertEqual(report["counts"]["operational_selectable_rows"], 0)
             self.assertEqual(report["counts"]["parent_links_created"], 0)
             self.assertEqual(report["counts"]["unique_candidate_source_ids"], 9)
+            self.assertEqual(report["sources"]["candidate_export_filename"], gz_path.name)
+            self.assertEqual(report["sources"]["candidate_export_size_bytes"], gz_path.stat().st_size)
+            self.assertEqual(report["sources"]["candidate_export_sha256"], hashlib.sha256(gz_path.read_bytes()).hexdigest())
             self.assertTrue(report_path.is_file())
             with gzip.open(gz_path, "rt", encoding="utf-8", newline="") as stream:
                 records = list(csv.DictReader(stream))
