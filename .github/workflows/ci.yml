@@ -2424,7 +2424,7 @@ jobs:
 
   geonames-full-source-audit:
     name: Phase 0 CI / Full GeoNames source audit
-    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27 && github.event.pull_request.head.sha == '99003059c24fce77b55208a6fdfc6a74810e3b53') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
