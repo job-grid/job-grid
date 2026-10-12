@@ -11,6 +11,7 @@ audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
 parse_geonames, parse_m49, reconcile = audit.parse_geonames, audit.parse_m49, audit.reconcile
 validate_exception_dispositions = audit.validate_exception_dispositions
+validate_complete_reconciliation = audit.validate_complete_reconciliation
 write_report = audit.write_report
 EXCEPTION_MANIFEST = json.loads((Path(__file__).resolve().parents[1] / "docs" / "geonames-un-m49-exception-dispositions-2026-10-12.json").read_text(encoding="utf-8"))
 
@@ -128,6 +129,33 @@ class CrosswalkTests(unittest.TestCase):
         self.assertIn("catalog_role", exported[0])
         self.assertIn("selectable_as_destination", exported[0])
         self.assertEqual({row["exception_disposition_status"] for row in exported}, {"DOCUMENTED"})
+
+
+    def test_new_unlisted_non_m49_tuple_blocks_completeness(self):
+        rows = [
+            row("XK","XKX","0","Kosovo","831053"),
+            row("TW","TWN","158","Taiwan","1668284"),
+            row("CS","SCG","891","Serbia and Montenegro","8505033"),
+            row("AN","ANT","530","Netherlands Antilles","8505032"),
+            row("ZZ","ZZZ","999","Unknown extra source area","999999"),
+        ]
+        geo = parse_geonames("\n".join(rows))
+        decisions = validate_exception_dispositions(EXCEPTION_MANIFEST, geo[:-1])
+        with self.assertRaisesRegex(ValueError, "undocumented=.*999999"):
+            validate_complete_reconciliation(geo, [], decisions)
+
+    def test_stale_disposition_blocks_if_tuple_is_now_in_comparison_table(self):
+        rows = [
+            row("XK","XKX","0","Kosovo","831053"),
+            row("TW","TWN","158","Taiwan","1668284"),
+            row("CS","SCG","891","Serbia and Montenegro","8505033"),
+            row("AN","ANT","530","Netherlands Antilles","8505032"),
+        ]
+        geo = parse_geonames("\n".join(rows))
+        decisions = validate_exception_dispositions(EXCEPTION_MANIFEST, geo)
+        m49 = [{"name":"Kosovo","m49_code":"412","alpha2":"XK","alpha3":"XKX"}]
+        with self.assertRaisesRegex(ValueError, "stale_or_now_matched=.*831053"):
+            validate_complete_reconciliation(geo, m49, decisions)
 
 
 if __name__=="__main__":
