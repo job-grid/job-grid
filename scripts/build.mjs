@@ -5,7 +5,8 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
 for (const name of ["index.html", "jobs.html", "job.html", "styles"]) {
-  await cp(new URL(`../${name}`, import.meta.url), new URL(name === "index.html" ? "index.html" : `${name}/`, output), { recursive: true });
+  const destinationName = name.endsWith(".html") ? name : `${name}/`;
+  await cp(new URL(`../${name}`, import.meta.url), new URL(destinationName, output), { recursive: true });
 }
 
 // Only browser-facing modules belong in the public static output.
