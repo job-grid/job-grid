@@ -1,39 +1,15 @@
 BEGIN;
 
--- Proposed Phase 2A foundation for the Close Job operation.
--- Review-only until project ownership, isolated testing and execution approval
--- are re-verified. Do not apply this migration through CI or an ad-hoc SQL console.
+-- Proposed additive Phase 2A Close Job lifecycle extension.
+-- Requires the owner-approved Phase 2A core schema to exist first. This migration
+-- does not create organizations, memberships, roles or vacancies. Review-only:
+-- do not apply until schema approval, isolated integration, recovery readiness,
+-- project authorization and separate execution approval are verified.
 
-CREATE TABLE public.organizations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  legal_name text NOT NULL CHECK (length(trim(legal_name)) BETWEEN 2 AND 200),
-  display_name text NOT NULL CHECK (length(trim(display_name)) BETWEEN 2 AND 120),
-  status text NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'verified', 'suspended')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE public.organization_memberships (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role text NOT NULL CHECK (role IN ('owner', 'admin', 'recruiter', 'viewer')),
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz,
-  UNIQUE (organization_id, user_id),
-  CHECK ((status = 'revoked' AND revoked_at IS NOT NULL)
-      OR (status = 'active' AND revoked_at IS NULL))
-);
-
-CREATE TABLE public.platform_roles (
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role text NOT NULL CHECK (role IN ('moderator', 'admin')),
-  active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, role)
-);
+-- Prerequisite: Phase 2A core migration must already define organizations,
+-- organization_memberships, platform_roles, geography and vacancies. This lifecycle
+-- migration deliberately does not create a competing tenant/vacancy data model.
+-- CI creates the documented contract fixture before applying this additive migration.
 
 CREATE TABLE public.vacancy_closure_reason_codes (
   code text PRIMARY KEY CHECK (code ~ '^[a-z][a-z0-9_]{1,63}$'),
@@ -51,38 +27,54 @@ VALUES
   ('incorrect_listing', 'Listing created in error')
 ON CONFLICT (code) DO NOTHING;
 
-CREATE TABLE public.vacancies (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-  reference_code text NOT NULL UNIQUE
-    CHECK (reference_code ~ '^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$'),
-  slug text NOT NULL CHECK (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
-  title text NOT NULL CHECK (length(trim(title)) BETWEEN 3 AND 180),
-  description text NOT NULL CHECK (length(trim(description)) BETWEEN 20 AND 20000),
-  work_location text NOT NULL CHECK (length(trim(work_location)) BETWEEN 2 AND 200),
-  country_code text NOT NULL CHECK (country_code ~ '^[A-Z]{2}$'),
-  status text NOT NULL DEFAULT 'draft'
-    CHECK (status IN (
-      'draft', 'submitted', 'approved', 'published', 'closed',
-      'suspended', 'expired', 'rejected', 'archived'
-    )),
-  version integer NOT NULL DEFAULT 1 CHECK (version >= 1),
-  published_at timestamptz,
-  expires_at timestamptz,
-  closed_at timestamptz,
-  closure_reason_code text REFERENCES public.vacancy_closure_reason_codes(code) ON DELETE RESTRICT,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (organization_id, slug),
-  CHECK (expires_at IS NULL OR published_at IS NULL OR expires_at > published_at),
-  CHECK (status NOT IN ('published', 'closed') OR published_at IS NOT NULL),
-  CHECK (
-    (status = 'closed' AND closed_at IS NOT NULL AND closure_reason_code IS NOT NULL)
-    OR
-    (status <> 'closed' AND closed_at IS NULL AND closure_reason_code IS NULL)
-  )
-);
+-- Add only the fields owned by this lifecycle extension to the canonical
+-- Phase 2A vacancy entity. Core identity, content, geography, moderation and
+-- application fields remain the responsibility of the Phase 2A core schema.
+ALTER TABLE public.vacancies
+  ADD COLUMN IF NOT EXISTS closed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS closure_reason_code text;
+
+DO $constraints$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_constraint
+     WHERE conrelid = 'public.vacancies'::regclass
+       AND conname = 'vacancies_closure_reason_code_fkey'
+  ) THEN
+    ALTER TABLE public.vacancies
+      ADD CONSTRAINT vacancies_closure_reason_code_fkey
+      FOREIGN KEY (closure_reason_code)
+      REFERENCES public.vacancy_closure_reason_codes(code)
+      ON DELETE RESTRICT;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_constraint
+     WHERE conrelid = 'public.vacancies'::regclass
+       AND conname = 'vacancies_closure_fields_consistent'
+  ) THEN
+    IF EXISTS (
+      SELECT 1
+        FROM public.vacancies
+       WHERE (status = 'closed' AND (closed_at IS NULL OR closure_reason_code IS NULL))
+          OR (status <> 'closed' AND (closed_at IS NOT NULL OR closure_reason_code IS NOT NULL))
+    ) THEN
+      RAISE EXCEPTION
+        'Existing vacancy closure states need reconciliation before adding closure constraints';
+    END IF;
+
+    ALTER TABLE public.vacancies
+      ADD CONSTRAINT vacancies_closure_fields_consistent
+      CHECK (
+        (status = 'closed' AND closed_at IS NOT NULL AND closure_reason_code IS NOT NULL)
+        OR
+        (status <> 'closed' AND closed_at IS NULL AND closure_reason_code IS NULL)
+      );
+  END IF;
+END;
+$constraints$;
 
 CREATE TABLE public.vacancy_audit_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -114,14 +106,15 @@ CREATE TABLE public.vacancy_closure_requests (
 );
 
 CREATE INDEX vacancies_public_search_idx
-  ON public.vacancies (country_code, status, published_at DESC, expires_at);
+  ON public.vacancies (geography_id, status, published_at DESC, expires_at);
 CREATE INDEX vacancies_org_status_idx
   ON public.vacancies (organization_id, status, updated_at DESC);
-CREATE INDEX organization_memberships_user_status_idx
-  ON public.organization_memberships (user_id, status, organization_id);
 CREATE INDEX vacancy_audit_events_vacancy_time_idx
   ON public.vacancy_audit_events (vacancy_id, occurred_at DESC);
 
+-- Canonical Phase 2A tables are expected to have RLS enabled by the core
+-- schema migration as well. Reasserting it is fail-closed and does not disable
+-- or replace existing policies.
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_roles ENABLE ROW LEVEL SECURITY;
@@ -376,36 +369,43 @@ REVOKE ALL ON FUNCTION public.close_published_vacancy(uuid, uuid, text, integer,
 GRANT EXECUTE ON FUNCTION public.close_published_vacancy(uuid, uuid, text, integer, uuid, text)
   TO service_role;
 
-REVOKE ALL ON public.organizations, public.organization_memberships,
-  public.platform_roles, public.vacancy_closure_reason_codes, public.vacancies,
+-- Restrict privileges only on lifecycle-owned tables. The core schema remains
+-- responsible for base organization/membership grants and its other API contracts.
+REVOKE ALL ON public.vacancy_closure_reason_codes,
   public.vacancy_audit_events, public.vacancy_closure_requests
   FROM PUBLIC, anon, authenticated;
 
-GRANT SELECT ON public.organizations, public.organization_memberships
-  TO authenticated;
 GRANT SELECT ON public.vacancy_closure_reason_codes TO anon, authenticated;
+
 GRANT SELECT (
   id, organization_id, reference_code, slug, title, description,
-  work_location, country_code, status, version, published_at, expires_at,
-  created_at, updated_at
+  geography_id, worksite_text, employment_type, contract_duration,
+  hours_per_week, salary_min, salary_max, salary_currency, pay_period,
+  benefits, accommodation_provided, qualification_requirements,
+  licence_requirements, language_requirements, vacancies_count,
+  sponsorship_status, application_deadline, status, published_at,
+  expires_at, created_at, updated_at
 ) ON public.vacancies TO anon;
+
 GRANT SELECT (
   id, organization_id, reference_code, slug, title, description,
-  work_location, country_code, status, version, published_at, expires_at,
-  created_at, updated_at
+  geography_id, worksite_text, employment_type, contract_duration,
+  hours_per_week, salary_min, salary_max, salary_currency, pay_period,
+  benefits, accommodation_provided, qualification_requirements,
+  licence_requirements, language_requirements, vacancies_count,
+  sponsorship_status, application_deadline, status, moderation_state,
+  verification_state, version, published_at, expires_at, closed_at,
+  closure_reason_code, created_at, updated_at
 ) ON public.vacancies TO authenticated;
 
-GRANT SELECT, INSERT, UPDATE ON public.organizations,
-  public.organization_memberships, public.platform_roles, public.vacancies
-  TO service_role;
+-- Minimal privilege required by the trusted lifecycle RPC.
+GRANT SELECT ON public.organization_memberships, public.platform_roles TO service_role;
+GRANT SELECT, UPDATE ON public.vacancies TO service_role;
 GRANT SELECT ON public.vacancy_closure_reason_codes TO service_role;
 GRANT SELECT, INSERT ON public.vacancy_audit_events TO service_role;
 GRANT SELECT, INSERT ON public.vacancy_closure_requests TO service_role;
 
 REVOKE UPDATE, DELETE ON public.vacancy_audit_events FROM service_role;
 REVOKE UPDATE, DELETE ON public.vacancy_closure_requests FROM service_role;
-REVOKE DELETE ON public.organizations, public.organization_memberships,
-  public.platform_roles, public.vacancy_closure_reason_codes, public.vacancies
-  FROM service_role;
 
 COMMIT;
