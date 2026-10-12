@@ -191,7 +191,7 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
                 seen_ids.add(geonames_id)
 
             kind, disposition, proposed_status = classified
-            source_country = fields[8].strip().upper()
+            source_country = fields[8].strip()
             country, country_status = classify_country(source_country, country_by_code, exception_by_id)
             if country_status == "SOURCE_CODE_MATCHES_HISTORICAL_ENTITY__HOLD":
                 # Historical country code must not turn children into current destination options.
