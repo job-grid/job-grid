@@ -162,6 +162,48 @@ test("vacancy list is loaded with the verified session and rendered only inside 
   assert.equal(vacancies[1].membershipRole, "viewer");
 });
 
+test("vacancy list paginates past 100 rows without silently omitting older jobs", async () => {
+  const organizationId = VACANCY.organization_id;
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({
+    ...VACANCY,
+    id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    organization_id: organizationId,
+    title: `Vacancy ${index + 1}`,
+  }));
+  const secondPage = [{
+    ...VACANCY,
+    id: "20000000-0000-4000-8000-000000000101",
+    organization_id: organizationId,
+    title: "Vacancy 101",
+  }];
+  const calls = [];
+
+  const fetchMock = async (input, init) => {
+    const url = new URL(input);
+    calls.push({ url, init });
+    if (url.pathname.endsWith("/organization_memberships")) {
+      return response([{ organization_id: organizationId, role: "owner", status: "active" }]);
+    }
+    if (url.pathname.endsWith("/organizations")) {
+      return response([{ id: organizationId, display_name: "Employer One" }]);
+    }
+    if (url.pathname.endsWith("/vacancies")) {
+      return response(url.searchParams.get("offset") === "100" ? secondPage : firstPage);
+    }
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  };
+
+  const vacancies = await loadEmployerVacancies(CONFIG, SESSION, fetchMock);
+  const vacancyRequests = calls.filter((call) => call.url.pathname.endsWith("/vacancies"));
+  assert.equal(vacancies.length, 101);
+  assert.deepEqual(
+    vacancyRequests.map((call) => call.url.searchParams.get("offset")),
+    ["0", "100"],
+  );
+  assert.ok(vacancyRequests.every((call) => call.url.searchParams.get("limit") === "100"));
+  assert.equal(vacancies.some((vacancy) => vacancy.title === "Vacancy 101"), true);
+});
+
 test("vacancy list refuses a session without verified user and access token", async () => {
   let calls = 0;
   await assert.rejects(
