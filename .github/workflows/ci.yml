@@ -2481,7 +2481,7 @@ jobs:
 
   geonames-location-candidate-export:
     name: Phase 0 CI / GeoNames location candidate package
-    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27 && github.event.pull_request.head.sha == '6772116a5b78113698351e7c884b0df9a2463d03') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
