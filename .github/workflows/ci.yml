@@ -1460,7 +1460,7 @@ jobs:
     name: Phase 0 CI / Global source audit of crosswalk exceptions
     if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -1607,6 +1607,101 @@ jobs:
           print("- The compressed row-level candidate file is a review/import artifact, not a database seed.")
           PY
 
+      - name: Test worldwide destination alias exporter
+        run: python3 -m unittest discover -s tests -p "test_geonames_alternate_names_candidate_export.py" -v
+
+      - name: Retrieve, fingerprint and CRC-check official alternateNamesV2 archive
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          alias_work="$work/alternate-names"
+          mkdir -p "$alias_work"
+          url="https://download.geonames.org/export/dump/alternateNamesV2.zip"
+          archive="$alias_work/alternateNamesV2.zip"
+          headers="$alias_work/alternateNamesV2.headers"
+          status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors \
+            --dump-header "$headers" --output "$archive" --write-out '%{http_code}' "$url")"
+          test "$status" = "200"
+          test -s "$archive"
+          retrieved_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          python3 - "$headers" "$archive" "$url" "$retrieved_at" "$status" "$alias_work/source-manifest.json" <<'PY'
+          import hashlib, json, sys, zipfile
+          from pathlib import Path
+          headers_path, archive_path, url, retrieved, status, manifest_path = sys.argv[1:]
+          hp=Path(headers_path).read_text(encoding="iso-8859-1",errors="replace")
+          blocks=[]; current={}; code=None
+          for line in hp.replace("\r\n","\n").split("\n"):
+              if line.startswith("HTTP/"):
+                  if code=="200": blocks.append(current)
+                  p=line.split(); code=p[1] if len(p)>1 else None; current={}
+              elif ":" in line and code:
+                  k,v=line.split(":",1); current[k.strip().lower()]=v.strip()
+          if code=="200": blocks.append(current)
+          h=blocks[-1] if blocks else {}
+          p=Path(archive_path); raw=p.read_bytes()
+          with zipfile.ZipFile(p,"r") as z:
+              hits=[n for n in z.namelist() if n=="alternateNamesV2.txt" or n.endswith("/alternateNamesV2.txt")]
+              if len(hits)!=1:
+                  raise SystemExit("Expected exactly one alternateNamesV2.txt archive member.")
+              bad=z.testzip()
+              if bad:
+                  raise SystemExit("ZIP CRC test failed for member "+bad)
+              info=z.getinfo(hits[0])
+          record={"source_url":url,"retrieved_at_utc":retrieved,"http_status":int(status),
+              "http_last_modified_header":h.get("last-modified"),"etag":h.get("etag"),
+              "size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),
+              "zip_crc_validation":"PASS","member_name":info.filename,"member_uncompressed_size_bytes":info.file_size}
+          Path(manifest_path).write_text(json.dumps({"manifest_version":1,"remote_source":record},indent=2)+"\n",encoding="utf-8")
+          print(json.dumps(record,indent=2))
+          PY
+
+      - name: Export source-pinned multilingual names for destination candidates
+        shell: bash
+        env:
+          RUNNER_TEMP_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP_DIR/geonames-world-source"
+          audit="$work/country-master-audit"
+          alias_work="$work/alternate-names"
+          output="$audit/destination-candidates"
+          python3 scripts/geonames-alternate-names-candidate-export.py \
+            --candidate-gzip "$output/worldwide-geonames-destination-candidates.csv.gz" \
+            --archive "$alias_work/alternateNamesV2.zip" \
+            --source-manifest "$alias_work/source-manifest.json" \
+            --output-dir "$output" \
+            | tee "$alias_work/alternate-name-export.stdout.json"
+          python3 - "$output/worldwide-geonames-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json,sys
+          from pathlib import Path
+          aliases=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          candidates=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          c=aliases["counts"]
+          if aliases.get("status")!="PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED":
+              raise SystemExit("Destination alias export did not pass.")
+          if c.get("destination_candidate_ids")!=candidates.get("counts",{}).get("candidate_file_rows"):
+              raise SystemExit("Alias destination IDs do not equal unique destination candidate input.")
+          if c.get("malformed_or_invalid_source_rows")!=0 or c.get("invalid_boolean_flag_rows")!=0:
+              raise SystemExit("Alternate-name source contains malformed rows/flags.")
+          if c.get("duplicate_matching_alternate_name_ids")!=0:
+              raise SystemExit("Duplicate matching alternateName IDs block alias acceptance.")
+          if c.get("matching_alias_rows_exported")!=c.get("unique_matching_alternate_name_ids"):
+              raise SystemExit("Alias row count does not reconcile to unique alias IDs.")
+          if c.get("operational_selectable_rows")!=0 or aliases.get("interpretation",{}).get("database_or_production_changes") is not False:
+              raise SystemExit("Alias export violated no-production-write boundary.")
+          print("## Worldwide destination alternate-name coverage")
+          print(f"- Destination candidates checked: {c['destination_candidate_ids']}")
+          print(f"- Candidates with one or more source aliases: {c['candidate_ids_with_aliases']}")
+          print(f"- Candidates without aliases in this snapshot: {c['candidate_ids_without_aliases']}")
+          print(f"- Alias rows exported: {c['matching_alias_rows_exported']}")
+          print(f"- Language codes represented: {c['language_codes_in_export']}")
+          print(f"- Malformed rows/flags and duplicate alias IDs: {c['malformed_or_invalid_source_rows']} / {c['invalid_boolean_flag_rows']} / {c['duplicate_matching_alternate_name_ids']}")
+          print("- Rows remain source evidence only; no operational selections, internal identity matches or parent links were created.")
+          PY
+
       - name: Compare all unique crosswalk exception IDs against the official global source
         shell: bash
         env:
@@ -1666,6 +1761,10 @@ jobs:
             ${{ runner.temp }}/geonames-world-source/country-master-audit/country-master-source-manifest.json
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-candidates.csv.gz
             ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-candidate-export-summary.json
+            ${{ runner.temp }}/geonames-world-source/alternate-names/source-manifest.json
+            ${{ runner.temp }}/geonames-world-source/alternate-names/alternate-name-export.stdout.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-alternate-names.csv.gz
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/destination-candidates/worldwide-geonames-destination-alternate-name-summary.json
           if-no-files-found: error
           retention-days: 7
 
