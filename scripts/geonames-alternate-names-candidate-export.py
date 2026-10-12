@@ -144,6 +144,9 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                    archive_path: Path, manifest_path: Path, output_dir: Path):
     candidate_country, country_totals = read_candidate_scope(candidate_gzip)
     country_area_country, country_area_source = read_country_area_scope(country_info_path, country_info_manifest_path)
+    country_area_counts = Counter(country_area_country.values())
+    country_area_alias_rows = Counter()
+    country_area_alias_ids_by_code = Counter()
     if set(candidate_country).intersection(country_area_country):
         raise ValueError("A GeoNames ID appears in both country/area and destination candidate scopes.")
     source_meta = source_manifest_record(manifest_path, archive_path)
@@ -158,6 +161,7 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
     exported_rows = 0
     aliases_by_language = Counter()
     alias_country_rows = Counter()
+    alias_country_ids = Counter()
     blank_language_rows = 0
     flag_malformed_rows = 0
     member_digest = hashlib.sha256()
@@ -200,6 +204,8 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                     record_scope_kind = "country_area"
                     source_country_code = country_area_country[geonames_id]
                     country_area_ids_with_aliases.add(geonames_id)
+                    country_area_alias_rows[source_country_code] += 1
+                    country_area_alias_ids_by_code[source_country_code] += 0
                 else:
                     continue
                 if alias_id in alias_ids_seen:
@@ -207,7 +213,8 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
                 else:
                     alias_ids_seen.add(alias_id)
                 country_code = source_country_code
-                alias_country_rows[country_code] += 1
+                alias_country_rows[(country_code, record_scope_kind)] += 1
+                alias_country_ids[(country_code, record_scope_kind, geonames_id)] += 1
                 language = language.strip()
                 if language:
                     aliases_by_language[language] += 1
@@ -244,16 +251,30 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
         raise ValueError("Alias coverage includes a GeoNames ID outside the candidate scope.")
     member_sha = member_digest.hexdigest()
 
-    aliases_by_country_unique_ids = Counter(candidate_country[gid] for gid in candidate_ids_with_aliases)
-    per_country = []
+    aliases_by_destination_code = Counter(candidate_country[gid] for gid in candidate_ids_with_aliases)
+    aliases_by_country_area_code = Counter(country_area_country[gid] for gid in country_area_ids_with_aliases)
+    destination_per_code = []
     for code, total in sorted(country_totals.items()):
-        ids_with_aliases = aliases_by_country_unique_ids[code]
-        per_country.append({
+        ids_with_aliases = aliases_by_destination_code[code]
+        destination_per_code.append({
             "source_country_code_raw": code,
-            "candidate_records": total,
-            "candidate_records_with_one_or_more_aliases": ids_with_aliases,
-            "candidate_records_without_aliases_in_snapshot": total - ids_with_aliases,
-            "matching_alias_rows": alias_country_rows[code],
+            "record_scope_kind": "destination_place_or_admin",
+            "source_scope_records": total,
+            "source_scope_records_with_aliases": ids_with_aliases,
+            "source_scope_records_without_aliases": total - ids_with_aliases,
+            "matching_alias_rows": alias_country_rows[(code, "destination_place_or_admin")],
+            "alias_coverage_ratio": round(ids_with_aliases / total, 6) if total else 0.0,
+        })
+    country_area_per_code = []
+    for code, total in sorted(country_area_counts.items()):
+        ids_with_aliases = aliases_by_country_area_code[code]
+        country_area_per_code.append({
+            "source_country_code_raw": code,
+            "record_scope_kind": "country_area",
+            "source_scope_records": total,
+            "source_scope_records_with_aliases": ids_with_aliases,
+            "source_scope_records_without_aliases": total - ids_with_aliases,
+            "matching_alias_rows": alias_country_rows[(code, "country_area")],
             "alias_coverage_ratio": round(ids_with_aliases / total, 6) if total else 0.0,
         })
 
@@ -298,6 +319,8 @@ def export_aliases(candidate_gzip: Path, country_info_path: Path, country_info_m
             "top_language_codes_by_alias_rows": [
                 {"language_code": code, "alias_rows": count} for code, count in aliases_by_language.most_common(50)
             ],
+            "destination_per_source_country_code": destination_per_code,
+            "country_area_per_source_alpha2": country_area_per_code,
             "operational_selectable_rows": 0,
             "database_or_production_changes": False,
         },
