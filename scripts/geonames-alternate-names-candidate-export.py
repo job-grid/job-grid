@@ -108,7 +108,6 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
     exported_rows = 0
     aliases_by_language = Counter()
     alias_country_rows = Counter()
-    alias_country_ids = {code: set() for code in country_totals}
     blank_language_rows = 0
     flag_malformed_rows = 0
     member_digest = hashlib.sha256()
@@ -152,7 +151,6 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
                 candidate_ids_with_aliases.add(geonames_id)
                 country_code = candidate_country[geonames_id]
                 alias_country_rows[country_code] += 1
-                alias_country_ids.setdefault(country_code, set()).add(geonames_id)
                 language = language.strip()
                 if language:
                     aliases_by_language[language] += 1
@@ -187,9 +185,10 @@ def export_aliases(candidate_gzip: Path, archive_path: Path, manifest_path: Path
         raise ValueError("Alias coverage includes a GeoNames ID outside the candidate scope.")
     member_sha = member_digest.hexdigest()
 
+    aliases_by_country_unique_ids = Counter(candidate_country[gid] for gid in candidate_ids_with_aliases)
     per_country = []
     for code, total in sorted(country_totals.items()):
-        ids_with_aliases = len(alias_country_ids.get(code, set()))
+        ids_with_aliases = aliases_by_country_unique_ids[code]
         per_country.append({
             "source_country_code_raw": code,
             "candidate_records": total,
