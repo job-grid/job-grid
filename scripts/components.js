@@ -17,7 +17,8 @@ class JobGridHeader extends HTMLElement {
   connectedCallback() {
     const path = window.location.pathname;
     const isHomePage = path === "/" || path.endsWith("/index.html");
-    const featuredHref = isHomePage ? "/jobs.html" : "#search-results";
+    const isJobsPage = path.endsWith("/jobs.html");
+    const featuredHref = isHomePage ? "/jobs.html" : isJobsPage ? "#search-results" : "/jobs.html";
     const howHref = isHomePage ? "#how-it-works" : "/index.html#how-it-works";
     const employerHref = isHomePage ? "#footer" : "/index.html#footer";
     this.innerHTML = `
