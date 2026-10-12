@@ -124,6 +124,30 @@ test("place normalization keeps the selected country and allows missing parent l
   assert.deepEqual(normalizeLocations({ results: [{ id: 2, name: "Paris", country_code: "FR" }] }, "KE"), []);
 });
 
+test("same-named places in different countries remain distinct by country and source ID", () => {
+  const sourceResponse = { results: [
+    { id: 501, name: "Springfield", country_code: "US", country: "United States", feature_code: "PPL" },
+    { id: 902, name: "Springfield", country_code: "KE", country: "Kenya", feature_code: "PPL" }
+  ] };
+
+  const kenya = normalizeLocations(sourceResponse, "KE");
+  const unitedStates = normalizeLocations(sourceResponse, "US");
+
+  assert.equal(kenya.length, 1);
+  assert.equal(unitedStates.length, 1);
+  assert.equal(kenya[0].name, unitedStates[0].name);
+  assert.notEqual(kenya[0].id, unitedStates[0].id);
+  assert.equal(kenya[0].countryCode, "KE");
+  assert.equal(unitedStates[0].countryCode, "US");
+
+  const kenyaPayload = buildLocationSelectionPayload(kenya[0], "KE", [{ code: "KE", name: "Kenya" }]);
+  const usPayload = buildLocationSelectionPayload(unitedStates[0], "US", [{ code: "US", name: "United States" }]);
+  assert.equal(kenyaPayload.place.providerId, "902");
+  assert.equal(usPayload.place.providerId, "501");
+  assert.equal(kenyaPayload.country.code, "KE");
+  assert.equal(usPayload.country.code, "US");
+});
+
 test("Kenya and Japan locations remain selectable when administrative parents are incomplete", () => {
   const sourceResponse = { results: [
     {
