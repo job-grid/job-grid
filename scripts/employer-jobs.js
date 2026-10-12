@@ -6,6 +6,7 @@ const ALLOWED_CLOSE_REASONS = new Set([
 const CLOSE_ROLES = new Set(["owner", "admin", "recruiter"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+const DATA_PAGE_SIZE = 100;
 
 export function normalizeEmployerConfig(config = {}) {
   const supabaseUrl = typeof config.supabaseUrl === "string"
@@ -128,6 +129,22 @@ async function requestJson(fetchImpl, url, options, failureCode = "BACKEND_REQUE
   return payload;
 }
 
+async function requestAllRows(fetchImpl, baseUrl, headers, failureCode) {
+  const rows = [];
+  let offset = 0;
+
+  while (true) {
+    const pageUrl = new URL(baseUrl);
+    pageUrl.searchParams.set("limit", String(DATA_PAGE_SIZE));
+    pageUrl.searchParams.set("offset", String(offset));
+    const page = await requestJson(fetchImpl, pageUrl, { headers }, failureCode);
+    if (!Array.isArray(page)) throw new Error("INVALID_BACKEND_RESPONSE");
+    rows.push(...page);
+    if (page.length < DATA_PAGE_SIZE) return rows;
+    offset += page.length;
+  }
+}
+
 function authenticatedHeaders(config, session) {
   assertSession(session);
   return {
@@ -147,20 +164,17 @@ export async function loadEmployerVacancies(rawConfig, session, fetchImpl = fetc
     user_id: `eq.${session.user.id}`,
     status: "eq.active",
     order: "organization_id.asc",
-    limit: "100",
   });
   const [memberships, vacancies, organizations] = await Promise.all([
-    requestJson(fetchImpl, membershipUrl, { headers }, "MEMBERSHIP_LOAD_FAILED"),
-    requestJson(fetchImpl, getRestUrl(config, "vacancies", {
+    requestAllRows(fetchImpl, membershipUrl, headers, "MEMBERSHIP_LOAD_FAILED"),
+    requestAllRows(fetchImpl, getRestUrl(config, "vacancies", {
       select: "id,organization_id,reference_code,title,status,version,published_at,expires_at,updated_at",
-      order: "updated_at.desc",
-      limit: "100",
-    }), { headers }, "VACANCY_LOAD_FAILED"),
-    requestJson(fetchImpl, getRestUrl(config, "organizations", {
+      order: "updated_at.desc,id.asc",
+    }), headers, "VACANCY_LOAD_FAILED"),
+    requestAllRows(fetchImpl, getRestUrl(config, "organizations", {
       select: "id,display_name",
-      order: "display_name.asc",
-      limit: "100",
-    }), { headers }, "ORGANIZATION_LOAD_FAILED"),
+      order: "display_name.asc,id.asc",
+    }), headers, "ORGANIZATION_LOAD_FAILED"),
   ]);
 
   if (!Array.isArray(memberships) || !Array.isArray(vacancies) || !Array.isArray(organizations)) {
