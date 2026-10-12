@@ -249,6 +249,10 @@ def export_candidates(all_countries: Path, country_info_path: Path, country_mani
         raise ValueError(f"Candidate export blocked: malformed={malformed_rows}, invalid IDs={invalid_id_rows}, duplicate IDs={duplicate_ids}.")
     if len(seen_ids) != emitted_rows:
         raise ValueError("Candidate IDs did not reconcile to output row count.")
+    if sum(disposition_counts.values()) != emitted_rows:
+        raise ValueError("Every candidate row must have exactly one source disposition.")
+    if sum(v["scope_rows"] for v in by_code.values()) != emitted_rows:
+        raise ValueError("Per-country candidate scope totals do not reconcile to the row-level export.")
 
     bucket_rows = []
     for raw_code, values in sorted(by_code.items()):
