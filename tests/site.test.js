@@ -131,11 +131,15 @@ test("historical, abandoned, destroyed and sub-place feature codes are not selec
     { id: 202, name: "Former town", country_code: "KE", country: "Kenya", feature_code: "PPLH" },
     { id: 203, name: "Abandoned town", country_code: "KE", country: "Kenya", feature_code: "PPLQ" },
     { id: 204, name: "Destroyed town", country_code: "KE", country: "Kenya", feature_code: "PPLW" },
-    { id: 205, name: "City section", country_code: "KE", country: "Kenya", feature_code: "PPLX" }
+    { id: 205, name: "City section", country_code: "KE", country: "Kenya", feature_code: "PPLX" },
+    { id: 206, name: "Grouped settlements", country_code: "KE", country: "Kenya", feature_code: "PPLS" }
   ] };
 
   const results = normalizeLocations(sourceResponse, "KE");
-  assert.deepEqual(results.map((place) => [place.id, place.featureCode]), [["200", "ADM2"]]);
+  assert.deepEqual(
+    results.map((place) => [place.id, place.featureCode]),
+    [["200", "ADM2"], ["206", "PPLS"]]
+  );
 });
 
 test("same-named places in different countries remain distinct by country and source ID", () => {
