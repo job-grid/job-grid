@@ -1247,6 +1247,54 @@ jobs:
           print("- Official parent references are retained as source evidence only; no GeoNames parent ID was selected.")
           PY
 
+      - name: Build Japan-native e-Stat period graph proposal (review only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/geonames-japan-estat"
+          node --test tests/geonames-japan-native-estat-period-graph-proposal.test.js
+          node scripts/geonames-japan-native-estat-period-graph-proposal.mjs \
+            "$work/japan-mlit-1995-all-126-estat-details.json" \
+            "$work/japan-mlit-1995-all-126-estat-details.manifest.json" \
+            "$work/japan-native-estat-period-graph"
+          python - "$work/japan-native-estat-period-graph.json" "$work/japan-mlit-1995-all-126-estat-details.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          source = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          counts = result.get("counts", {})
+          if result.get("status") != "PASS_JAPAN_ESTAT_NATIVE_PERIOD_GRAPH_PROPOSED__REVIEW_ONLY__NO_SELECTABLE_RECORDS":
+              raise SystemExit("Japan native e-Stat graph did not return the expected candidate-only status.")
+          expected = {
+              "source_geonames_targets_reviewed": 126,
+              "distinct_e_stat_area_codes": 105,
+              "source_period_nodes": 557,
+              "spatial_target_to_area_code_candidate_associations": 120,
+              "verified_geonames_to_estat_crosswalks": 0,
+              "approved_operational_parent_links": 0,
+              "selectable_records": 0,
+          }
+          for key, value in expected.items():
+              if counts.get(key) != value:
+                  raise SystemExit("Japan native graph count mismatch for " + key + ": expected " + str(value) + ", found " + str(counts.get(key)))
+          if counts.get("target_ids_without_spatial_context") != source.get("targets_without_spatial_context"):
+              raise SystemExit("Target rows without spatial context do not reconcile to the original detail audit.")
+          if any(node.get("selectable") is not False for node in result.get("source_period_nodes", [])):
+              raise SystemExit("Native period graph contains a selectable source-period node.")
+          if any(edge.get("operational_parent_link_created") is not False for edge in result.get("source_declared_parent_edges", [])):
+              raise SystemExit("Native period graph violates the no-operational-parent-write boundary.")
+          if any(row.get("geonames_to_estat_crosswalk_verified") is not False for row in result.get("spatial_target_area_code_candidates", [])):
+              raise SystemExit("A spatial candidate was incorrectly marked as a verified GeoNames identity crosswalk.")
+          print("## Japan e-Stat-native historical hierarchy proposal")
+          for key, value in expected.items():
+              print("- " + key + ": " + str(value))
+          print("- Parent-reference-only stubs: " + str(counts.get("parent_reference_only_stub_nodes")))
+          print("- Parent reference rows retained: " + str(counts.get("parent_reference_edges_retained")))
+          print("- Invalid/self parent references held unresolved: " + str(counts.get("source_parent_references_with_invalid_or_self_reference")))
+          print("- Historical source nodes, parent edges and GeoNames associations remain review-only; no database, selector or production changes.")
+          PY
+
       - name: Audit official e-Stat parents against exact GeoNames Japan administrative labels
         shell: bash
         run: |
@@ -1565,6 +1613,11 @@ jobs:
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.area-code-period-history.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.source-response.json
             ${{ runner.temp }}/geonames-japan-estat/japan-mlit-1995-all-126-estat-details.manifest.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-native-estat-period-graph.json
+            ${{ runner.temp }}/geonames-japan-estat/japan-native-estat-period-graph.period-nodes.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-native-estat-period-graph.parent-edges.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-native-estat-period-graph.target-area-candidates.csv
+            ${{ runner.temp }}/geonames-japan-estat/japan-native-estat-period-graph.unresolved-parent-references.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.json
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.parent-references.csv
             ${{ runner.temp }}/geonames-japan-estat/japan-estat-parent-geonames-candidates.candidate-matches.csv
