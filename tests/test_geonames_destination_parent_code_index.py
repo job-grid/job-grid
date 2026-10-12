@@ -98,6 +98,7 @@ class DestinationParentCodeIndexTests(unittest.TestCase):
             self.assertEqual(report["counts"]["rows_not_accounted_for"], 0)
             self.assertEqual(report["counts"]["ambiguous_index_key_groups_by_level"]["2"], 1)
             self.assertEqual(report["counts"]["operational_parent_links_created"], 0)
+            self.assertIs(report["counts"]["database_or_production_changes"], False)
             self.assertTrue(index_path.is_file())
             self.assertTrue(resolution_path.is_file())
             self.assertTrue(summary_out.is_file())
