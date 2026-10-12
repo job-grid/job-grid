@@ -63,8 +63,8 @@ export function normalizeLocations(payload, countryCode) {
       admin3: String(item?.admin3 ?? "").trim(),
       admin4: String(item?.admin4 ?? "").trim(),
       featureCode,
-      latitude: Number.isFinite(Number(item?.latitude)) ? Number(item.latitude) : null,
-      longitude: Number.isFinite(Number(item?.longitude)) ? Number(item.longitude) : null
+      latitude: item?.latitude != null && item.latitude !== "" && Number.isFinite(Number(item.latitude)) ? Number(item.latitude) : null,
+      longitude: item?.longitude != null && item.longitude !== "" && Number.isFinite(Number(item.longitude)) ? Number(item.longitude) : null
     });
   }
   return results.sort((a, b) => {
@@ -86,8 +86,10 @@ export function buildLocationSelectionPayload(place, countryCode, countries = []
     ["admin4", place.admin4]
   ].filter(([, name]) => String(name ?? "").trim())
     .map(([level, name]) => ({ level, name: String(name).trim() }));
-  const latitude = Number.isFinite(place.latitude) ? place.latitude : null;
-  const longitude = Number.isFinite(place.longitude) ? place.longitude : null;
+  const latitude = Number.isFinite(place.latitude) && place.latitude >= -90 && place.latitude <= 90
+    ? place.latitude : null;
+  const longitude = Number.isFinite(place.longitude) && place.longitude >= -180 && place.longitude <= 180
+    ? place.longitude : null;
   return {
     schemaVersion: 1,
     country: { code, name: country?.name || place.country || code },
