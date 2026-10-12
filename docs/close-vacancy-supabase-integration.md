@@ -28,28 +28,29 @@ The lifecycle migration adds only closure fields and lifecycle-owned catalog/aud
 - An additive lifecycle extension against the proposed Phase 2A core entities `organizations`, `organization_memberships`, `platform_roles` and `vacancies`. This change no longer creates those core tables.
 - Two vacancy closure metadata fields (`closed_at`, `closure_reason_code`) with a foreign key and a consistency constraint; the core schema retains ownership of organization, identity, geography, vacancy content, moderation and application columns.
 - A controlled closure-reason catalog, append-only lifecycle audit events and durable idempotency records.
+- A PostgreSQL function that locks the vacancy row, rechecks organization/moderator authorization, requires the expected version, permits only published-to-closed within the valid publication window, increments the version, and commits the vacancy update, audit event and idempotency record in one transaction.
 - Row-level security that exposes only in-window published vacancies to anonymous callers, while active organization members can view vacancies in their own organization.
-- An append-only vacancy audit table.
-- Durable idempotency records and a PostgreSQL function that locks the vacancy row, authorizes an active organization owner/admin/recruiter or active moderator/admin, requires the exact expected version, updates published to closed, increments the version, and inserts the audit event and idempotency record in the same transaction.
 - An Edge Function that validates the bearer session with Supabase Auth, derives the actor from that verified session, enforces an explicit origin allowlist, limits payload size, rejects client-supplied actor/role/status fields, and calls the database function using server-side credentials.
 - A pinned SDK dependency and a CI type-check workflow.
 
 The implementation has no vacancy-create, independent moderation, employer portal, or application-submission workflow. Consequently it is **not by itself the full recruitment marketplace** and no real Close Job button has been added to the public website. Existing applications are not modified or deleted by closure; the vacancy row itself is retained.
 
-## Phase 2A schema compatibility — open blocker
+## Phase 2A schema compatibility — owner approval still required
 
-PR #25, `docs/phase-2a-recruitment-spec.md`, is currently open, unmerged and draft. It is a proposed logical model, not an owner-approved physical schema. This Close Job migration must not be described as reconciled to an approved canonical schema.
+PR #25 (`docs/phase-2a-jobs-recruitment-spec.md`) remains open, unmerged and draft. It defines a proposed logical data model, not an owner-approved physical schema. The Close Job migration has been refactored to **not create** `organizations`, `organization_memberships`, `platform_roles` or `vacancies`.
 
-The mapping is only partial today:
+The current CI workflow creates `supabase/tests/phase2a_schema_contract.sql` in disposable PostgreSQL before applying the lifecycle migration. That fixture tests the minimum proposed Phase 2A column/role boundary needed by Close Job; it does not establish that the fixture is the approved canonical schema or that the live project has those tables.
 
-| Phase 2A concept | Current Close Job proposal | Compatibility gap |
+| Required canonical prerequisite | What the lifecycle extension expects | Current evidence |
 |---|---|---|
-| `organizations` | Minimal tenant row with legal/display names and status | The logical model also includes organization type, registration jurisdiction/number, verification status and later branches/worksites. |
-| `organization_memberships` | Tenant-scoped user, role and active/revoked state | Identity uses Supabase `auth.users`; role/identity model still requires owner approval and an implemented membership administration flow. |
-| `vacancies` | Minimum status/version, country/location, title/body and publication-window fields | The logical model also includes branch/geography references, occupation/sector/skill fields, employment and compensation terms, moderation/verification state, and application deadline. Those are not represented by this minimum proposal. |
-| `job_applications` | No production table exists in this proposal or the verified empty public schema | SQL CI now creates a disposable table using the Phase 2A `job_applications` contract name to test that closure does not delete a related application row. This is a contract fixture, not evidence of a live application table or real candidate history. |
+| `organizations` and `organization_memberships` | Tenant id, active/revoked membership, tenant-scoped owner/admin/recruiter/viewer roles, active tenant boundary and RLS | Structural test fixture only; no live recruitment schema verified |
+| `platform_roles` | Controlled active moderator/admin role used by the trusted close RPC | Structural test fixture only; the role-grant administration process is not implemented |
+| `vacancies` | Canonical vacancy id/org, creator identity, reference/slug/title/description, geography/worksite, lifecycle status, integer version, published/expiry times, moderation/verification fields | Minimal compatible fixture passes CI; must be compared with the approved physical schema |
+| Applications/history | The closure operation must not delete or rewrite application records | Disposable `job_applications` fixture is preserved by tests; it is not evidence of a live application table or candidate history |
 
-**Release gate:** until the owner approves a single Phase 2A core schema, do not apply this migration. The implementation must then be reworked as additive closure columns, policies, audit and idempotency objects against those canonical entities, rather than creating a competing simplified organization/vacancy model. No live database or application data was changed by this PR.
+Before execution, the owner-approved core migration must provide the compatible canonical tables/columns, constraints, RLS and base grants. The lifecycle extension adds only `closed_at`, `closure_reason_code`, the controlled closure-reason catalog, append-only closure audit events, durable idempotency records, and lifecycle policy/function integration. It also removes table-wide and stale per-column `SELECT` grants from `vacancies` before granting the explicit reviewed column projections.
+
+A reviewer must still compare every identifier, status rule, existing RLS policy, granted column and any existing closed-row data against the approved core schema. If pre-existing rows violate the new closure metadata invariant, the migration intentionally stops and requires reconciliation rather than silently rewriting records. The current project-connection mismatch and separate recovery-readiness gate remain unresolved. No live migration or deployment is authorized by this proposal.
 
 ## Security boundaries
 
