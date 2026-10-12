@@ -10,6 +10,7 @@ const components = await readFile(new URL("../scripts/components.js", import.met
 const buildScript = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
 const mainScript = await readFile(new URL("../scripts/main.js", import.meta.url), "utf8");
 const logo = await readFile(new URL("../public/job-grid-logo.png", import.meta.url));
+const countryData = JSON.parse(await readFile(new URL("../public/data/countries.en.json", import.meta.url), "utf8"));
 
 test("homepage includes semantic landmarks and descriptive metadata", () => {
   assert.match(html, /<html lang="en">/);
@@ -71,6 +72,15 @@ test("country selector is included in the homepage and shipped in the static bui
   const pickerCss = await readFile(new URL("../styles/location-picker.css", import.meta.url), "utf8");
   assert.ok(pickerCss.includes("location-picker-fields"));
   assert.ok(pickerCss.includes("@media (max-width: 740px)"));
+});
+
+test("bundled country data covers a broad worldwide list and includes Kenya and Japan", () => {
+  assert.ok(countryData.length >= 240, "Expected a broad country/area fallback list");
+  assert.equal(countryData.find((country) => country.code === "KE")?.name, "Kenya");
+  assert.equal(countryData.find((country) => country.code === "JP")?.name, "Japan");
+  assert.equal(new Set(countryData.map((country) => country.code)).size, countryData.length);
+  assert.match(buildScript, /public\\/data/);
+  assert.match(buildScript, /countries\\.en\\.json/);
 });
 
 test("country list normalization discards invalid/duplicate codes and sorts labels", () => {
