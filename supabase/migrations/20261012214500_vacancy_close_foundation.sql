@@ -377,13 +377,29 @@ REVOKE ALL ON public.vacancy_closure_reason_codes,
 
 GRANT SELECT ON public.vacancy_closure_reason_codes TO anon, authenticated;
 
--- Remove table-wide or stale column-level reads inherited from a core draft.
--- Re-grant only the explicitly reviewed public/management projection below.
-REVOKE SELECT ON public.vacancies FROM anon, authenticated;
-REVOKE SELECT (
-  created_by, moderation_state, verification_state, version, closed_at,
-  closure_reason_code
-) ON public.vacancies FROM anon, authenticated;
+-- Remove table-wide and every pre-existing column-level read grant before
+-- applying the approved projections below. This avoids stale broad grants from
+-- any core-schema draft from bypassing the intended column allowlist.
+REVOKE SELECT ON public.vacancies FROM PUBLIC, anon, authenticated;
+
+DO $reset_vacancy_column_select$
+DECLARE
+  v_column record;
+BEGIN
+  FOR v_column IN
+    SELECT attname
+      FROM pg_attribute
+     WHERE attrelid = 'public.vacancies'::regclass
+       AND attnum > 0
+       AND NOT attisdropped
+  LOOP
+    EXECUTE format(
+      'REVOKE SELECT (%I) ON public.vacancies FROM PUBLIC, anon, authenticated',
+      v_column.attname
+    );
+  END LOOP;
+END;
+$reset_vacancy_column_select$;
 
 GRANT SELECT (
   id, organization_id, reference_code, slug, title, description,
