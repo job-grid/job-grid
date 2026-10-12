@@ -1615,6 +1615,8 @@ jobs:
             ${{ runner.temp }}/geonames-crosswalk-exception-source-audit.json
             ${{ runner.temp }}/geonames-world-source/source-manifest.json
             ${{ runner.temp }}/geonames-world-source/country-master-audit/geonames-country-catalog-aggregate.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/geonames-destination-source-coverage.json
+            ${{ runner.temp }}/geonames-world-source/country-master-audit/geonames-destination-coverage-by-source-country.csv
             ${{ runner.temp }}/geonames-world-source/country-master-audit/country-master-source-manifest.json
           if-no-files-found: error
           retention-days: 7
@@ -1889,6 +1891,14 @@ jobs:
           print("- Direct ISO Country Codes Collection snapshot: not captured by this audit.")
           print("- UN M49 numeric codes are not treated as ISO numeric-3 proof.")
           print("- Automatic code replacement: not authorized.")
+          rows_path = Path(sys.argv[1]).with_name("country-area-code-crosswalk-rows.json")
+          rows = json.loads(rows_path.read_text(encoding="utf-8"))
+          review_rows = [row for row in rows if row.get("source_side") == "GeoNames countryInfo" and row.get("match_status") != "MATCHED_ALPHA2_ALPHA3_PAIR"]
+          print("### GeoNames source-code rows for manual review")
+          if not review_rows:
+              print("- None.")
+          for row in review_rows:
+              print(f"- {row.get('name')} — {row.get('alpha2')}/{row.get('alpha3')}; GeoNames ID {row.get('geonames_id')}; {row.get('match_status')}")
           PY
 
       - name: Upload country/area code crosswalk evidence
