@@ -64,12 +64,12 @@ test("vacancy cards are clearly marked sample content and no live features are c
 });
 
 test("country selector is included in the homepage and shipped in the static build", async () => {
-  assert.match(html, /<job-grid-location-picker><\\/job-grid-location-picker>/);
-  assert.match(html, /scripts\\/location-picker\\.js/);
-  assert.match(buildScript, /"location-picker\\.js"/);
+  assert.ok(html.includes("<job-grid-location-picker></job-grid-location-picker>"));
+  assert.ok(html.includes("/scripts/location-picker.js"));
+  assert.ok(buildScript.includes('"location-picker.js"'));
   const pickerCss = await readFile(new URL("../styles/location-picker.css", import.meta.url), "utf8");
-  assert.match(pickerCss, /location-picker-fields/);
-  assert.match(pickerCss, /@media \\(max-width: 740px\\)/);
+  assert.ok(pickerCss.includes("location-picker-fields"));
+  assert.ok(pickerCss.includes("@media (max-width: 740px)"));
 });
 
 test("country list normalization discards invalid/duplicate codes and sorts labels", () => {
