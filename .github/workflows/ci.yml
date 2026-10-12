@@ -2478,3 +2478,59 @@ jobs:
             ${{ runner.temp }}/geonames-full-source-audit/console-summary.json
           if-no-files-found: error
           retention-days: 14
+
+  geonames-location-candidate-export:
+    name: Phase 0 CI / GeoNames location candidate package
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 27) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Verify the exporter against synthetic place and alias data
+        shell: bash
+        run: python3 -m unittest discover -s tests -p 'test_geonames_location_candidate_export.py' -v
+
+      - name: Download official GeoNames inputs for this candidate build
+        shell: bash
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/geonames-candidate-source
+        run: |
+          set -euo pipefail
+          mkdir -p "$SOURCE_DIR"
+          for filename in allCountries.zip alternateNamesV2.zip admin1CodesASCII.txt admin2Codes.txt; do
+            url="https://download.geonames.org/export/dump/$filename"
+            status="$(curl --silent --show-error --location --fail --retry 3 --retry-all-errors --output "$SOURCE_DIR/$filename" --write-out '%{http_code}' "$url")"
+            test "$status" = "200"
+            test -s "$SOURCE_DIR/$filename"
+          done
+
+      - name: Build compressed country-scoped location candidates and aliases
+        shell: bash
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/geonames-candidate-source
+          OUTPUT_DIR: ${{ runner.temp }}/geonames-location-candidate-package
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          python3 scripts/geonames-location-candidate-export.py --source-dir "$SOURCE_DIR" --output-dir "$OUTPUT_DIR" | tee "$OUTPUT_DIR/console-summary.json"
+          cat "$OUTPUT_DIR/location-candidate-build-report.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat "$OUTPUT_DIR/console-summary.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload candidate location package for review (source archives excluded)
+        uses: actions/upload-artifact@v4
+        with:
+          name: geonames-location-candidate-package-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/geonames-location-candidate-package/location-candidates.csv.gz
+            ${{ runner.temp }}/geonames-location-candidate-package/location-alternate-names.csv.gz
+            ${{ runner.temp }}/geonames-location-candidate-package/location-candidate-build-report.json
+            ${{ runner.temp }}/geonames-location-candidate-package/console-summary.json
+          if-no-files-found: error
+          retention-days: 14
