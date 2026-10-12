@@ -145,6 +145,17 @@ test("selected location emits a versioned country-scoped integration payload wit
   assert.equal(buildLocationSelectionPayload(place, "JP", [{ code: "JP", name: "Japan" }]), null);
 });
 
+test("location RLS structural test is checked in and explicitly non-destructive", async () => {
+  const rlsTest = await readFile(new URL("../supabase/tests/location_preference_rls_contract.sql", import.meta.url), "utf8");
+  assert.ok(rlsTest.includes("pg_policies"));
+  assert.ok(rlsTest.includes("user_location_preferences_select_own"));
+  assert.ok(rlsTest.includes("user_location_preferences_insert_own"));
+  assert.ok(rlsTest.includes("user_location_preferences_update_own"));
+  assert.ok(rlsTest.includes("user_location_preferences_delete_own"));
+  assert.ok(rlsTest.includes("cross-user isolation end to end"));
+  assert.ok(rlsTest.includes("RLS must be enabled"));
+});
+
 test("proposed profile-location migration enforces owner-scoped RLS and safe coordinates", async () => {
   const migration = await readFile(new URL("../supabase/migrations/20261012183500_add_user_location_preferences.sql", import.meta.url), "utf8");
   for (const fragment of [
