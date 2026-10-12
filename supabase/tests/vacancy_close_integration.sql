@@ -104,6 +104,12 @@ INSERT INTO public.vacancies (
 
 DO $column_grant_test$
 BEGIN
+  IF has_table_privilege('anon', 'public.vacancies', 'SELECT') THEN
+    RAISE EXCEPTION 'anonymous role has table-wide SELECT on vacancies';
+  END IF;
+  IF has_table_privilege('authenticated', 'public.vacancies', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated role has table-wide SELECT on vacancies';
+  END IF;
   IF has_column_privilege('anon', 'public.vacancies', 'created_by', 'SELECT') THEN
     RAISE EXCEPTION 'anonymous role has access to internal created_by column';
   END IF;
