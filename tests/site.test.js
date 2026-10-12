@@ -107,6 +107,16 @@ test("geocoding requests always constrain results to the selected country", () =
   assert.equal(url.searchParams.get("format"), "json");
 });
 
+test("a changed place query clears old suggestions before the debounce starts", async () => {
+  const pickerScript = await readFile(new URL("../scripts/location-picker.js", import.meta.url), "utf8");
+  const inputHandler = pickerScript.match(/onPlaceInput\(\) \{([\s\S]*?)\n    \}/)?.[1];
+  assert.ok(inputHandler, "Expected the place input handler to exist");
+  const newQueryGate = inputHandler.indexOf("if (!this.selectedCountry || query.length < 2)");
+  assert.ok(newQueryGate >= 0, "Expected the minimum-query gate");
+  assert.ok(inputHandler.indexOf("this.matches = [];") < newQueryGate, "Old matches must be cleared before the next query is evaluated");
+  assert.ok(inputHandler.indexOf("this.resultsContainer.replaceChildren();") < newQueryGate, "Old visible suggestions must be removed before debounce");
+});
+
 test("place normalization keeps the selected country and allows missing parent levels", () => {
   const result = normalizeLocations({ results: [
     { id: 1, name: "Kisumu", country_code: "KE", country: "Kenya", admin1: "Kisumu County", feature_code: "PPLA" },
