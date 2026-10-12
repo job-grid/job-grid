@@ -1,3 +1,4 @@
+import base64
 import csv
 import gzip
 import hashlib
@@ -126,19 +127,36 @@ class AlternateNameExporterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"duplicate GeoNames ID"):
                 exporter.read_candidate_scope(cand)
 
-    def test_rejects_aliases_with_invalid_boolean_flags(self):
+    def test_quarantines_aliases_with_invalid_boolean_flags_instead_of_exporting_them(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp); cand=p/"c.csv.gz"
             with gzip.open(cand,"wt",encoding="utf-8",newline="") as f:
-                w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"]);w.writeheader();w.writerow(candidate_row(1,"A","KE"))
+                w=csv.DictWriter(f,fieldnames=["geonames_id","name","source_country_code_raw"]);w.writeheader()
+                w.writerows([candidate_row(1,"A","KE"),candidate_row(2,"B","KE")])
             archive=p/"alternateNamesV2.zip"
-            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:z.writestr("alternateNamesV2.txt",alt_row(1,1,"en","A",("yes","0","0","0"))+"\n")
+            payload="\n".join([
+                alt_row(1,1,"en","A",("yes","0","0","0")),
+                alt_row(2,2,"en","B"),
+            ])+"\n"
+            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:z.writestr("alternateNamesV2.txt",payload)
             raw=archive.read_bytes()
             manifest=p/"manifest.json"
             manifest.write_text(json.dumps({"remote_source":{"source_url":exporter.SOURCE_URL,"retrieved_at_utc":"now","http_status":200,"size_bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"zip_crc_validation":"PASS"}}),encoding="utf-8")
             ci,cm=write_country_info_sources(p,[country_info_row("GB","GBR","826","United Kingdom","2")])
-            with self.assertRaisesRegex(ValueError,"boolean flags invalid"):
-                exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
+            report,out,summary=exporter.export_aliases(cand,ci,cm,archive,manifest,p/"out")
+            self.assertEqual(report["status"],"PASS_ALIAS_SCOPE_RECONCILED_WITH_QUARANTINE__CANDIDATES_ONLY__NOT_IMPORTED")
+            self.assertEqual(report["counts"]["invalid_boolean_flag_rows"],1)
+            self.assertEqual(report["counts"]["quarantined_source_rows"],1)
+            with gzip.open(out,"rt",encoding="utf-8",newline="") as stream:
+                exported=list(csv.DictReader(stream))
+            self.assertEqual([row["geonames_id"] for row in exported],["2"])
+            quarantine=Path(p/"out"/"worldwide-geonames-country-and-destination-alternate-name-quarantine.csv")
+            with quarantine.open(encoding="utf-8",newline="") as stream:
+                rows=list(csv.DictReader(stream))
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]["reason_code"],"INVALID_BOOLEAN_FLAGS")
+            self.assertEqual(rows[0]["geonames_id_candidate"],"1")
+            self.assertEqual(base64.b64decode(rows[0]["raw_line_base64"]).decode("utf-8").strip(),alt_row(1,1,"en","A",("yes","0","0","0")))
 
     def test_rejects_duplicate_alternate_name_ids_in_destination_scope(self):
         with tempfile.TemporaryDirectory() as tmp:
