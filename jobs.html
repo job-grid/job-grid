@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#004ef5" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="Search Job Grid for currently published jobs by role, country, and location." />
+    <title>Find jobs | Job Grid</title>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href="/styles/jobs.css" />
+    <script type="module" src="/scripts/components.js"></script>
+    <script type="module" src="/scripts/jobs-search.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="top"></div>
+    <job-grid-header></job-grid-header>
+    <main id="main">
+      <section class="jobs-page section-wrap" aria-labelledby="jobs-title">
+        <div class="jobs-heading">
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> Your next step</p>
+          <h1 id="jobs-title">Find your next opportunity.</h1>
+          <p class="jobs-intro">Search current published vacancies by role and location. Only records returned by the connected Job Grid jobs service can appear here; this page never fills the results with sample listings.</p>
+        </div>
+        <form id="job-search-form" class="jobs-search-form" aria-label="Search published jobs">
+          <div class="jobs-search-field jobs-search-field-wide">
+            <label for="job-query">Keyword or role</label>
+            <input id="job-query" name="q" type="search" maxlength="160" autocomplete="off" placeholder="e.g. care assistant, driver, developer" />
+          </div>
+          <div class="jobs-search-field">
+            <label for="job-country">Country code (optional)</label>
+            <input id="job-country" name="country" type="text" maxlength="2" inputmode="text" autocapitalize="characters" autocomplete="country" placeholder="KE" aria-describedby="job-country-help" />
+            <small id="job-country-help">Use a two-letter code, such as KE.</small>
+          </div>
+          <div class="jobs-search-field">
+            <label for="job-city">City or town (optional)</label>
+            <input id="job-city" name="city" type="text" maxlength="100" autocomplete="address-level2" placeholder="e.g. Kisumu" />
+          </div>
+          <div class="jobs-search-actions">
+            <button class="button button-primary" type="submit">Search jobs</button>
+            <button class="button button-secondary" type="reset">Clear</button>
+          </div>
+        </form>
+        <section id="search-results" class="jobs-results-section" aria-labelledby="results-title">
+          <div class="jobs-results-heading">
+            <div><p class="eyebrow">Search results</p><h2 id="results-title">Published opportunities</h2></div>
+          </div>
+          <p id="job-search-status" class="jobs-status" role="status" aria-live="polite" data-tone="neutral">Search for current published vacancies. No sample listings are loaded.</p>
+          <div id="job-search-results" class="job-results" aria-label="Published job results"></div>
+        </section>
+        <p class="jobs-safety-note">Stay safe: verify the employer and the role before paying fees or sharing identity documents. Job Grid will not ask you to send sensitive documents through this preview page.</p>
+      </section>
+    </main>
+    <job-grid-footer></job-grid-footer>
+  </body>
+</html>
