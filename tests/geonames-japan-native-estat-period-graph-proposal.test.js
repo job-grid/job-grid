@@ -50,7 +50,7 @@ function fixtures() {
     input_spatial_first_report_sha256: hash("c"), input_e_stat_audit_report_sha256: hash("d"),
     input_e_stat_raw_source_response_sha256: hash("e"),
     source_catalog_page_response_fingerprints: [{ response_sha256: hash("f") }],
-    detail_batches: [{ response_sha256: hash("g") }],
+    detail_batches: [{ response_sha256: hash("7") }],
   };
   return { report, manifest };
 }
