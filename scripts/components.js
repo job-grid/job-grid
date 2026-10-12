@@ -19,7 +19,7 @@ class JobGridHeader extends HTMLElement {
           <nav class="nav-links" id="primary-navigation" aria-label="Main navigation">
             <a href="#featured-roles">Explore roles</a>
             <a href="#how-it-works">How it works</a>
-            <a href="#footer">For employers</a>
+            <a href="/employer-jobs.html">For employers</a>
           </nav>
           <div class="header-actions">
             <a class="button button-primary button-small" href="#featured-roles">Explore jobs <span aria-hidden="true">↗</span></a>
@@ -42,7 +42,7 @@ class JobGridFooter extends HTMLElement {
             <p>A clearer path to opportunity. We’re building a focused place for people and employers to connect around work.</p>
           </div>
           <nav class="footer-links" aria-label="Footer navigation">
-            <a href="#featured-roles">Explore roles</a><a href="#how-it-works">How it works</a><a href="#top">Back to top ↑</a>
+            <a href="#featured-roles">Explore roles</a><a href="/employer-jobs.html">Employer workspace</a><a href="#how-it-works">How it works</a><a href="#top">Back to top ↑</a>
           </nav>
         </div>
         <div class="footer-bottom">© ${year} Job Grid. Official logo supplied by the owner. Job previews are illustrative only.</div>
