@@ -40,7 +40,7 @@ class CrosswalkTests(unittest.TestCase):
         xk = next(x for x in details if x["source_side"]=="GeoNames countryInfo" and x["name"]=="Kosovo")
         self.assertEqual(xk["match_status"],"GEONAMES_CODE_PAIR_NOT_PRESENT_IN_UN_M49")
         self.assertFalse(report["interpretation"]["automatic_code_replacement_authorized"])
-        self.assertFalse(report["interpretation"]["un_m49_numeric_code_is_iso_numeric3"])
+        self.assertEqual(report["interpretation"]["un_m49_numeric_code_is_iso_numeric3"], "CANDIDATE_WHERE_EXACT_ALPHA_PAIR_AND_GEONAMES_NUMERIC_MATCH")
 
     def test_alpha2_match_with_conflicting_alpha3_is_flagged(self):
         geo = parse_geonames(row("KE","KEX","404","Kenya","1"))
@@ -117,6 +117,9 @@ class CrosswalkTests(unittest.TestCase):
         self.assertEqual(catalog["counts"]["historical_reference_rows_nonselectable"], 2)
         self.assertEqual(catalog["counts"]["operational_selectable_rows"], 0)
         self.assertEqual(len(catalog["records"]), 6)
+        kenya_candidate = next(r for r in catalog["records"] if r["geonames_id"] == "1")
+        self.assertEqual(kenya_candidate["iso_code_candidates"], {"alpha2":"KE","alpha3":"KEN","numeric3":"404"})
+        self.assertIn("NUMERIC_ASSIGNED_BY_UN", kenya_candidate["iso_code_evidence_status"])
 
 
     def test_csv_export_preserves_disposition_columns(self):
@@ -172,6 +175,16 @@ class CrosswalkTests(unittest.TestCase):
         m49 = [{"name":"Kosovo","m49_code":"412","alpha2":"XK","alpha3":"XKX"}]
         with self.assertRaisesRegex(ValueError, "stale_or_now_matched=.*831053"):
             validate_complete_reconciliation(geo, m49, decisions)
+
+
+    def test_exact_alpha_pair_with_numeric_conflict_blocks_acceptance(self):
+        geo = parse_geonames(row("KE","KEN","999","Kenya","1"))
+        m49 = [{"name":"Kenya","m49_code":"404","alpha2":"KE","alpha3":"KEN"}]
+        report, details = reconcile(geo, m49, {})
+        self.assertEqual(report["status"], "BLOCKED_NUMERIC_CODE_CONFLICTS")
+        self.assertEqual(report["counts"]["alpha2_alpha3_matched_but_numeric_code_conflicts"], 1)
+        self.assertEqual(details[0]["match_status"], "ALPHA_PAIR_MATCH_NUMERIC3_CONFLICT")
+        self.assertFalse(report["interpretation"]["automatic_code_replacement_authorized"])
 
 
 if __name__=="__main__":
