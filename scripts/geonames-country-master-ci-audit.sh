@@ -90,13 +90,15 @@ python scripts/geonames-country-catalog-audit.py \
   --output "$audit/geonames-country-catalog-aggregate.json" \
   | tee "$audit/geonames-country-catalog-summary.stdout.json"
 
-python - "$audit/geonames-country-catalog-aggregate.json" "$audit/country-master-source-manifest.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+python - "$audit/geonames-country-catalog-aggregate.json" "$audit/country-master-source-manifest.json" "$audit/geonames-destination-source-coverage.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+import csv
 import json
 import sys
 from pathlib import Path
 
 report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 manifest = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+coverage = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
 c = report["counts"]
 if report.get("status") not in {
     "PASS_GEO_NAMES_COUNTRY_IDENTITY_AUDIT",
@@ -121,6 +123,25 @@ print(f"- Worldwide rows scanned: {c['all_countries_rows_scanned']}; malformed: 
 print(f"- Country IDs joined to recognized country-related features: {c['country_info_ids_matching_any_recognized_country_feature']} / {c['country_info_rows']}")
 print(f"- Historical/numeric-format review items: {c['country_info_ids_matching_historical_political_feature']} historical matches; {c['country_info_invalid_numeric3_rows']} numeric-format anomaly(s)")
 print(f"- Additional current/territory feature rows outside country metadata (scope review only): {c['current_or_territory_feature_ids_without_country_info']}")
-print("- ISO 3166-1 authority comparison: NOT PERFORMED; remains a separate local/owner gate.")
-print("- No raw country rows, code tuples, IDs, or parent links were emitted by this audit.")
+print("- ISO alpha-code cross-check: see separate UN M49 crosswalk audit; direct ISO package not captured.")
+print("- No parent links, database writes or selectable destinations were created.")
+print("## GeoNames destination source coverage (candidates, not product-complete destinations)")
+rows = coverage.get("country_coverage_rows", [])
+if not rows:
+    raise SystemExit("Destination coverage report has no country-code rows.")
+if sum(int(row.get("source_rows", 0)) for row in rows) != c["all_countries_rows_scanned"]:
+    raise SystemExit("Per-country destination source totals do not reconcile to the worldwide row count.")
+if sum(int(row.get("current_place_candidate_rows", 0)) for row in rows) != coverage.get("current_place_candidate_rows"):
+    raise SystemExit("Per-country current place candidate totals do not reconcile.")
+if coverage.get("selectable_destinations_approved") is not False or coverage.get("worldwide_destination_completeness") != "NOT_ESTABLISHED_BY_SOURCE_COUNTS_ALONE":
+    raise SystemExit("Destination audit improperly claims approval or completeness.")
+print(f"- Source country-code buckets (including blank): {coverage['source_country_code_buckets_including_blank']}")
+print(f"- Buckets with current place candidates: {coverage['source_country_code_buckets_with_current_place_candidates']}")
+print(f"- GeoNames current place candidate rows: {coverage['current_place_candidate_rows']}")
+print(f"- Populated feature rows (class P): {coverage['populated_feature_class_rows']}")
+print(f"- Historical/non-current place rows held out: {coverage['historical_or_noncurrent_place_rows']}")
+for level in range(1, 6):
+    print(f"- ADM{level} rows: {coverage[f'current_admin{level}_rows']}")
+print(f"- Country metadata alpha-2 codes with no source place candidates: {coverage['country_info_alpha2_codes_without_current_place_candidates']}")
+print("- This is a GeoNames source-distribution report, not proof of official hierarchy, selectability, or worldwide destination completeness.")
 PY
