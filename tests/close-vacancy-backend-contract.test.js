@@ -118,6 +118,6 @@ test("anonymous and authenticated table grants do not expose internal creator id
   assert.ok(migration.includes("GRANT SELECT ("));
   assert.equal(/GRANT SELECT ON public\.vacancies TO authenticated/i.test(migration), false);
   assert.ok(coreSchema.includes("created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL"));
-  assert.equal(/created_by[\s,)]/.test(migration.split("GRANT SELECT (")[1] ?? ""), true);
+  assert.equal(/created_by[\s,)]/.test(migration.split("GRANT SELECT (")[1] ?? ""), false);
   assert.equal(/REVOKE ALL ON public\.organizations|REVOKE ALL ON public\.organization_memberships/i.test(migration), false);
 });
