@@ -377,6 +377,14 @@ REVOKE ALL ON public.vacancy_closure_reason_codes,
 
 GRANT SELECT ON public.vacancy_closure_reason_codes TO anon, authenticated;
 
+-- Remove table-wide or stale column-level reads inherited from a core draft.
+-- Re-grant only the explicitly reviewed public/management projection below.
+REVOKE SELECT ON public.vacancies FROM anon, authenticated;
+REVOKE SELECT (
+  created_by, moderation_state, verification_state, version, closed_at,
+  closure_reason_code
+) ON public.vacancies FROM anon, authenticated;
+
 GRANT SELECT (
   id, organization_id, reference_code, slug, title, description,
   geography_id, worksite_text, employment_type, contract_duration,
