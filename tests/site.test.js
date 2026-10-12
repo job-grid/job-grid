@@ -111,6 +111,29 @@ test("place normalization keeps the selected country and allows missing parent l
   assert.deepEqual(normalizeLocations({ results: [{ id: 2, name: "Paris", country_code: "FR" }] }, "KE"), []);
 });
 
+test("selected location emits a versioned country-scoped integration payload with optional admin levels", () => {
+  const place = normalizeLocations({ results: [{
+    id: 314159,
+    name: "Kisumu",
+    country_code: "KE",
+    country: "Kenya",
+    admin1: "Kisumu County",
+    feature_code: "PPLA",
+    latitude: -0.1022,
+    longitude: 34.7617
+  }] }, "KE")[0];
+  const payload = buildLocationSelectionPayload(place, "KE", [{ code: "KE", name: "Kenya" }]);
+  assert.equal(payload.schemaVersion, 1);
+  assert.deepEqual(payload.country, { code: "KE", name: "Kenya" });
+  assert.equal(payload.place.provider, "open-meteo-geocoding");
+  assert.equal(payload.place.providerId, "314159");
+  assert.equal(payload.place.type, "populated_place");
+  assert.deepEqual(payload.place.adminAreas, [{ level: "admin1", name: "Kisumu County" }]);
+  assert.deepEqual(payload.place.coordinates, { latitude: -0.1022, longitude: 34.7617 });
+  assert.equal(payload.displayLabel, "Kisumu, Kisumu County, Kenya");
+  assert.equal(buildLocationSelectionPayload(place, "JP", [{ code: "JP", name: "Japan" }]), null);
+});
+
 test("remote place text is escaped before HTML insertion", () => {
   assert.equal(escapeLocationText('<img src="x" onerror="bad">'), "&lt;img src=&quot;x&quot; onerror=&quot;bad&quot;&gt;");
 });
