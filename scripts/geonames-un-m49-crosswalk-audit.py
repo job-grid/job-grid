@@ -214,6 +214,101 @@ def validate_complete_reconciliation(geo_rows, m49_rows, dispositions):
     return {"live_unmatched_source_ids": len(live_unmatched), "disposition_rows": len(disposition_ids)}
 
 
+
+def build_country_destination_candidates(geo_rows, m49_rows, dispositions, sources):
+    """Build a source-reconciled candidate package; it is never operationally enabled."""
+    m49_by_pair = {(r["alpha2"], r["alpha3"]): r for r in m49_rows}
+    records = []
+    for source_row in geo_rows:
+        source_id = str(source_row["geonames_id"])
+        pair = (source_row["alpha2"], source_row["alpha3"])
+        m49_row = m49_by_pair.get(pair)
+        if m49_row:
+            records.append({
+                "record_key": "geonames:" + source_id,
+                "geonames_id": source_id,
+                "canonical_display_name_candidate": m49_row["name"],
+                "geonames_source_name": source_row["name"],
+                "catalog_role": "country_area_destination",
+                "entity_kind": "m49_country_or_area",
+                "record_status_candidate": "active",
+                "proposed_selectable_as_destination": True,
+                "operational_selectable": False,
+                "sovereignty_claim": False,
+                "iso_codes": {"alpha2": source_row["alpha2"], "alpha3": source_row["alpha3"], "numeric3": None},
+                "iso_numeric3_candidate_from_geonames": source_row["numeric3"],
+                "m49_current_code": m49_row["m49_code"],
+                "m49_current_row_present": True,
+                "source_codes_preserved": {"alpha2": source_row["alpha2"], "alpha3": source_row["alpha3"], "numeric3": source_row["numeric3"]},
+                "source_identity_status": "EXACT_ALPHA2_ALPHA3_PAIR",
+                "disposition_status": "MATCHED",
+                "valid_to": None,
+                "historical_successor_context": [],
+                "classification_note": "Selectable as an operational destination is proposed as a geography feature, not an assertion of sovereignty or immigration eligibility. ISO numeric-3 has not been independently refreshed from a live ISO source in this audit."
+            })
+            continue
+        decision = dispositions.get(source_id)
+        if not decision:
+            raise ValueError(f"Cannot build candidate package with an undocumented source-code exception: {source_id}.")
+        current = decision["catalog_role"] == "current_destination_area"
+        records.append({
+            "record_key": "geonames:" + source_id,
+            "geonames_id": source_id,
+            "canonical_display_name_candidate": decision["canonical_display_name"],
+            "geonames_source_name": source_row["name"],
+            "catalog_role": decision["catalog_role"],
+            "entity_kind": "geographic_destination_area" if current else "historical_reference",
+            "record_status_candidate": decision["status"],
+            "proposed_selectable_as_destination": decision["selectable_as_destination"],
+            "operational_selectable": False,
+            "sovereignty_claim": False,
+            "iso_codes": decision["iso_codes"],
+            "iso_numeric3_candidate_from_geonames": source_row["numeric3"],
+            "m49_current_code": None,
+            "m49_current_row_present": False,
+            "m49_context_note": decision["m49_disposition"],
+            "source_codes_preserved": {"alpha2": source_row["alpha2"], "alpha3": source_row["alpha3"], "numeric3": source_row["numeric3"]},
+            "source_identity_status": "SOURCE_CODE_TUPLE_PRESERVED__EXCEPTION_DISPOSITION_DOCUMENTED",
+            "disposition_status": "DOCUMENTED",
+            "valid_to": decision.get("valid_to"),
+            "historical_successor_context": decision.get("historical_successor_context", []),
+            "classification_note": decision.get("relationship_policy", decision.get("iso_code_policy", "Conservative geography-only disposition; no sovereignty claim."))
+        })
+    ids = [r["geonames_id"] for r in records]
+    if len(ids) != len(set(ids)) or len(records) != len(geo_rows):
+        raise ValueError("Candidate package must contain each source countryInfo ID exactly once.")
+    current = [r for r in records if r["record_status_candidate"] == "active"]
+    historic = [r for r in records if r["record_status_candidate"] == "historical_inactive"]
+    if len(current) != 250 or len(historic) != 2 or sum(r["m49_current_row_present"] for r in records) != len(m49_rows):
+        raise ValueError("Unexpected country/area package counts; the source reconciliation needs review.")
+    return {
+        "schema_version": 1,
+        "package_type": "country-area-destination-catalog-candidate",
+        "generated_at_utc": now(),
+        "status": "SOURCE_RECONCILED_CANDIDATE_ONLY__NOT_IMPORTED",
+        "sources": sources,
+        "counts": {
+            "source_country_info_rows": len(geo_rows),
+            "un_m49_coded_country_area_rows": len(m49_rows),
+            "m49_exact_pair_rows": sum(r["m49_current_row_present"] for r in records),
+            "current_destination_candidates": len(current),
+            "historical_reference_rows_nonselectable": len(historic),
+            "total_source_records_accounted_for": len(records),
+            "source_tuple_exceptions_documented": sum(r["disposition_status"] == "DOCUMENTED" for r in records),
+            "operational_selectable_rows": sum(r["operational_selectable"] for r in records),
+            "unresolved_country_area_identities": 0
+        },
+        "policy": {
+            "iso_alpha2_alpha3": "Use the exact alpha-code pair exposed in the UN M49 table only where that row exists; special-area records preserve their separately evidenced fields.",
+            "iso_numeric3": "Not independently refreshed from the current ISO source in this audit; candidate-only and nullable.",
+            "historical_rows": "Retained for history/reference, never selectable as a current destination.",
+            "destination_vs_sovereignty": "The destination selector is a geographic product behavior, not a sovereignty or immigration-eligibility decision.",
+            "selectability_applied_to_live_system": False,
+            "database_or_production_changes": False
+        },
+        "records": sorted(records, key=lambda r: (r["catalog_role"] == "historical_reference", r["canonical_display_name_candidate"].casefold(), r["geonames_id"]))
+    }
+
 def reconcile(geo, m49, sources, dispositions=None):
     m49_pairs = {(r["alpha2"], r["alpha3"]): r for r in m49}
     geo_pairs = {(r["alpha2"], r["alpha3"]): r for r in geo
@@ -354,7 +449,7 @@ def check_manifest(manifest_path, geopath, m49path):
     return result
 
 
-def write_report(report, rows, out):
+def write_report(report, rows, out, catalog_package=None):
     out.mkdir(parents=True, exist_ok=True)
     (out/"country-area-code-crosswalk-aggregate.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     (out/"country-area-code-crosswalk-rows.json").write_text(json.dumps(rows,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
@@ -366,6 +461,33 @@ def write_report(report, rows, out):
     ]
     with (out/"country-area-code-crosswalk-rows.csv").open("w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
+    if catalog_package is not None:
+        (out/"country-area-destination-catalog-candidate.json").write_text(
+            json.dumps(catalog_package,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+        catalog_fields=[
+            "record_key","geonames_id","canonical_display_name_candidate","geonames_source_name",
+            "catalog_role","entity_kind","record_status_candidate","proposed_selectable_as_destination",
+            "operational_selectable","sovereignty_claim","iso_alpha2_candidate","iso_alpha3_candidate",
+            "iso_numeric3_candidate","source_alpha2","source_alpha3","source_numeric3","m49_current_code",
+            "m49_current_row_present","source_identity_status","disposition_status","valid_to","classification_note"
+        ]
+        with (out/"country-area-destination-catalog-candidate.csv").open("w",newline="",encoding="utf-8") as f:
+            writer=csv.DictWriter(f,fieldnames=catalog_fields); writer.writeheader()
+            for r in catalog_package["records"]:
+                writer.writerow({
+                    "record_key":r["record_key"],"geonames_id":r["geonames_id"],
+                    "canonical_display_name_candidate":r["canonical_display_name_candidate"],
+                    "geonames_source_name":r["geonames_source_name"],"catalog_role":r["catalog_role"],
+                    "entity_kind":r["entity_kind"],"record_status_candidate":r["record_status_candidate"],
+                    "proposed_selectable_as_destination":r["proposed_selectable_as_destination"],
+                    "operational_selectable":r["operational_selectable"],"sovereignty_claim":r["sovereignty_claim"],
+                    "iso_alpha2_candidate":r["iso_codes"].get("alpha2"),"iso_alpha3_candidate":r["iso_codes"].get("alpha3"),
+                    "iso_numeric3_candidate":r["iso_codes"].get("numeric3"),"source_alpha2":r["source_codes_preserved"]["alpha2"],
+                    "source_alpha3":r["source_codes_preserved"]["alpha3"],"source_numeric3":r["source_codes_preserved"]["numeric3"],
+                    "m49_current_code":r["m49_current_code"],"m49_current_row_present":r["m49_current_row_present"],
+                    "source_identity_status":r["source_identity_status"],"disposition_status":r["disposition_status"],
+                    "valid_to":r["valid_to"],"classification_note":r["classification_note"]
+                })
 
 
 def main(argv=None):
@@ -384,9 +506,10 @@ def main(argv=None):
         dispositions=validate_exception_dispositions(exception_manifest,geo)
         reconciliation_gate=validate_complete_reconciliation(geo,m49,dispositions)
         report,rows=reconcile(geo,m49,sources,dispositions)
+        catalog_package=build_country_destination_candidates(geo,m49,dispositions,sources)
     except (OSError,UnicodeError,json.JSONDecodeError,ValueError) as exc:
         print(f"BLOCKED_COUNTRY_AREA_CODE_AUDIT: {type(exc).__name__}: {exc}",file=sys.stderr); return 2
-    write_report(report,rows,a.output_dir)
+    write_report(report,rows,a.output_dir,catalog_package)
     print(json.dumps({"status":report["status"],"counts":report["counts"]},indent=2))
     return 1 if report["status"]=="BLOCKED_STRUCTURAL_SOURCE_ISSUES" else 0
 
