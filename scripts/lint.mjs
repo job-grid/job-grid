@@ -26,6 +26,8 @@ const checks = [
   [employerCss.includes("@media (max-width: 740px)") && employerCss.includes(":focus-visible"), "Employer page has mobile layout and keyboard focus"],
   [runtimeConfig.includes('supabaseUrl: ""') && runtimeConfig.includes('publishableKey: ""'), "Runtime backend configuration is disabled by default"],
   [employerScript.includes("window?.jobGridAuth") && employerScript.includes("auth.getSession"), "Employer actions require the approved auth session adapter"],
+  [employerScript.includes("getFreshEmployerSession(auth, session)") && employerScript.includes("session = await getFreshEmployerSession(auth, session)"), "Employer API calls refresh the active session before using its bearer token"],
+  [employerScript.includes('elements.dialog.addEventListener("cancel"') && employerScript.includes("if (busy) {\n      event.preventDefault();"), "Close confirmation cannot be dismissed with Escape while a request is running"],
   [employerScript.includes("Idempotency-Key") && employerScript.includes("expected_version"), "Close Job uses an idempotency key and expected version"],
   [buildScript.includes('"employer-jobs.html"') && buildScript.includes('"employer-jobs.js"'), "Employer page and client are packaged into the static build"],
 ];
