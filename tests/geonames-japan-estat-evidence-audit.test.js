@@ -361,6 +361,77 @@ test("matches Japanese alternate-name entries only by exact official Japanese la
   assert.match(csv, /NO_EXACT_JAPANESE_ALTERNATE_LABEL_MATCH/);
 });
 
+test("official alternateNamesV2 aliases feed exact Japanese label candidates and remain evidence-only", () => {
+  const targets = makeTargets().map((target, index) => ({
+    ...target, source_identity_and_raw_codes_verified: true, source_alternate_names: [],
+    name: index === 0 ? "Yao-ambiguous" : target.name,
+  }));
+  const sourceRows = [estatRow(990, {
+    period_uri: "http://data.e-stat.go.jp/lod/sac/C27100-19700401",
+    area_code: "27100", label_en: "Different English title", label_ja: "八尾町",
+  })];
+  const english = buildCandidateAudit(targets, sourceRows, "c".repeat(64));
+  const targetAliasResults = targets.map((target, index) => ({
+    ...target, source_identity_scope_verified: true, selected_japanese_alias_count: index === 0 ? 1 : 0,
+    aliases: index === 0 ? [{
+      alternate_name_id: "70001", geonames_id: target.geonames_id, language_code: "ja",
+      alternate_name: "八尾町", is_preferred_name: "1", is_short_name: "0", is_colloquial: "0",
+      is_historic: "0", valid_from: "", valid_to: "", source_row_sha256: "d".repeat(64),
+      source_archive_sha256: "e".repeat(64),
+    }] : [], operational_parent_link_created: false,
+  }));
+  const aliasAudit = {
+    status: "PASS_SOURCE_PINNED_MULTILINGUAL_TARGET_ALIAS_EXTRACTION__CANDIDATES_ONLY__NO_PARENT_LINKS_APPROVED",
+    target_count: targets.length,
+    source: {
+      source_url: "https://download.geonames.org/export/dump/alternateNamesV2.zip", http_status: 200,
+      zip_crc_validation: "PASS", member_name: "alternateNamesV2.txt",
+      archive_sha256: "e".repeat(64), source_manifest_sha256: "f".repeat(64),
+    },
+    target_results: targetAliasResults, operational_parent_links_created: 0, database_or_production_changes: false,
+  };
+  const japanese = buildJapaneseAlternateNameCandidateAudit(targets, english, sourceRows, aliasAudit);
+  const target = japanese.target_results.find((row) => row.geonames_id === targets[0].geonames_id);
+  assert.equal(target.candidates.length, 1);
+  assert.equal(target.candidates[0].area_code, "27100");
+  assert.deepEqual(target.candidates[0].alias_source_kinds, ["GeoNames alternateNamesV2.zip"]);
+  assert.deepEqual(target.candidates[0].matching_multilingual_alias_ids, ["70001"]);
+  assert.deepEqual(target.candidates[0].matching_multilingual_alias_languages, ["ja"]);
+  assert.equal(target.candidates[0].multilingual_alias_evidence[0].alternate_name, "八尾町");
+  assert.equal(target.operational_parent_link_created, false);
+  assert.equal(japanese.operational_parent_links_created, 0);
+});
+
+test("Japanese aliases add candidate history for ambiguous English labels, not only unmatched labels", async () => {
+  const requests = [];
+  const pA = "http://data.e-stat.go.jp/lod/sac/C27100-19700401";
+  const pB = "http://data.e-stat.go.jp/lod/sac/C27101-19700401";
+  const pC = "http://data.e-stat.go.jp/lod/sac/C27103-19700401";
+  const fakeFetch = async (_url, options) => {
+    requests.push(options);
+    const query = new URLSearchParams(options.body).get("query");
+    if (query.includes("VALUES ?period")) {
+      assert.match(query, /C27100-19700401/);
+      assert.match(query, /C27101-19700401/);
+      assert.match(query, /C27103-19700401/);
+      return sparqlResponse([detailBinding(pA), detailBinding(pB), detailBinding(pC, { LABELJA: { value: "八尾町" } })]);
+    }
+    const offset = Number(query.match(/OFFSET (\d+)/)?.[1] ?? "0");
+    return sparqlResponse(offset === 0 ? [
+      { ...catalogBinding(27100, "Yao-cho"), PERIOD: { type: "uri", value: pA } },
+      { ...catalogBinding(27101, "Yao cho"), PERIOD: { type: "uri", value: pB } },
+      { ...catalogBinding(27103, "Unrelated label", "八尾町"), PERIOD: { type: "uri", value: pC } },
+    ] : []);
+  };
+  const snapshot = await fetchEstatSnapshot(["Yao-chō"], fakeFetch, () => new Date("2026-10-11T00:00:00.000Z"),
+    [{ geonames_id: "1848001", target_name: "Yao-chō", alternate_names: ["八尾町"] }]);
+  assert.equal(snapshot.manifest.candidate_area_code_count, 2);
+  assert.equal(snapshot.manifest.japanese_alternate_name_candidate_area_code_count, 1);
+  assert.equal(snapshot.manifest.candidate_area_code_count_including_japanese_alternate_names, 3);
+  assert.equal(snapshot.manifest.candidate_history_period_uris_requested, 3);
+  assert.equal(requests.length, 2);
+});
+
 test("Japanese alternate-name review includes ambiguous English targets and records independent code intersection", () => {
   const targets = makeTargets().map((target, index) => ({
     ...target,

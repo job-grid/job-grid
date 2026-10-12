@@ -494,10 +494,64 @@ export function buildCandidateAudit(targets, sourceRows, sourceSnapshotSha256) {
   };
 }
 
-export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandidateAudit, sourceRows) {
+export function validateJapaneseAlternateNamesV2Audit(audit, targets) {
+  if (audit == null) return new Map();
+  const source = audit.source ?? {};
+  if (
+    audit.status !== "PASS_SOURCE_PINNED_MULTILINGUAL_TARGET_ALIAS_EXTRACTION__CANDIDATES_ONLY__NO_PARENT_LINKS_APPROVED" ||
+    audit.target_count !== EXPECTED_JAPAN_TARGETS || audit.operational_parent_links_created !== 0 ||
+    audit.database_or_production_changes !== false ||
+    source.source_url !== "https://download.geonames.org/export/dump/alternateNamesV2.zip" ||
+    source.http_status !== 200 || source.zip_crc_validation !== "PASS" ||
+    source.member_name !== "alternateNamesV2.txt" ||
+    !/^[a-f0-9]{64}$/i.test(String(source.archive_sha256 ?? "")) ||
+    !/^[a-f0-9]{64}$/i.test(String(source.source_manifest_sha256 ?? ""))
+  ) throw new Error("Official GeoNames multilingual-name target-alias audit failed source/provenance validation.");
+  const expectedById = new Map(targets.map((target) => [String(target.geonames_id), target]));
+  const byId = new Map();
+  for (const row of audit.target_results ?? []) {
+    const id = String(row.geonames_id ?? "");
+    const expected = expectedById.get(id);
+    if (!expected || byId.has(id)) throw new Error("Unexpected or duplicate multilingual alias target ID: " + id);
+    const identityFields = [
+      [expected.name, row.name], ["JP", row.country_code], ["ADM4", row.feature_code], ["00", row.raw_admin1_code],
+      [expected.raw_admin2_code ?? "", row.raw_admin2_code ?? ""],
+      ["PRESERVE_ADMIN_FEATURE_HIERARCHY_UNRESOLVED", row.owner_approved_disposition],
+    ];
+    if (row.source_identity_scope_verified !== true ||
+        identityFields.some(([expectedValue, actual]) => String(expectedValue ?? "") !== String(actual ?? "")) ||
+        row.operational_parent_link_created !== false || !Array.isArray(row.aliases) ||
+        Number(row.selected_japanese_alias_count) !== row.aliases.length) {
+      throw new Error("Multilingual alias target identity/raw-code scope mismatch: " + id);
+    }
+    const aliasIds = new Set();
+    for (const alias of row.aliases) {
+      const language = String(alias.language_code ?? "");
+      const name = String(alias.alternate_name ?? "");
+      const languageIsJapanese = language.toLowerCase().split("-")[0] === "ja";
+      const untaggedJapaneseScript = !language && containsJapaneseOrHanScript(name);
+      if (String(alias.geonames_id ?? "") !== id || !/^\d+$/.test(String(alias.alternate_name_id ?? "")) ||
+          !name.trim() || !(languageIsJapanese || untaggedJapaneseScript) ||
+          !/^[a-f0-9]{64}$/i.test(String(alias.source_row_sha256 ?? "")) ||
+          String(alias.source_archive_sha256 ?? "") !== String(source.archive_sha256) ||
+          aliasIds.has(String(alias.alternate_name_id))) {
+        throw new Error("Invalid or duplicate multilingual alias for Japan target " + id);
+      }
+      aliasIds.add(String(alias.alternate_name_id));
+    }
+    byId.set(id, row.aliases);
+  }
+  if (byId.size !== targets.length || [...expectedById.keys()].some((id) => !byId.has(id))) {
+    throw new Error("Multilingual audit must preserve all target IDs, including targets without aliases.");
+  }
+  return byId;
+}
+
+export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandidateAudit, sourceRows, alternateNamesV2Audit = null) {
   if (!Array.isArray(targets) || targets.length !== EXPECTED_JAPAN_TARGETS) {
     throw new Error(`Expected ${EXPECTED_JAPAN_TARGETS} source-verified Japanese targets; got ${targets?.length ?? 0}.`);
   }
+  const aliasesByTarget = validateJapaneseAlternateNamesV2Audit(alternateNamesV2Audit, targets);
   const englishResults = new Map(
     (englishCandidateAudit?.target_results ?? []).map((row) => [String(row.geonames_id), row]),
   );
@@ -525,9 +579,15 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
     const englishCandidateAreaCodes = uniqueStrings(
       (english.candidates ?? []).map((candidate) => String(candidate.area_code ?? "")),
     );
-    const alternateNames = uniqueStrings(
-      (target.source_alternate_names ?? []).map(normalizeJapaneseLabel).filter(Boolean),
-    );
+    const alternateNameV2Rows = aliasesByTarget.get(String(target.geonames_id)) ?? [];
+    const aliasEvidence = [
+      ...(target.source_alternate_names ?? []).map((alternateName) => ({
+        source: "GeoNames JP.txt inline alternate_names", alternate_name: alternateName, alternate_name_id: "",
+        language_code: "", valid_from: "", valid_to: "", is_historic: "",
+      })),
+      ...alternateNameV2Rows.map((row) => ({ ...row, source: "GeoNames alternateNamesV2.zip" })),
+    ];
+    const alternateNames = uniqueStrings(aliasEvidence.map((row) => normalizeJapaneseLabel(row.alternate_name)).filter(Boolean));
     const alternateSet = new Set(alternateNames);
     const matchedRows = sourceRows.filter((row) =>
       /^\d{5}$/.test(String(row.area_code ?? "")) &&
@@ -561,6 +621,8 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
           }
         }
         parentReferences.sort((a, b) => a.area_code.localeCompare(b.area_code) || a.uri.localeCompare(b.uri));
+        const candidateAliasEvidence = aliasEvidence.filter((alias) =>
+          matchingLabels.includes(normalizeJapaneseLabel(alias.alternate_name)));
         return {
           area_code: areaCode,
           matches_exact_english_candidate_area_code: englishCandidateAreaCodes.includes(areaCode),
@@ -568,6 +630,12 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
           exact_matching_period_uris: matchingUris,
           matched_official_japanese_labels: matchingLabels,
           geo_names_alternate_names_matching_labels: matchingLabels,
+          alias_source_kinds: uniqueStrings(candidateAliasEvidence.map((alias) => alias.source)),
+          matching_multilingual_alias_ids: uniqueStrings(candidateAliasEvidence.map((alias) => String(alias.alternate_name_id ?? "")).filter(Boolean)),
+          matching_multilingual_alias_languages: uniqueStrings(candidateAliasEvidence.map((alias) => String(alias.language_code ?? ""))),
+          matching_multilingual_alias_validity_ranges: uniqueStrings(candidateAliasEvidence.map((alias) =>
+            String(alias.valid_from ?? "") + ".." + String(alias.valid_to ?? ""))),
+          multilingual_alias_evidence: candidateAliasEvidence,
           history_period_count: history.length,
           parent_area_codes_across_history: uniqueStrings(parentReferences.map((parent) => parent.area_code)),
           parent_references_across_history: parentReferences,
@@ -593,7 +661,9 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
         candidates.filter((candidate) => candidate.matches_exact_english_candidate_area_code)
           .map((candidate) => candidate.area_code),
       ),
-      source_alternate_names: alternateNames,
+      source_alternate_names: uniqueStrings((target.source_alternate_names ?? []).map(normalizeJapaneseLabel).filter(Boolean)),
+      alternate_name_v2_values: uniqueStrings(alternateNameV2Rows.map((row) => normalizeJapaneseLabel(row.alternate_name)).filter(Boolean)),
+      alternate_name_v2_row_count: alternateNameV2Rows.length,
       alternate_name_count: alternateNames.length,
       alternate_name_tokens_with_japanese_or_han_script: alternateNames.filter(containsJapaneseOrHanScript).length,
       has_japanese_or_han_script_alternate_name: alternateNames.some(containsJapaneseOrHanScript),
@@ -606,7 +676,7 @@ export function buildJapaneseAlternateNameCandidateAudit(targets, englishCandida
   return {
     report_version: 1,
     status: "PASS_EXACT_JAPANESE_ALTERNATE_LABEL_DISCOVERY; CANDIDATES_ONLY; NO_PARENT_LINKS_APPROVED",
-    matching_rule: "Review all source-verified Japan targets with zero or multiple distinct exact-English area-code candidates. Only complete GeoNames alternate-name entries that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidate evidence. Each Japanese candidate is flagged when its area code also appears in the exact-English candidate set. No substring, transliteration, reading, fuzzy or proximity matching is used; no candidate approves identity or parentage.",
+    matching_rule: "Review all source-verified Japan targets with zero or multiple distinct exact-English area-code candidates. Only complete GeoNames JP.txt inline names or source-pinned alternateNamesV2.zip records that exactly equal an official e-Stat Japanese label after Unicode NFC normalization and outer trimming are candidate evidence. Each Japanese candidate is flagged when its area code also appears in the exact-English candidate set. No substring, transliteration, reading, fuzzy or proximity matching is used; no candidate approves identity or parentage.",
     target_count: targetResults.length,
     target_scope: "all source-verified Japan targets without exactly one English area-code candidate (zero or multiple); candidates only",
     english_targets_with_zero_exact_area_code_candidates: targetResults.filter((target) => target.english_exact_name_candidate_count === 0).length,
@@ -639,11 +709,12 @@ export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSh
     "raw_admin1_code", "raw_admin2_code", "source_identity_and_raw_codes_verified",
     "english_exact_name_candidate_count", "english_candidate_area_codes",
     "japanese_candidate_area_codes_also_matching_english",
-    "source_alternate_names", "alternate_name_count",
+    "source_alternate_names", "alternate_name_v2_values", "alternate_name_v2_row_count", "alternate_name_count",
     "alternate_name_tokens_with_japanese_or_han_script", "has_japanese_or_han_script_alternate_name",
     "candidate_area_code_count", "review_status", "candidate_area_code",
     "candidate_matches_exact_english_candidate_area_code", "exact_matching_japanese_label_period_count",
-    "candidate_history_period_count", "matched_official_japanese_labels",
+    "candidate_history_period_count", "matched_official_japanese_labels", "candidate_alias_source_kinds",
+    "matching_multilingual_alias_ids", "matching_multilingual_alias_languages", "matching_multilingual_alias_validity_ranges",
     "matching_period_uris", "matching_period_date_ranges", "history_parent_area_codes",
     "history_parent_labels_en", "history_parent_labels_ja", "source_snapshot_sha256",
     "operational_parent_link_created",
@@ -662,9 +733,14 @@ export function renderJapaneseAlternateNameCandidateCsv(report, sourceSnapshotSh
       const row = {
         ...target,
         source_alternate_names: target.source_alternate_names.join(";"),
+        alternate_name_v2_values: target.alternate_name_v2_values.join(";"),
         english_candidate_area_codes: target.english_candidate_area_codes.join(";"),
         japanese_candidate_area_codes_also_matching_english:
           target.japanese_candidate_area_codes_also_matching_english.join(";"),
+        candidate_alias_source_kinds: (candidate?.alias_source_kinds ?? []).join(";"),
+        matching_multilingual_alias_ids: (candidate?.matching_multilingual_alias_ids ?? []).join(";"),
+        matching_multilingual_alias_languages: (candidate?.matching_multilingual_alias_languages ?? []).join(";"),
+        matching_multilingual_alias_validity_ranges: (candidate?.matching_multilingual_alias_validity_ranges ?? []).join(";"),
         candidate_area_code: candidate?.area_code ?? "",
         candidate_matches_exact_english_candidate_area_code:
           candidate ? String(candidate.matches_exact_english_candidate_area_code === true) : "",
@@ -858,9 +934,20 @@ export async function fetchEstatSnapshot(
   const unmatchedTargetKeys = new Set(
     [...targetKeys].filter((key) => !englishMatchedTargetKeys.has(key)),
   );
+  const englishCodesByTargetKey = new Map();
+  for (const row of initiallyMatchedRows) {
+    const key = normalizeExactLabel(row.label_en);
+    const codes = englishCodesByTargetKey.get(key) ?? new Set();
+    codes.add(row.area_code);
+    englishCodesByTargetKey.set(key, codes);
+  }
   const alternateJapaneseKeys = new Set(
     targetJapaneseAlternateNameRecords
-      .filter((record) => unmatchedTargetKeys.has(normalizeExactLabel(record.target_name)))
+      .filter((record) => {
+        const key = normalizeExactLabel(record.target_name);
+        const codeCount = englishCodesByTargetKey.get(key)?.size ?? 0;
+        return codeCount !== 1;
+      })
       .flatMap((record) => record.alternate_names ?? [])
       .map(normalizeJapaneseLabel)
       .filter(Boolean),
@@ -982,7 +1069,7 @@ export async function fetchEstatSnapshot(
   };
 }
 
-export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, fetchImpl = fetch, now = () => new Date() }) {
+export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, alternateNamesV2AuditPath = null, fetchImpl = fetch, now = () => new Date() }) {
   const targetBytes = await readFile(targetsPath);
   const targetsRaw = selectJapanTargets(parseCsv(targetBytes.toString("utf8")));
   if (targetsRaw.length !== EXPECTED_JAPAN_TARGETS) {
@@ -1011,10 +1098,16 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     source_identity_and_raw_codes_verified: true,
   }));
   const geoNamesManifest = JSON.parse(await readFile(geoNamesManifestPath, "utf8"));
+  const alternateNamesV2AuditBytes = alternateNamesV2AuditPath ? await readFile(alternateNamesV2AuditPath) : null;
+  const alternateNamesV2Audit = alternateNamesV2AuditBytes ? JSON.parse(alternateNamesV2AuditBytes.toString("utf8")) : null;
+  const aliasesByTarget = validateJapaneseAlternateNamesV2Audit(alternateNamesV2Audit, targets);
   const japaneseAlternateNameRecords = targets.map((row) => ({
     geonames_id: String(row.geonames_id),
     target_name: row.name,
-    alternate_names: row.source_alternate_names ?? [],
+    alternate_names: uniqueStrings([
+      ...(row.source_alternate_names ?? []),
+      ...(aliasesByTarget.get(String(row.geonames_id)) ?? []).map((alias) => alias.alternate_name),
+    ].map(normalizeJapaneseLabel).filter(Boolean)),
   }));
   const snapshot = await fetchEstatSnapshot(
     targets.map((row) => row.name),
@@ -1027,6 +1120,7 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     targets,
     report,
     snapshot.sourceRows,
+    alternateNamesV2Audit,
   );
   report.generated_at_utc = now().toISOString().replace(/\.\d{3}Z$/, "Z");
   report.input = {
@@ -1038,10 +1132,29 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
     geonames_country_source_line_count: geoLines.length,
     geonames_country_malformed_or_wrong_shape_lines: malformedRows,
     source_identity_and_raw_code_matches: targets.length,
+    geonames_alternate_names_v2_audit_sha256: alternateNamesV2AuditBytes ? sha256(alternateNamesV2AuditBytes) : null,
+    geonames_alternate_names_v2_selected_alias_rows: alternateNamesV2Audit?.summary?.selected_japanese_alias_rows ?? 0,
   };
   report.source = {
     geoNames: geoNamesManifest,
     eStat: snapshot.manifest,
+    geoNamesAlternateNamesV2: alternateNamesV2Audit ? {
+      source_url: alternateNamesV2Audit.source?.source_url,
+      retrieved_at_utc: alternateNamesV2Audit.source?.retrieved_at_utc,
+      http_status: alternateNamesV2Audit.source?.http_status,
+      etag: alternateNamesV2Audit.source?.etag,
+      archive_sha256: alternateNamesV2Audit.source?.archive_sha256,
+      archive_size_bytes: alternateNamesV2Audit.source?.archive_size_bytes,
+      zip_crc_validation: alternateNamesV2Audit.source?.zip_crc_validation,
+      member_name: alternateNamesV2Audit.source?.member_name,
+      member_uncompressed_size_bytes: alternateNamesV2Audit.source?.member_uncompressed_size_bytes,
+      source_manifest_sha256: alternateNamesV2Audit.source?.source_manifest_sha256,
+      dispositions_sha256: alternateNamesV2Audit.source?.dispositions_sha256,
+      target_count: alternateNamesV2Audit.target_count,
+      source_rows_scanned: alternateNamesV2Audit.source_rows_scanned,
+      summary: alternateNamesV2Audit.summary,
+      status: alternateNamesV2Audit.status,
+    } : null,
   };
   const prefix = resolve(outputPrefix);
   await mkdir(dirname(prefix), { recursive: true });
@@ -1063,12 +1176,12 @@ export async function runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNam
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const [targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath] = process.argv.slice(2);
+  const [targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, alternateNamesV2AuditPath] = process.argv.slice(2);
   if (!targetsPath || !geoNamesPath || !outputPrefix || !geoNamesManifestPath) {
-    process.stderr.write("Usage: node scripts/geonames-japan-estat-evidence-audit.mjs <dispositions.csv> <JP.txt> <output-prefix> <geonames-source-manifest.json>\n");
+    process.stderr.write("Usage: node scripts/geonames-japan-estat-evidence-audit.mjs <dispositions.csv> <JP.txt> <output-prefix> <geonames-source-manifest.json> [japan-alternate-names-v2-target-aliases.json]\n");
     process.exitCode = 2;
   } else {
-    runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath })
+    runAudit({ targetsPath, geoNamesPath, outputPrefix, geoNamesManifestPath, alternateNamesV2AuditPath })
       .then((report) => {
         const summary = { ...report };
         delete summary.target_results;
