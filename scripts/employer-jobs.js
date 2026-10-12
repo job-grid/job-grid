@@ -72,6 +72,27 @@ function assertSession(session) {
   }
 }
 
+export async function getFreshEmployerSession(auth, previousSession = null) {
+  if (!auth || typeof auth.getSession !== "function") {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  let session;
+  try {
+    session = await auth.getSession();
+    assertSession(session);
+  } catch {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  // Do not reuse a vacancy view if another account becomes active in this tab.
+  if (previousSession && session.user.id !== previousSession.user.id) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return session;
+}
+
 function getRestUrl(config, resource, parameters = {}) {
   const url = new URL(`/rest/v1/${resource}`, config.supabaseUrl);
   for (const [key, value] of Object.entries(parameters)) {
@@ -131,12 +152,12 @@ export async function loadEmployerVacancies(rawConfig, session, fetchImpl = fetc
   const [memberships, vacancies, organizations] = await Promise.all([
     requestJson(fetchImpl, membershipUrl, { headers }, "MEMBERSHIP_LOAD_FAILED"),
     requestJson(fetchImpl, getRestUrl(config, "vacancies", {
-      select: "id,organization_id,reference_code,slug,title,status,version,published_at,expires_at,closed_at,closure_reason_code,updated_at",
+      select: "id,organization_id,reference_code,title,status,version,published_at,expires_at,updated_at",
       order: "updated_at.desc",
       limit: "100",
     }), { headers }, "VACANCY_LOAD_FAILED"),
     requestJson(fetchImpl, getRestUrl(config, "organizations", {
-      select: "id,display_name,type,status,verification_status",
+      select: "id,display_name",
       order: "display_name.asc",
       limit: "100",
     }), { headers }, "ORGANIZATION_LOAD_FAILED"),
@@ -385,15 +406,7 @@ export async function initializeEmployerPortal({
 
   let session;
   try {
-    session = await auth.getSession();
-  } catch {
-    setConnection(elements, "error", "Could not verify your session", "The authentication provider did not return a valid session.");
-    showNotice(elements, friendlyEmployerError(new Error("AUTH_REQUIRED")));
-    return;
-  }
-
-  try {
-    assertSession(session);
+    session = await getFreshEmployerSession(auth);
   } catch {
     setConnection(elements, "error", "Sign-in required", "A verified Job Grid sign-in session is needed to view employer vacancies.");
     showNotice(elements, friendlyEmployerError(new Error("AUTH_REQUIRED")));
@@ -409,6 +422,9 @@ export async function initializeEmployerPortal({
     elements.refresh.disabled = true;
     setConnection(elements, "loading", "Loading your vacancies", "Loading vacancies through your authenticated session and the backend's tenant policies.");
     try {
+      // Refresh the adapter-owned session on each load so expired access tokens
+      // are not reused indefinitely. The adapter remains responsible for refresh.
+      session = await getFreshEmployerSession(auth, session);
       currentVacancies = await loadEmployerVacancies(config, session, fetchImpl);
       elements.notice.hidden = true;
       elements.workspace.hidden = false;
@@ -439,6 +455,17 @@ export async function initializeEmployerPortal({
     idempotencyKey = null;
   });
 
+  elements.dialog.addEventListener("cancel", (event) => {
+    // Escape must not close the modal while the server may be committing the
+    // operation; otherwise a successful request could look like a failed one.
+    if (busy) {
+      event.preventDefault();
+      return;
+    }
+    selectedVacancy = null;
+    idempotencyKey = null;
+  });
+
   elements.closeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (busy || !selectedVacancy || !idempotencyKey) return;
@@ -455,6 +482,7 @@ export async function initializeEmployerPortal({
     elements.confirm.textContent = "Closing…";
     elements.dialogError.hidden = true;
     try {
+      session = await getFreshEmployerSession(auth, session);
       await closeVacancy(config, session, selectedVacancy, elements.reason.value, idempotencyKey, fetchImpl);
       elements.dialog.close("success");
       selectedVacancy = null;
