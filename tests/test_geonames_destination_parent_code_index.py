@@ -86,6 +86,8 @@ class DestinationParentCodeIndexTests(unittest.TestCase):
                 candidate(104, "Cross Country Namesake", "P", "PPL", country="GB", admin1="30", admin2="001",
                           country_id="2635167"),
                 candidate(105, "Ambiguous Parent Example", "P", "PPL", admin1="30", admin2="999"),
+                candidate(106, "Whitespace Admin Code", "P", "PPL", admin1=" "),
+                candidate(107, "Whitespace Country Code", "P", "PPL", country=" ", admin1="30", admin2="001"),
             ]
             candidate_path, summary_path = write_candidate_package(tmp, rows)
             report, index_path, resolution_path, summary_out = mod.build_parent_code_index(
@@ -118,6 +120,8 @@ class DestinationParentCodeIndexTests(unittest.TestCase):
             self.assertEqual(resolved["104"]["direct_parent_resolution_status"], "NO_EXACT_ADMIN_PARENT_KEY")
             self.assertEqual(resolved["105"]["direct_parent_resolution_status"], "AMBIGUOUS_EXACT_ADMIN_PARENT_KEY")
             self.assertEqual(json.loads(resolved["105"]["candidate_ids_for_direct_key_json"]), ["21", "22"])
+            self.assertEqual(resolved["106"]["direct_parent_resolution_status"], "BLOCKED_RAW_ADMIN_CODE_GAP")
+            self.assertEqual(resolved["107"]["direct_parent_resolution_status"], "BLOCKED_COUNTRY_CODE_MISSING")
             self.assertTrue(all(row["parent_link_created"] == "False" for row in resolved.values()))
             self.assertTrue(all(row["operational_selectable"] == "False" for row in resolved.values()))
 
