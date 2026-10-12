@@ -53,6 +53,38 @@ INSERT INTO public.vacancies (
     'JOB-A003', 'draft-analyst', 'Draft Analyst',
     'Prepare and maintain project information for an internal analysis team.',
     'Nairobi', 'KE', 'draft', 1, NULL, NULL
+  ),
+  (
+    '20000000-0000-4000-8000-000000000005',
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'JOB-A004', 'expired-engineer', 'Expired Engineer',
+    'Maintain engineering records and support operational reliability.',
+    'Nairobi', 'KE', 'published', 1, now() - interval '30 days', now() - interval '1 hour'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000006',
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'JOB-A005', 'future-analyst', 'Future Analyst',
+    'Prepare forward-looking operational reports for a project team.',
+    'Nairobi', 'KE', 'published', 1, now() + interval '1 day', now() + interval '31 days'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000007',
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'JOB-A006', 'moderator-close', 'Moderator Close Test',
+    'Coordinate quality reviews and provide oversight for teams.',
+    'Nairobi', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
+  ),
+  (
+    '20000000-0000-4000-8000-000000000008',
+    '10000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'JOB-B002', 'viewer-close', 'Viewer Permission Test',
+    'Support business operations and maintain regular status reporting.',
+    'Kisumu', 'KE', 'published', 1, now() - interval '1 day', now() + interval '30 days'
   );
 
 DO $column_grant_test$
@@ -183,6 +215,56 @@ BEGIN
     RAISE EXCEPTION 'draft closure was not rejected: %', result;
   END IF;
 
+  -- A read-only viewer member must not be allowed to close a vacancy.
+  result := public.close_published_vacancy(
+    '20000000-0000-4000-8000-000000000008',
+    '00000000-0000-4000-8000-000000000004',
+    'filled',
+    1,
+    '40000000-0000-4000-8000-000000000011',
+    'viewer-close-request-01'
+  );
+  IF result->>'error' <> 'FORBIDDEN' THEN
+    RAISE EXCEPTION 'viewer membership was incorrectly allowed to close: %', result;
+  END IF;
+
+  -- Moderator role can close a published vacancy outside their employer tenancy.
+  result := public.close_published_vacancy(
+    '20000000-0000-4000-8000-000000000007',
+    '00000000-0000-4000-8000-000000000003',
+    'incorrect_listing',
+    1,
+    '40000000-0000-4000-8000-000000000012',
+    'moderator-close-request-01'
+  );
+  IF result->>'ok' <> 'true' OR result->>'status' <> 'closed' THEN
+    RAISE EXCEPTION 'authorized moderator close failed: %', result;
+  END IF;
+
+  result := public.close_published_vacancy(
+    '20000000-0000-4000-8000-000000000005',
+    '00000000-0000-4000-8000-000000000001',
+    'filled',
+    1,
+    '40000000-0000-4000-8000-000000000013',
+    'expired-close-request-01'
+  );
+  IF result->>'error' <> 'INVALID_STATE' THEN
+    RAISE EXCEPTION 'expired published vacancy was closable: %', result;
+  END IF;
+
+  result := public.close_published_vacancy(
+    '20000000-0000-4000-8000-000000000006',
+    '00000000-0000-4000-8000-000000000001',
+    'filled',
+    1,
+    '40000000-0000-4000-8000-000000000014',
+    'future-close-request-01'
+  );
+  IF result->>'error' <> 'INVALID_STATE' THEN
+    RAISE EXCEPTION 'future published vacancy was closable: %', result;
+  END IF;
+
   result := public.close_published_vacancy(
     '20000000-0000-4000-8000-000000000003',
     '00000000-0000-4000-8000-000000000001',
@@ -275,6 +357,16 @@ BEGIN
    WHERE id = '20000000-0000-4000-8000-000000000003';
   IF row_count <> 1 THEN
     RAISE EXCEPTION 'anonymous callers cannot see an active published vacancy';
+  END IF;
+  SELECT count(*) INTO row_count
+    FROM public.vacancies
+   WHERE id IN (
+     '20000000-0000-4000-8000-000000000005',
+     '20000000-0000-4000-8000-000000000006',
+     '20000000-0000-4000-8000-000000000007'
+   );
+  IF row_count <> 0 THEN
+    RAISE EXCEPTION 'anonymous callers can see an expired, future or moderator-closed vacancy';
   END IF;
 END;
 $anon_test$;
