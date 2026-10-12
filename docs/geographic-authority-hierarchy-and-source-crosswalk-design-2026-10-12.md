@@ -105,3 +105,12 @@ The current country-catalog PR remains draft and has unresolved acceptance gates
 - [Kenya external county-ancestor evidence review, 2026-10-11](geonames-kenya-external-ancestor-evidence-2026-10-11.md)
 - [Country catalog database foundation](country-catalog-database-foundation.md)
 - [Database migration governance](database-migrations.md)
+
+
+### Kenya application — source-native overlay proposal (2026-10-12)
+
+The non-operational fixture [Kenya native-unit overlay proposal](geonames-kenya-native-unit-overlay-proposal-2026-10-12.json) applies this architecture to the documented path: Kiambu County → Githunguri Sub-County → Kiambururu Location.
+
+It uses explicit source-scoped **proposal keys**, not invented official IDs or production UUIDs. The reviewed GeoNames Kenya snapshot contains no exact Githunguri Sub-County feature; GeoNames ID 197219 is a Location-level feature and is not a valid substitute. GeoNames ID 192705 remains an unresolved review candidate because the 2024 Gazette labels Kiambururu as a Location while the GeoNames record labels it a Sub-Location (ADM3).
+
+The fixture and regressions only prove that the official native path can be represented without a false GeoNames mapping. They do **not** approve a crosswalk, add selectable entries, create operational relationships, or constitute a source-pinned dry run: the cited source bytes have not been captured and hashed by this fixture. The live selector remains unchanged. A later schema/implementation PR still requires source snapshot provenance, duplicate-prevention decisions and the backup/restore gate.

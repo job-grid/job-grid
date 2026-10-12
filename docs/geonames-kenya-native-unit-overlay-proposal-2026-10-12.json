@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "artifact_type": "NON_OPERATIONAL_SOURCE_NATIVE_ADMINISTRATIVE_UNIT_OVERLAY_PROPOSAL",
+  "decision_date": "2026-10-12",
+  "country_code": "KE",
+  "status": "NATIVE_PATH_SOURCE_BACKED__ENTITY_CROSSWALKS_PENDING__NOT_SELECTABLE",
+  "purpose": "Represent Kenya's documented native administrative path without fabricating a GeoNames parent ID or forcing an unresolved crosswalk. Proposal keys in this file are source-scoped reconciliation keys, not official Kenyan identifiers, GeoNames IDs, or production UUIDs.",
+  "source_retrieval_boundary": {
+    "official_source_snapshot_pinned": false,
+    "source_bytes_hashes_recorded": false,
+    "note": "This fixture cites official publications already reviewed in the accompanying evidence dossier. It is not a newly captured or hashed machine-readable source snapshot and must not be described as a source-pinned dry run."
+  },
+  "sources": [
+    {
+      "source_key": "ke-gazette-admin-units-2024",
+      "authority": "Kenya Ministry of Interior / Kenya Gazette",
+      "title": "Gazette Vol. 17, 14 February 2024 — Special Issue: Administrative Units",
+      "url": "https://www.interior.go.ke/sites/default/files/2024-05/gazette-vol.-17-14-2-24-special-admin-units.pdf",
+      "published_on": "2024-02-14",
+      "source_location": "Printed page 526; Kiambu County > Githunguri Sub-County",
+      "supports": [
+        "Kiambururu is listed as a Location under Githunguri Sub-County in Kiambu County."
+      ],
+      "limitations": [
+        "Does not publish a persistent machine-readable identifier crosswalk to GeoNames ID 192705.",
+        "This proposal does not store or claim a verified source-file hash."
+      ]
+    },
+    {
+      "source_key": "kiambu-county-administrative-units",
+      "authority": "Kiambu County Government",
+      "title": "Administrative Units",
+      "url": "https://kiambu.go.ke/administrative-units/",
+      "published_on": null,
+      "supports": [
+        "Distinguishes national-government administrative sub-counties from county-government/electoral units.",
+        "Lists Githunguri among national-government administrative sub-counties."
+      ],
+      "limitations": [
+        "Does not provide a GeoNames identifier crosswalk for Githunguri Sub-County or Kiambururu Location."
+      ]
+    },
+    {
+      "source_key": "knbs-statistical-abstract-2025",
+      "authority": "Kenya National Bureau of Statistics",
+      "title": "2025 Statistical Abstract — Administrative Units",
+      "url": "https://www.knbs.or.ke/wp-content/uploads/2025/11/2025-Statistical-Abstract.pdf",
+      "published_on": "2025",
+      "supports": [
+        "Lists Githunguri under Kiambu County."
+      ],
+      "limitations": [
+        "The displayed SNO value is a serial number, not a persistent canonical sub-county identifier."
+      ]
+    }
+  ],
+  "proposal_units": [
+    {
+      "proposal_key": "ke:national-admin-unit:kiambu-county",
+      "country_code": "KE",
+      "official_name": "Kiambu County",
+      "unit_level": "county",
+      "proposal_key_is_official_identifier": false,
+      "production_uuid": null,
+      "geonames_crosswalk": {
+        "status": "NOT_RESOLVED_BY_THIS_FIXTURE",
+        "approved_geonames_id": null
+      },
+      "selectability": "NOT_DECIDED",
+      "notes": [
+        "Included as source-path context only.",
+        "Do not create a second selectable county without the separate catalog identity and duplicate-prevention review."
+      ]
+    },
+    {
+      "proposal_key": "ke:national-admin-unit:kiambu:githunguri-sub-county",
+      "country_code": "KE",
+      "official_name": "Githunguri Sub-County",
+      "unit_level": "sub_county",
+      "parent_proposal_key": "ke:national-admin-unit:kiambu-county",
+      "proposal_key_is_official_identifier": false,
+      "official_identifier": null,
+      "production_uuid": null,
+      "geonames_crosswalk": {
+        "status": "NO_EXACT_SUBCOUNTY_FEATURE_FOUND_IN_REVIEWED_GEONAMES_KE_SNAPSHOT",
+        "approved_geonames_id": null,
+        "candidate_geonames_ids": [],
+        "evidence": "The source-pinned GeoNames Kenya candidate scan found zero exact Githunguri Sub-County administrative-label candidates. This is bounded to the reviewed source snapshot and search method."
+      },
+      "selectability": "NOT_SELECTABLE_PENDING_SCHEMA_IDENTITY_AND_DUPLICATE_REVIEW"
+    },
+    {
+      "proposal_key": "ke:national-admin-unit:kiambu:githunguri:kiambururu-location",
+      "country_code": "KE",
+      "official_name": "Kiambururu",
+      "unit_level": "location",
+      "parent_proposal_key": "ke:national-admin-unit:kiambu:githunguri-sub-county",
+      "proposal_key_is_official_identifier": false,
+      "official_identifier": null,
+      "production_uuid": null,
+      "geonames_crosswalk": {
+        "status": "UNRESOLVED_CANDIDATE_ONLY",
+        "approved_geonames_id": null,
+        "candidate_geonames_ids": [
+          {
+            "geonames_id": "192705",
+            "geonames_name": "Kiambururu Sub-Location",
+            "feature_code": "ADM3",
+            "disposition": "REVIEW_ONLY_LEVEL_AND_IDENTITY_MISMATCH",
+            "reason": "The official 2024 Gazette reports a Location; GeoNames ID 192705 reports Sub-Location (ADM3). The available evidence does not establish a persistent identifier crosswalk or formal reclassification date."
+          }
+        ],
+        "forbidden_parent_candidate": {
+          "geonames_id": "197219",
+          "geonames_name": "Githunguri Location",
+          "feature_code": "ADMD",
+          "reason": "This is a Location-level record, not the official Githunguri Sub-County parent."
+        }
+      },
+      "raw_geonames_admin1_code_preserved": "01",
+      "raw_geonames_legacy_composite_key_preserved": "KE.01",
+      "selectability": "NOT_SELECTABLE_PENDING_IDENTITY_CROSSWALK_AND_DUPLICATE_REVIEW"
+    }
+  ],
+  "native_path_edges": [
+    {
+      "child_proposal_key": "ke:national-admin-unit:kiambu-county",
+      "parent_reference": "country_code:KE",
+      "relationship_type": "administrative_parent",
+      "status": "SOURCE_PATH_CONTEXT_ONLY",
+      "source_keys": ["ke-gazette-admin-units-2024", "kiambu-county-administrative-units"]
+    },
+    {
+      "child_proposal_key": "ke:national-admin-unit:kiambu:githunguri-sub-county",
+      "parent_proposal_key": "ke:national-admin-unit:kiambu-county",
+      "relationship_type": "administrative_parent",
+      "status": "SOURCE_BACKED_NATIVE_PATH__NOT_OPERATIONAL",
+      "source_keys": ["ke-gazette-admin-units-2024", "kiambu-county-administrative-units", "knbs-statistical-abstract-2025"]
+    },
+    {
+      "child_proposal_key": "ke:national-admin-unit:kiambu:githunguri:kiambururu-location",
+      "parent_proposal_key": "ke:national-admin-unit:kiambu:githunguri-sub-county",
+      "relationship_type": "administrative_parent",
+      "status": "SOURCE_BACKED_NATIVE_PATH__NOT_OPERATIONAL",
+      "source_keys": ["ke-gazette-admin-units-2024"]
+    }
+  ],
+  "decision_boundary": {
+    "source_native_path_documented": true,
+    "approved_geonames_parent_ids": [],
+    "approved_geonames_target_crosswalks": [],
+    "geonames_id_197219_used_as_subcounty_parent": false,
+    "raw_geonames_codes_changed": false,
+    "operational_parent_links_created": 0,
+    "selectable_records_added": 0,
+    "production_uuids_created": 0,
+    "database_migrations_seeds_imports_or_deployments": false,
+    "real_backup_or_restore_claimed": false,
+    "next_gate": "Capture and hash permitted authoritative machine-readable source evidence where available; implement identity, duplicate-prevention and selectability review in a separately authorized schema PR."
+  }
+}
