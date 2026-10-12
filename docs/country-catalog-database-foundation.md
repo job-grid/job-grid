@@ -668,11 +668,11 @@ A versioned, record-specific override resolves the current first-order parent fo
 
 GeoNames ID 192705 (Kiambururu) remains unresolved: the official native path names Githunguri Sub-County, but no matching GeoNames/catalog parent node is verified. ID 197219 is Githunguri Location and cannot be substituted. The historic 128-row exclusion snapshot is unchanged; CI generates a separate effective overlay of 127 unresolved exceptions (126 Japan plus Kiambururu) and removes only Imenti Central from that exclusion list. No operational database parent link is written.
 
-## 5Q. Public UN M49 country-code cross-check — 2026-10-12
+## 5Q. Public UN M49 country/area code cross-check — 2026-10-12
 
-A reproducible CI audit now compares GeoNames countryInfo alpha-2/alpha-3 pairs against the live public UN M49 table, which displays ISO-assigned alpha codes. First measured result: **252 GeoNames rows; 248 exact code pairs; 4 GeoNames pairs absent from the UN table; zero alpha-code conflicts and zero duplicate code groups.** The four out-of-table pairs remain explicit review cases. Source hashes, row-level reconciliation and measured counts are in [the audit report](geonames-un-m49-crosswalk-audit-2026-10-12.md) and the [short-lived CI artifact](https://github.com/job-grid/job-grid/actions/runs/38186018959/artifacts/11719920819).
+The source-pinned CI cross-check now requires the live GeoNames `countryInfo.txt` and public UN M49 table to reconcile by exact alpha-2/alpha-3 pairs, plus a versioned disposition for every source row not listed separately in M49. The measured run parsed **252 GeoNames rows; 248 exact M49 alpha-code pairs; 4 tuples absent from M49; zero code conflicts and zero duplicate code groups**. The exception manifest covers Kosovo, Taiwan, historical Serbia and Montenegro, and historical Netherlands Antilles. CI fails closed if a new unmatched tuple appears or a disposition becomes stale. See [the measured report](geonames-un-m49-crosswalk-audit-2026-10-12.md), [exception manifest](geonames-un-m49-exception-dispositions-2026-10-12.json) and [CI evidence/candidate package](https://github.com/job-grid/job-grid/actions/runs/38190820033/artifacts/11721722211).
 
-This public cross-check is not a direct ISO Country Codes Collection download. The direct ISO-package provenance question is not falsely marked closed. UN M49 numeric codes are statistical identifiers, not treated as ISO numeric-3 proof. No codes, schema, database, migrations, seeds, imports, production or deployment state were changed. Worldwide destination completeness and the remaining hierarchy/association review gates remain open.
+The public UN source exposes ISO alpha-code fields, but this is not a live ISO Country Codes Collection/OBP snapshot. M49 numerical codes remain a separate statistical namespace; numeric ISO values are nullable until independently verified. No source code is automatically replaced and no code audit creates a production selector or database row.
 
 ## 5R. Destination-source feature coverage audit — 2026-10-12
 
@@ -682,3 +682,14 @@ Candidate place IDs and current administrative IDs are now checked for source id
 
 The acceptance rules and feature-code boundary are documented in [Worldwide destination completeness and selector policy](worldwide-destination-completeness-and-selector-policy-2026-10-12.md). Latest source-feature coverage counts remain pending the Phase 0 run triggered by the current audit changes. No data, schema, parent path, migration, seed, import or production state was changed.
 
+
+
+## 5S. Country/area destination candidate package — 2026-10-12
+
+The current CI job emits a structured, row-level country/area destination candidate package from the live GeoNames `countryInfo` snapshot and current public UN M49 table. The candidate package must account for all source rows exactly once and enforce the curated exception manifest before emitting output.
+
+Measured counts: **252 source records accounted for; 248 exact UN M49 code-pair records; 250 proposed current destination-area candidates; 2 historical reference records; 0 operationally selectable rows**. The 250 current options consist of the 248 M49-listed country/area rows plus the separately searchable Kosovo and Taiwan geographic destination areas. Serbia and Montenegro (former entity, dissolved 2006) and Netherlands Antilles (former entity, dissolved 2010) remain retained, historical and nonselectable. The candidate package is attached to [the successful country-area CI run](https://github.com/job-grid/job-grid/actions/runs/38190820033/artifacts/11721722211), along with source hashes and row-level crosswalk evidence.
+
+The output is a source-reconciled **candidate import package**, not a static production seed. It preserves GeoNames IDs/raw tuples as source identifiers, separates current ISO fields from M49 codes, records a distinct historical/active destination role, and makes sovereignty claims explicitly false. Operational selection remains disabled until the owner-approved catalog policy and the database/security/recovery gates are cleared.
+
+This is complete for the **country/area source rows in this GeoNames snapshot vs. the current UN M49 scope**. It is not complete for the full Job Grid destination catalogue: populated places and administrative divisions still need a row-level scope acceptance, full parent and country assignment review, alternate-name/language coverage, source freshness policy, and import dry-run. Existing Japan and Kenya parent-path exceptions must remain separate from the country-code result. No migration, seed, import, database write, production change or deployment occurred.
