@@ -1,44 +1,63 @@
-# GeoNames country codes vs official UN M49 alpha-code table — 2026-10-12
+# GeoNames country/area reconciliation and destination candidate package — 2026-10-12
 
-**Audit disposition: PASS WITH 4 SOURCE-CODE REVIEW ITEMS.** The automated public UN M49 alpha-code cross-check passed its structural and unit tests. This does not close every country-catalog acceptance gate and no code was changed automatically.
+**Country/area code result: PASS WITH DOCUMENTED EXCEPTIONS.** The live CI job reconciled the entire current GeoNames countryInfo list against the current public UN M49 country/area table, and now emits a row-level country/area destination candidate package. This is a country/area-layer deliverable only; it does not certify every city/town, administrative parent, alias, or operational database record.
 
 ## Measured result
 
-Phase 0 CI run [#38186018959](https://github.com/job-grid/job-grid/actions/runs/38186018959), job **Phase 0 CI / Country-area code crosswalk audit**, completed successfully and uploaded [row-level evidence and the source manifest](https://github.com/job-grid/job-grid/actions/runs/38186018959/artifacts/11719920819).
+Phase 0 CI run [#38190820033](https://github.com/job-grid/job-grid/actions/runs/38190820033), job **Phase 0 CI / Country-area code crosswalk audit**, completed successfully. Its [country/area code audit and destination candidate package](https://github.com/job-grid/job-grid/actions/runs/38190820033/artifacts/11721722211) includes source provenance, row-level reconciliation, and the candidate CSV/JSON.
 
 | Measure | Result |
 |---|---:|
 | GeoNames countryInfo rows parsed | 252 |
-| Coded country/area rows in the UN M49 table | 248 |
+| Current coded country/area rows in UN M49 | 248 |
 | Exact alpha-2 + alpha-3 pairs matched, GeoNames → UN M49 | 248 |
 | Exact alpha-2 + alpha-3 pairs matched, UN M49 → GeoNames | 248 |
-| GeoNames pairs not present in UN M49 | 4 |
-| Alpha-2 matches with conflicting alpha-3 | 0 |
-| Alpha-3 matches with conflicting alpha-2 | 0 |
-| UN M49 pairs missing from GeoNames or conflicting | 0 |
-| Duplicate GeoNames or UN alpha-code groups | 0 |
-| GeoNames numeric-3 values equal to M49 numerical codes on exact-pair rows (diagnostic only) | 248 |
-| Rows requiring manual review | 4 |
+| Source tuples absent from current UN M49 | 4 |
+| Alpha-2/alpha-3 conflicts | 0 |
+| Duplicate code groups | 0 |
+| Undocumented source exceptions | 0 |
+| Country/area records accounted for in candidate package | 252 / 252 |
+| Proposed current destination-area candidates | 250 |
+| Historical records retained but nonselectable | 2 |
+| Operational selectability applied | 0 |
+| Database or production writes | 0 |
 
-The four GeoNames-only pairs are preserved as review cases in the artifact. They are **not** treated as invalid records, assigned replacement codes, or marked selectable. The row-level artifact is retained temporarily by GitHub Actions.
+The 250 proposed destination entries are the 248 UN M49 coded country/area records plus two current geographic destination areas that do not appear as separate current rows in UN M49. The two old source entities are retained as historic references and excluded from current destination selection. The candidate export is deliberately **not** an import or a live selector configuration.
 
-## Captured source provenance
+## Four documented exceptions
 
-| Source | Retrieval time (UTC) | HTTP | Bytes | SHA-256 |
-|---|---|---:|---:|---|
-| [GeoNames countryInfo.txt](https://download.geonames.org/export/dump/countryInfo.txt) | 2026-10-11T23:53:58Z | 200 | 31,680 | `c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974` |
-| [UNSD M49 overview](https://unstats.un.org/unsd/methodology/m49/overview/) | 2026-10-11T23:53:59Z | 200 | 1,721,575 | `b9048114f6e7f2abda83bf03d4263c9d7cd1bd7230e3d0461025ee7839a7a1fb` |
+The manifest is [versioned in the repository](geonames-un-m49-exception-dispositions-2026-10-12.json). The current CI job checks the actual live source IDs and code tuples against it, verifies every out-of-M49 tuple is covered exactly once, and fails closed if a tuple changes, disappears, or a new unlisted exception appears.
 
-GeoNames retrieval metadata included Last-Modified `Sun, 11 Oct 2026 03:06:52 GMT` and ETag `"7bc0-65d87df9028a7"`. The UN response did not expose Last-Modified or ETag in this retrieval. CI verified the downloaded sizes and SHA-256 values against the same-run source manifest.
+| GeoNames record | Current disposition | Destination behavior |
+|---|---|---|
+| Kosovo, ID `831053`, source tuple `XK/XKX/0` | Current destination area; GeoNames tuple retained only as source identifiers; ISO fields left null | Proposed searchable/selectable destination without a sovereignty claim |
+| Taiwan, ID `1668284`, source tuple `TW/TWN/158` | Current destination area; tuple has corroborating ISO newsletter evidence; live ISO OBP/collection refresh remains outstanding | Proposed searchable/selectable destination without a sovereignty claim |
+| Serbia and Montenegro, ID `8505033`, historical tuple `CS/SCG/891` | Former entity dissolved on 3 June 2006 into Serbia and Montenegro | Historical reference only; not a current selectable destination |
+| Netherlands Antilles, ID `8505032`, historical tuple `AN/ANT/530` | Former entity dissolved on 10 October 2010; Aruba separated earlier in 1986 | Historical reference only; not a current selectable destination |
 
-## Correct interpretation
+### Why the two current destination areas are separate from sovereignty policy
 
-The join uses only exact pairs of ISO-assigned alpha-2 and alpha-3 codes displayed by the official UN table. Names are not identity keys. UN M49 numeric values are statistical identifiers maintained by UNSD, so equality with GeoNames numeric values is diagnostic only, not proof of ISO numeric-3 conformity.
+UNSD says M49 is a statistical classification and its groupings do not imply political affiliation. Its FAQ explains that Kosovo is considered part of Serbia for M49 purposes, with numerical code 412 available for strictly statistical use; it similarly places Taiwan Province of China within China for M49, while 158 may be used for strictly statistical purposes. Those are M49 classification notes, not rules that Job Grid must suppress a geographic destination from a job-location search. Source codes remain preserved and any statistical rollup must be represented separately from ISO codes. [UN M49 overview and FAQ](https://unstats.un.org/unsd/methodology/m49/?hl=en-GB).
 
-This is a reproducible public cross-check and avoids requiring the paid ISO Country Codes Collection for this pass. It is **not** a downloaded ISO collection or direct ISO-published machine-readable snapshot. The direct ISO-package provenance gate therefore remains open; exceptional or conflicting rows still need reviewed disposition.
+The ISO newsletter archive provides corroborating code evidence for `TW/TWN/158`, but a live current ISO Online Browsing Platform / Country Codes Collection snapshot was **not** retrieved in this audit. The candidate package records that limitation and does not claim the public UN table is a substitute for all current ISO records. [ISO country-code information](https://www.iso.org/iso-3166-country-codes.html) · [ISO 3166 newsletter VI-3](https://www.iso.org/modules/legacy_files/n567_newsletter.pdf).
 
-## Remaining country and destination work
+UNSD's recent-changes notes say Serbia and Montenegro was dissolved in 2006 into Serbia (M49 688) and Montenegro (M49 499). They also say the Netherlands Antilles federation was dissolved in 2010; Aruba had already separated in 1986, while Curaçao, Sint Maarten and Bonaire/Sint Eustatius/Saba have successor-context records. These records are never reactivated as current destinations. [UNSD M49 recent changes](https://unstats.un.org/unsd/methodology/m49/?hl=en-GB) · [ISO 3166-3 (formerly used country names)](https://www.iso.org/standard/72484.html).
 
-This code comparison does not establish complete destination coverage or resolve the place hierarchy. The four out-of-table code pairs require individual review from the artifact; entity classification/selectability policy, remaining crosswalk and association cases, country-specific administrative parent paths, localized names, destination feature coverage and source-update policy remain open. Kiambururu remains unresolved by GeoNames identity and must not be force-matched to the similarly named Githunguri Location.
+## Candidate package contents and code policy
 
-No source codes were rewritten. No database schema, migration, seed, import, production write or deployment was performed. The wider PR #27 Phase 0 run was still in progress when this job completed; see the run page for overall CI status.
+The CI artifact includes:
+- `country-area-destination-catalog-candidate.csv` — 252 row-level candidate records for review;
+- `country-area-destination-catalog-candidate.json` — structured records and integrity counts;
+- row-level source reconciliation CSV/JSON;
+- aggregate code audit JSON and the actual source snapshot manifest;
+- the versioned exception-disposition manifest.
+
+Each candidate retains GeoNames ID and raw countryInfo code tuple, carries a distinct source/matching status, and uses the UN M49 country/area label for exact pair matches. Alpha-2 and alpha-3 values are copied from the UN table's expressly labelled ISO fields for matched rows. M49 numeric codes stay in a separate field. For ordinary rows, `iso_numeric3` remains null until it is verified from an approved ISO source; the numeric source value is retained separately as a candidate. The candidate package never claims that records have already become selectable in the live system.
+
+## What is and is not complete
+
+**Completed for this pass:** all 252 countryInfo source rows have one identity/code disposition; all 248 current UN M49 country/area rows match GeoNames by exact alpha-code pair; the four exceptions are versioned and no automatic replacements are authorized. The package contains 250 proposed current destination-area entries and two historic records.
+
+**Still open:** current ISO source refresh for numeric-code maintenance and Taiwan periodic re-verification; approval of product display/selectability policy; all city/town/locality and administrative-area candidates; parent hierarchy verification (including 126 Japan ADM4 paths and the Kenya Kiambururu mismatch); alternate-name/language coverage; source update lifecycle and final dry-run/import reconciliation. The wider GeoNames source scan covers 13,472,324 rows, but source row counts alone do not certify place-level completeness.
+
+No database schema, migration, seed, import, live selector change, production write, or deployment was made. PR #27 remains a draft; the database/recovery gates remain separate from this country/area candidate package.
