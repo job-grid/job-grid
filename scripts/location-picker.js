@@ -19,7 +19,7 @@ const FALLBACK_COUNTRIES = [
 const SELECTABLE_FEATURE_CODES = new Set([
   "ADM1", "ADM2", "ADM3", "ADM4", "ADM5", "ADMD",
   "PPL", "PPLA", "PPLA2", "PPLA3", "PPLA4", "PPLA5",
-  "PPLC", "PPLCD", "PPLF", "PPLG", "PPLL", "PPLR"
+  "PPLC", "PPLCD", "PPLF", "PPLG", "PPLL", "PPLR", "PPLS"
 ]);
 
 /** Normalize the remote country-list response without treating it as persisted catalog data. */
