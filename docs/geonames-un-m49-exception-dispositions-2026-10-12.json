@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "title": "GeoNames countryInfo rows absent from current UN M49 alpha-code table",
+  "disposition_policy": "Keep source identifiers immutable. Distinguish current searchable destination areas from historical former entities. Destination selection is a geographic product behavior and does not assert sovereignty, treaty status, immigration eligibility, or statistical treatment.",
+  "comparison_scope": {
+    "geonames_source": "https://download.geonames.org/export/dump/countryInfo.txt",
+    "un_source": "https://unstats.un.org/unsd/methodology/m49/overview/",
+    "observed_count": 4,
+    "join_key": "Exact alpha-2 + alpha-3 pair",
+    "no_automatic_code_replacement": true
+  },
+  "records": [
+    {
+      "geonames_id": "831053",
+      "geonames_name": "Kosovo",
+      "source_codes": {
+        "alpha2": "XK",
+        "alpha3": "XKX",
+        "numeric3": "0"
+      },
+      "m49_disposition": "No separate current country/area row in the live M49 overview; UNSD FAQ says Kosovo is considered part of Serbia (M49 688) for M49 purposes and code 412 may be used for strictly statistical purposes.",
+      "catalog_role": "current_destination_area",
+      "canonical_display_name": "Kosovo",
+      "status": "active",
+      "selectable_as_destination": true,
+      "sovereignty_claim": false,
+      "iso_codes": {
+        "alpha2": null,
+        "alpha3": null,
+        "numeric3": null
+      },
+      "iso_code_policy": "Do not map XK/XKX/0 into ISO fields. Preserve these values only in source identifiers; do not treat M49 statistical code 412 as ISO numeric-3.",
+      "relationship_policy": "Do not silently merge the destination area into the Serbia country identity. If statistical rollups are needed, record a separately typed source/statistical association with explicit provenance.",
+      "source_urls": [
+        "https://unstats.un.org/unsd/methodology/m49/?hl=en-GB",
+        "https://www.iso.org/iso-3166-country-codes.html",
+        "https://download.geonames.org/export/dump/countryInfo.txt"
+      ]
+    },
+    {
+      "geonames_id": "1668284",
+      "geonames_name": "Taiwan",
+      "source_codes": {
+        "alpha2": "TW",
+        "alpha3": "TWN",
+        "numeric3": "158"
+      },
+      "m49_disposition": "No separate current country/area row in the live M49 overview; UNSD FAQ says Taiwan Province of China is treated within China (M49 156) for M49 purposes, while 158 may be used for strictly statistical purposes.",
+      "catalog_role": "current_destination_area",
+      "canonical_display_name": "Taiwan",
+      "status": "active",
+      "selectable_as_destination": true,
+      "sovereignty_claim": false,
+      "iso_codes": {
+        "alpha2": "TW",
+        "alpha3": "TWN",
+        "numeric3": "158"
+      },
+      "iso_code_policy": "Retain the source tuple and corroborating ISO 3166 newsletter evidence with provenance; the audit has not downloaded the live ISO OBP/Code Collection, so ISO source-refresh verification remains an explicit periodic review.",
+      "relationship_policy": "Keep Taiwan as an independently searchable geographic destination record. Do not infer or encode a sovereignty relationship from this destination-selectability decision. Do not treat M49 grouping as a Job Grid place-identity parent.",
+      "source_urls": [
+        "https://unstats.un.org/unsd/methodology/m49/?hl=en-GB",
+        "https://www.iso.org/modules/legacy_files/n567_newsletter.pdf",
+        "https://www.iso.org/iso-3166-country-codes.html",
+        "https://download.geonames.org/export/dump/countryInfo.txt"
+      ]
+    },
+    {
+      "geonames_id": "8505033",
+      "geonames_name": "Serbia and Montenegro",
+      "source_codes": {
+        "alpha2": "CS",
+        "alpha3": "SCG",
+        "numeric3": "891"
+      },
+      "m49_disposition": "Historical former entity. UNSD records that Serbia and Montenegro formally dissolved on 3 June 2006 into Serbia (M49 688) and Montenegro (M49 499).",
+      "catalog_role": "historical_reference",
+      "canonical_display_name": "Serbia and Montenegro (historical)",
+      "status": "historical_inactive",
+      "selectable_as_destination": false,
+      "sovereignty_claim": false,
+      "iso_codes": {
+        "alpha2": null,
+        "alpha3": null,
+        "numeric3": null
+      },
+      "iso_code_policy": "The CS/SCG/891 tuple is retained as historical source metadata only; it must not be used as a current ISO country code tuple.",
+      "valid_to": "2006-06-03",
+      "historical_successor_context": [
+        {
+          "name": "Serbia",
+          "m49_code": "688",
+          "relationship": "historical_successor_context"
+        },
+        {
+          "name": "Montenegro",
+          "m49_code": "499",
+          "relationship": "historical_successor_context"
+        }
+      ],
+      "relationship_policy": "Historical context only, not an active parent, merge, redirect to a single successor, or selectable destination.",
+      "source_urls": [
+        "https://unstats.un.org/unsd/methodology/m49/?hl=en-GB",
+        "https://www.iso.org/standard/72484.html",
+        "https://download.geonames.org/export/dump/countryInfo.txt"
+      ]
+    },
+    {
+      "geonames_id": "8505032",
+      "geonames_name": "Netherlands Antilles",
+      "source_codes": {
+        "alpha2": "AN",
+        "alpha3": "ANT",
+        "numeric3": "530"
+      },
+      "m49_disposition": "Historical former entity. UNSD says the Netherlands Antilles federation was formally dissolved on 10 October 2010; Aruba separated earlier in 1986.",
+      "catalog_role": "historical_reference",
+      "canonical_display_name": "Netherlands Antilles (historical)",
+      "status": "historical_inactive",
+      "selectable_as_destination": false,
+      "sovereignty_claim": false,
+      "iso_codes": {
+        "alpha2": null,
+        "alpha3": null,
+        "numeric3": null
+      },
+      "iso_code_policy": "The AN/ANT/530 tuple is preserved in historical source identifiers only, not in current ISO fields.",
+      "valid_to": "2010-10-10",
+      "historical_successor_context": [
+        {
+          "name": "Aruba",
+          "m49_code": "533",
+          "relationship": "historical_successor_context",
+          "note": "Separated in 1986; do not imply it was first created at the 2010 dissolution."
+        },
+        {
+          "name": "Curaçao",
+          "m49_code": "531",
+          "relationship": "historical_successor_context"
+        },
+        {
+          "name": "Sint Maarten (Dutch part)",
+          "m49_code": "534",
+          "relationship": "historical_successor_context"
+        },
+        {
+          "name": "Bonaire, Sint Eustatius and Saba",
+          "m49_code": "535",
+          "relationship": "historical_successor_context"
+        }
+      ],
+      "relationship_policy": "Historical reference only. The successor context is not a universal parent edge; post-2010 constitutional arrangements differ between the islands.",
+      "source_urls": [
+        "https://unstats.un.org/unsd/methodology/m49/?hl=en-GB",
+        "https://www.iso.org/standard/72484.html",
+        "https://download.geonames.org/export/dump/countryInfo.txt"
+      ]
+    }
+  ]
+}
