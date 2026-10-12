@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { normalizeCountries, buildGeocodingUrl, normalizeLocations, buildPlaceLabel, escapeLocationText } from "../scripts/location-picker.js";
+import { normalizeCountries, buildGeocodingUrl, normalizeLocations, buildPlaceLabel, buildLocationSelectionPayload, escapeLocationText } from "../scripts/location-picker.js";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
