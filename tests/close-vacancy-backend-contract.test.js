@@ -82,7 +82,7 @@ test("Edge Function derives actor from verified Auth session and rejects client 
 
 test("Edge Function uses bounded payloads and exact allowlisted origins", () => {
   assert.ok(handler.includes("MAX_BODY_BYTES = 4096"));
-  assert.ok(handler.includes('Deno.env.get("ALLOWED_ORIGINS")'));
+  assert.ok(handler.includes('const getEnv = dependencies.getEnv ?? ((name: string) => Deno.env.get(name))'));
   assert.ok(handler.includes("if (origin && !origins.has(origin))"));
   assert.ok(handler.includes('"Cache-Control", "no-store"'));
 });
