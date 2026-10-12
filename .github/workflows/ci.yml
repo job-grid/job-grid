@@ -2463,6 +2463,7 @@ jobs:
           OUTPUT_DIR: ${{ runner.temp }}/geonames-full-source-audit
         run: |
           set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
           retrieved_at="$(cat "$SOURCE_DIR/retrieved-at.txt")"
           python3 scripts/geonames-full-source-audit.py --source-dir "$SOURCE_DIR" --output-dir "$OUTPUT_DIR" --retrieved-at-utc "$retrieved_at" | tee "$OUTPUT_DIR/console-summary.json"
           cat "$OUTPUT_DIR/geonames-full-source-audit.md" | tee -a "$GITHUB_STEP_SUMMARY"
