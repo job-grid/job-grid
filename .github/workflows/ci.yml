@@ -1679,24 +1679,41 @@ jobs:
             --source-manifest "$alias_work/source-manifest.json" \
             --output-dir "$output" \
             | tee "$alias_work/alternate-name-export.stdout.json"
-          python3 - "$output/worldwide-geonames-country-and-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          python3 - "$output/worldwide-geonames-country-and-destination-alternate-name-summary.json" "$output/worldwide-geonames-destination-candidate-export-summary.json" "$audit/geonames-country-catalog-aggregate.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import json,sys
           from pathlib import Path
           aliases=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           candidates=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          country_master=json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
           c=aliases["counts"]
+          master_counts=country_master.get("counts",{})
+          expected_country_area_rows=master_counts.get("country_info_rows")
+          expected_country_sha=country_master.get("sources",{}).get("country_info",{}).get("sha256")
           if aliases.get("status")!="PASS_ALIAS_SCOPE_RECONCILED__CANDIDATES_ONLY__NOT_IMPORTED":
               raise SystemExit("Destination alias export did not pass.")
           if c.get("destination_candidate_ids")!=candidates.get("counts",{}).get("candidate_file_rows"):
               raise SystemExit("Alias destination IDs do not equal unique destination candidate input.")
-          if c.get("country_area_source_ids")!=252:
-              raise SystemExit("Alternate-name audit must include all 252 country/area source identities.")
+          if not isinstance(expected_country_area_rows,int) or expected_country_area_rows<=0:
+              raise SystemExit("Pinned country-master audit has no valid countryInfo row count.")
+          if c.get("country_area_source_ids")!=expected_country_area_rows:
+              raise SystemExit("Alias audit country/area ID count does not match the pinned countryInfo source.")
+          country_source=aliases.get("sources",{}).get("country_info_source",{})
+          if not expected_country_sha or country_source.get("sha256")!=expected_country_sha:
+              raise SystemExit("Alias audit countryInfo SHA-256 does not match the source-pinned country-master audit.")
+          if sum(int(row.get("source_scope_records",0)) for row in aliases.get("per_country_area_alpha2",[]))!=expected_country_area_rows:
+              raise SystemExit("Per-alpha-2 country/area coverage rows do not reconcile to countryInfo.")
+          if sum(int(row.get("source_scope_records",0)) for row in aliases.get("per_source_country_code",[]))!=c.get("destination_candidate_ids"):
+              raise SystemExit("Per-source-country destination coverage rows do not reconcile to candidate input.")
           if c.get("source_scope_record_ids")!=c.get("destination_candidate_ids",0)+c.get("country_area_source_ids",0):
               raise SystemExit("Combined alias source scope does not reconcile.")
           if c.get("malformed_or_invalid_source_rows")!=0 or c.get("invalid_boolean_flag_rows")!=0:
               raise SystemExit("Alternate-name source contains malformed rows/flags.")
           if c.get("duplicate_matching_alternate_name_ids")!=0:
               raise SystemExit("Duplicate matching alternateName IDs block alias acceptance.")
+          destination_alias_rows=sum(int(row.get("matching_alias_rows",0)) for row in aliases.get("per_source_country_code",[]))
+          country_alias_rows=sum(int(row.get("matching_alias_rows",0)) for row in aliases.get("per_country_area_alpha2",[]))
+          if destination_alias_rows+country_alias_rows!=c.get("matching_alias_rows_exported"):
+              raise SystemExit("Destination and country/area alias row totals do not reconcile.")
           if c.get("matching_alias_rows_exported")!=c.get("unique_matching_alternate_name_ids"):
               raise SystemExit("Alias row count does not reconcile to unique alias IDs.")
           if c.get("operational_selectable_rows")!=0 or aliases.get("interpretation",{}).get("database_or_production_changes") is not False:
