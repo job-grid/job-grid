@@ -14,6 +14,14 @@ const FALLBACK_COUNTRIES = [
   { code: "ZA", name: "South Africa" }
 ];
 
+// Conservative current-place/admin allowlist. Historical divisions/places and sub-place records
+// remain evidence/review candidates, not direct city/town/locality suggestions.
+const SELECTABLE_FEATURE_CODES = new Set([
+  "ADM1", "ADM2", "ADM3", "ADM4", "ADM5", "ADMD",
+  "PPL", "PPLA", "PPLA2", "PPLA3", "PPLA4", "PPLA5",
+  "PPLC", "PPLCD", "PPLF", "PPLG", "PPLL", "PPLR"
+]);
+
 /** Normalize the remote country-list response without treating it as persisted catalog data. */
 export function normalizeCountries(rows) {
   if (!Array.isArray(rows)) return [];
@@ -50,8 +58,8 @@ export function normalizeLocations(payload, countryCode) {
     const id = item?.id == null ? "" : String(item.id);
     const featureCode = String(item?.feature_code ?? "").trim().toUpperCase();
     if (code !== selectedCode || !name || !id) continue;
-    // A missing/unknown feature type is review-only; do not turn it into a place by default.
-    if (!featureCode || (!featureCode.startsWith("PPL") && !featureCode.startsWith("ADM"))) continue;
+    // Unknown, historical, abandoned/destroyed, and sub-place feature codes are review-only.
+    if (!SELECTABLE_FEATURE_CODES.has(featureCode)) continue;
     if (seen.has(id)) continue;
     seen.add(id);
     results.push({
