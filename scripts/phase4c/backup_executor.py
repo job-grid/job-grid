@@ -462,6 +462,7 @@ def _read_migration_state(source: SourcePostgresConfig) -> str:
             password=source.password,
             connect_timeout=5,
             sslmode="verify-full",
+            sslrootcert=os.environ.get("PGSSLROOTCERT"),
             autocommit=True,
             options="-c statement_timeout=5000",
         ) as conn:
@@ -645,13 +646,17 @@ def _build_dump_command(source: SourcePostgresConfig, output_path: Path) -> list
 
 
 def _child_env(source: SourcePostgresConfig) -> dict[str, str]:
+    ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
+    if not ca_file or not Path(ca_file).is_file():
+        raise SafetyError("Verified PostgreSQL root certificate is required.")
     return {
         "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
         "LANG": os.environ.get("LANG", "C"),
         "LC_ALL": os.environ.get("LC_ALL", "C"),
         "PGPASSWORD": source.password,
-        # Set TLS verification for pg_dump itself, not only the psycopg preflight.
+        # Require encrypted transport, CA verification, and hostname verification.
         "PGSSLMODE": "verify-full",
+        "PGSSLROOTCERT": ca_file,
     }
 
 
