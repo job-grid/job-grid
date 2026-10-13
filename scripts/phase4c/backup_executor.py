@@ -462,7 +462,7 @@ def _read_migration_state(source: SourcePostgresConfig) -> str:
             password=source.password,
             connect_timeout=5,
             sslmode="verify-full",
-            sslrootcert=os.environ.get("PGSSLROOTCERT"),
+            sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
             options="-c statement_timeout=5000",
         ) as conn:
