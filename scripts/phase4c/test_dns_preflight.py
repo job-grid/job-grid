@@ -1,10 +1,12 @@
+import os
+import ssl
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from production_preflight import APPROVED_HOST, BackupPreflight, PreflightCode, PreflightConfig, PreflightFailure, check_dns
+from production_preflight import APPROVED_HOST, BackupPreflight, PreflightCode, PreflightConfig, PreflightFailure, _create_postgres_ssl_context, check_dns
 
 
 class DNSPreflightTests(unittest.TestCase):
@@ -62,6 +64,37 @@ class DNSPreflightTests(unittest.TestCase):
                 BackupPreflight(r2_client=object(), bucket="synthetic").run(config)
         self.assertEqual(ctx.exception.code, PreflightCode.TCP_FAILED.value)
         client_check.assert_not_called()
+
+
+    def test_ssl_context_loads_supabase_root_ca_without_disabling_verification(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "project-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("production_preflight.ssl.create_default_context") as create_context:
+                    context = create_context.return_value
+                    result = _create_postgres_ssl_context()
+            self.assertIs(result, context)
+            context.load_verify_locations.assert_called_once_with(cafile=str(ca_file))
+            self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)
+
+    def test_ssl_context_fails_closed_when_root_ca_is_missing(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(PreflightFailure) as ctx:
+                _create_postgres_ssl_context()
+        self.assertEqual(ctx.exception.code, PreflightCode.TLS_FAILED.value)
+
+    def test_ssl_context_converts_invalid_ca_to_fixed_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "project-root-ca.crt"
+            ca_file.write_text("invalid CA fixture", encoding="utf-8")
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("production_preflight.ssl.create_default_context") as create_context:
+                    create_context.return_value.load_verify_locations.side_effect = ssl.SSLError("secret certificate detail")
+                    with self.assertRaises(PreflightFailure) as ctx:
+                        _create_postgres_ssl_context()
+        self.assertEqual(ctx.exception.code, PreflightCode.TLS_FAILED.value)
+        self.assertNotIn("secret certificate detail", str(ctx.exception))
 
 if __name__ == "__main__":
     unittest.main()
