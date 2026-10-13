@@ -255,6 +255,32 @@ def pg_dump_failure_diagnostic(stderr: bytes | str, exit_code: int) -> str:
     )
 
 
+def is_sanitized_pg_dump_failure_diagnostic(message: str) -> bool:
+    """Accept only the exact fixed-label diagnostic emitted by this module.
+
+    This lets the outer executor preserve safe failure classification without
+    ever forwarding arbitrary subprocess stderr or exception text.
+    """
+    categories = (
+        "authentication|authorization|connection|tls|server_query|pg_dump_error|"
+        "option_usage|client_compatibility|local_io|unknown"
+    )
+    details = (
+        "server_closed_connection|connection_lost|connection_send_failed|"
+        "connection_receive_failed|server_version_mismatch|"
+        "server_version_newer_than_client|query_failed|output_open_failed|"
+        "output_write_failed|disk_full|io_error|authentication_failed|"
+        "no_password|tls_certificate|ssl_error|connection_refused|"
+        "connection_timeout|dns_failure|option_usage|generic_pg_dump_error|"
+        "unclassified"
+    )
+    pattern = (
+        r"pg_dump failed: category=(" + categories + r") detail=(" + details +
+        r") exit_code=[0-9]+ stderr_sha256=[0-9a-f]{64} stderr_bytes=[0-9]+"
+    )
+    return re.fullmatch(pattern, message) is not None
+
+
 class SubprocessCommandRunner:
     """Runs pg_dump without placing the database password in argv."""
 
@@ -708,6 +734,12 @@ class BackupExecutor:
                 )
                 if not plaintext.is_file() or plaintext.stat().st_size == 0:
                     raise RuntimeError
+            except BackupError as exc:
+                # Preserve only our strictly allow-listed sanitized classifier.
+                # All arbitrary exception text remains hidden from logs.
+                if is_sanitized_pg_dump_failure_diagnostic(str(exc)):
+                    raise
+                raise BackupError("PG_DUMP_FAILED") from None
             except Exception:
                 raise BackupError("PG_DUMP_FAILED") from None
 
