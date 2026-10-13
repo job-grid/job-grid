@@ -97,6 +97,17 @@ class FakeRunner:
 
 
 class FoundationTests(unittest.TestCase):
+    def setUp(self):
+        self._ca_temp = tempfile.TemporaryDirectory()
+        self.ca_file = Path(self._ca_temp.name) / "synthetic-root-ca.crt"
+        self.ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+        self._ca_env = patch.dict(os.environ, {"PGSSLROOTCERT": str(self.ca_file)}, clear=False)
+        self._ca_env.start()
+
+    def tearDown(self):
+        self._ca_env.stop()
+        self._ca_temp.cleanup()
+
     def config(self, root):
         return BackupConfig(
             source=SourcePostgresConfig(
@@ -250,6 +261,7 @@ class FoundationTests(unittest.TestCase):
             "RECOVERY_POSTGRES_USER": "recovery_user",
             "RECOVERY_POSTGRES_PASSWORD": "synthetic-recovery-password",
             "RECOVERY_PROJECT_REF": RECOVERY_PROJECT_REF,
+            "PGSSLROOTCERT": str(self.ca_file),
             "BACKUP_R2_ENDPOINT_URL": APPROVED_R2_ENDPOINT_URL,
             "BACKUP_R2_BUCKET": BACKUP_BUCKET,
             "BACKUP_R2_ACCESS_KEY_ID": "recovery-access",
