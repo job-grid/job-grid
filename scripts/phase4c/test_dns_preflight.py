@@ -6,7 +6,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from production_preflight import APPROVED_HOST, BackupPreflight, PreflightCode, PreflightConfig, PreflightFailure, _create_postgres_ssl_context, check_dns
+from production_preflight import (
+    APPROVED_HOST,
+    BackupPreflight,
+    PreflightCode,
+    PreflightConfig,
+    PreflightFailure,
+    _create_postgres_ssl_context,
+    check_authentication,
+    check_dns,
+)
 
 
 class DNSPreflightTests(unittest.TestCase):
@@ -95,6 +104,24 @@ class DNSPreflightTests(unittest.TestCase):
                         _create_postgres_ssl_context()
         self.assertEqual(ctx.exception.code, PreflightCode.TLS_FAILED.value)
         self.assertNotIn("secret certificate detail", str(ctx.exception))
+
+
+    def test_authentication_check_supports_psycopg3_connection_info(self):
+        class ConnectionWithoutPsycopg2SslAttribute:
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        config = PreflightConfig(
+            APPROVED_HOST, 5432, "postgres", "synthetic-user",
+            "synthetic-password", "17", Path(tempfile.gettempdir()), b"0" * 32
+        )
+        conn = ConnectionWithoutPsycopg2SslAttribute()
+        with patch("production_preflight._connect", return_value=conn) as connect:
+            check_authentication(config)
+        connect.assert_called_once_with(config)
+        self.assertTrue(conn.closed)
 
 if __name__ == "__main__":
     unittest.main()

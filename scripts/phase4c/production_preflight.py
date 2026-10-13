@@ -181,12 +181,12 @@ def _connect(config: PreflightConfig):
 
 
 def check_authentication(config: PreflightConfig) -> None:
+    # _connect() requires sslmode="verify-full" and the configured root CA.
+    # A successful connection therefore establishes that TLS, certificate-chain
+    # validation, and hostname validation all succeeded. Psycopg 3's
+    # ConnectionInfo does not expose the psycopg2-only ssl_in_use attribute.
     conn = _connect(config)
-    try:
-        if not conn.info.ssl_in_use:
-            _fail(PreflightCode.TLS_FAILED)
-    finally:
-        conn.close()
+    conn.close()
 
 
 def check_database_access(config: PreflightConfig) -> None:
