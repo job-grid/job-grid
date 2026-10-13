@@ -73,7 +73,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-          test "$(command -v pg_restore)" = "/usr/lib/postgresql/17/bin/pg_restore"
+          export PATH="/usr/lib/postgresql/17/bin:$PATH"
+          resolved_pg_restore="$(command -v pg_restore)"
+          test "$resolved_pg_restore" = "/usr/lib/postgresql/17/bin/pg_restore"
+          echo "pg_restore resolved to: $resolved_pg_restore"
+          echo "pg_restore version: $(pg_restore --version)"
 
       - name: Install pinned recovery dependencies
         run: python -m pip install -r scripts/phase4c/requirements-backup.txt
