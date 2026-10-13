@@ -80,7 +80,7 @@ BEGIN
   IF enabled_handler_count < 1 THEN
     RAISE EXCEPTION 'STOP: no enabled event trigger references this function; inspect manually.';
   END IF;
-END
+END;
 $repair$;
 
 -- Remove inherited default execution and any direct grants to API-facing roles.
