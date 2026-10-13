@@ -37,6 +37,7 @@ from backup_executor import (
     classify_pg_dump_failure,
     classify_pg_dump_failure_detail,
     pg_dump_failure_diagnostic,
+    is_sanitized_pg_dump_failure_diagnostic,
     assert_no_restore_target,
     main,
 )
@@ -453,6 +454,59 @@ class BackupExecutorTests(unittest.TestCase):
         self.assertIn("stderr_sha256=" + __import__("hashlib").sha256(b"").hexdigest(), first)
         self.assertIn("stderr_bytes=0", first)
         self.assertRegex(first, r"stderr_sha256=[0-9a-f]{64}")
+
+    def test_sanitized_pg_dump_diagnostic_is_allowlisted_and_executor_preserves_it(self):
+        secret_stderr = (
+            b"pg_dump: error: query failed: ERROR: permission denied "
+            b"for user backup_user password=DO-NOT-LOG "
+            b"postgresql://backup_user:DO-NOT-LOG@private-host/postgres"
+        )
+        diagnostic = pg_dump_failure_diagnostic(secret_stderr, 1)
+        self.assertTrue(is_sanitized_pg_dump_failure_diagnostic(diagnostic))
+        self.assertFalse(is_sanitized_pg_dump_failure_diagnostic(
+            "pg_dump failed: category=server_query " + secret_stderr.decode()
+        ))
+
+        class DiagnosticFailingRunner:
+            def run(self, argv, *, env, output_path):
+                raise BackupError(diagnostic)
+
+        with tempfile.TemporaryDirectory() as temp:
+            executor = BackupExecutor(
+                self.make_config(Path(temp)),
+                command_runner=DiagnosticFailingRunner(),
+                r2_client=FakeR2(),
+                preflight=FakePreflight(),
+            )
+            with self.assertRaises(BackupError) as raised:
+                executor.create_backup()
+
+        message = str(raised.exception)
+        self.assertIn("category=authorization", message)
+        self.assertIn("detail=query_failed", message)
+        self.assertIn("stderr_sha256=", message)
+        self.assertNotIn("DO-NOT-LOG", message)
+        self.assertNotIn("private-host", message)
+        self.assertNotIn(secret_stderr.decode(), message)
+
+    def test_unrecognized_runner_exception_remains_redacted(self):
+        class UnsafeFailingRunner:
+            def run(self, argv, *, env, output_path):
+                raise BackupError("password=NEVER-LOG-THIS host=private.invalid")
+
+        with tempfile.TemporaryDirectory() as temp:
+            executor = BackupExecutor(
+                self.make_config(Path(temp)),
+                command_runner=UnsafeFailingRunner(),
+                r2_client=FakeR2(),
+                preflight=FakePreflight(),
+            )
+            with self.assertRaises(BackupError) as raised:
+                executor.create_backup()
+
+        self.assertEqual(str(raised.exception), "PG_DUMP_FAILED")
+        self.assertNotIn("NEVER-LOG-THIS", str(raised.exception))
+        self.assertNotIn("private.invalid", str(raised.exception))
 
     def test_pg_dump_failure_diagnostic_only_emits_approved_categories(self):
         allowed = {"authentication", "authorization", "connection", "tls", "server_query", "pg_dump_error", "option_usage", "client_compatibility", "local_io", "unknown"}
