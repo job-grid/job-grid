@@ -143,15 +143,21 @@ class BackupExecutorTests(unittest.TestCase):
         )
 
     def run_synthetic_backup(self, root, r2):
-        return BackupExecutor(
-            self.make_config(root),
-            command_runner=FakeRunner(),
-            r2_client=r2,
-            preflight=FakePreflight(),
-            clock=lambda: __import__("datetime").datetime(
-                2026, 10, 8, tzinfo=__import__("datetime").timezone.utc
-            ),
-        ).create_backup()
+        ca_file = root / "synthetic-root-ca.crt"
+        ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+        try:
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                return BackupExecutor(
+                    self.make_config(root),
+                    command_runner=FakeRunner(),
+                    r2_client=r2,
+                    preflight=FakePreflight(),
+                    clock=lambda: __import__("datetime").datetime(
+                        2026, 10, 8, tzinfo=__import__("datetime").timezone.utc
+                    ),
+                ).create_backup()
+        finally:
+            ca_file.unlink(missing_ok=True)
 
     def test_end_to_end_has_complete_four_object_artifact_set(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -482,14 +488,17 @@ class BackupExecutorTests(unittest.TestCase):
                 raise BackupError(diagnostic)
 
         with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "synthetic-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
             executor = BackupExecutor(
                 self.make_config(Path(temp)),
                 command_runner=DiagnosticFailingRunner(),
                 r2_client=FakeR2(),
                 preflight=FakePreflight(),
             )
-            with self.assertRaises(BackupError) as raised:
-                executor.create_backup()
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with self.assertRaises(BackupError) as raised:
+                    executor.create_backup()
 
         message = str(raised.exception)
         self.assertIn("category=authorization", message)
@@ -505,14 +514,17 @@ class BackupExecutorTests(unittest.TestCase):
                 raise BackupError("password=NEVER-LOG-THIS host=private.invalid")
 
         with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "synthetic-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
             executor = BackupExecutor(
                 self.make_config(Path(temp)),
                 command_runner=UnsafeFailingRunner(),
                 r2_client=FakeR2(),
                 preflight=FakePreflight(),
             )
-            with self.assertRaises(BackupError) as raised:
-                executor.create_backup()
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with self.assertRaises(BackupError) as raised:
+                    executor.create_backup()
 
         self.assertEqual(str(raised.exception), "PG_DUMP_FAILED")
         self.assertNotIn("NEVER-LOG-THIS", str(raised.exception))
