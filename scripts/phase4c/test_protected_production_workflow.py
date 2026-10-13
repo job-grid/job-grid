@@ -28,6 +28,7 @@ class ProtectedProductionWorkflowTests(unittest.TestCase):
             "BACKUP_SOURCE_POSTGRES_USER",
             "BACKUP_SOURCE_POSTGRES_PASSWORD",
             "BACKUP_SOURCE_POSTGRES_MAJOR_VERSION",
+            "BACKUP_SOURCE_POSTGRES_CA_CERT",
             "BACKUP_R2_ACCESS_KEY_ID",
             "BACKUP_R2_SECRET_ACCESS_KEY",
             "BACKUP_ENCRYPTION_KEY",

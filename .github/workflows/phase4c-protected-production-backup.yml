@@ -44,6 +44,24 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install trusted production Supabase database CA
+        shell: bash
+        env:
+          SUPABASE_POSTGRES_CA_CERT: ${{ secrets.BACKUP_SOURCE_POSTGRES_CA_CERT }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SUPABASE_POSTGRES_CA_CERT:-}" ]]; then
+            echo "::error::Missing environment secret BACKUP_SOURCE_POSTGRES_CA_CERT."
+            echo "Download the production database root certificate from Supabase Database Settings > SSL Configuration."
+            exit 1
+          fi
+          ca_file="$RUNNER_TEMP/job-grid-production-postgres-root-ca.crt"
+          printf '%s' "$SUPABASE_POSTGRES_CA_CERT" > "$ca_file"
+          chmod 600 "$ca_file"
+          openssl x509 -in "$ca_file" -noout >/dev/null
+          echo "PGSSLROOTCERT=$ca_file" >> "$GITHUB_ENV"
+          unset SUPABASE_POSTGRES_CA_CERT
+
       - name: Install PostgreSQL 17 client
         run: |
           set -euo pipefail

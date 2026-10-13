@@ -119,6 +119,21 @@ def check_tcp(host: str, port: int) -> None:
         _fail(PreflightCode.TCP_FAILED)
 
 
+def _create_postgres_ssl_context() -> ssl.SSLContext:
+    """Trust system roots plus the explicitly configured Supabase database CA."""
+    ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
+    if not ca_file or not Path(ca_file).is_file():
+        _fail(PreflightCode.TLS_FAILED)
+    try:
+        context = ssl.create_default_context()
+        # Keep public roots and add the Supabase project's downloaded root CA.
+        context.load_verify_locations(cafile=ca_file)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        return context
+    except (OSError, ssl.SSLError, ValueError):
+        _fail(PreflightCode.TLS_FAILED)
+
+
 def check_tls(host: str, port: int) -> None:
     raw = None
     try:
@@ -127,8 +142,7 @@ def check_tls(host: str, port: int) -> None:
         raw.sendall(struct.pack("!II", 8, SSL_REQUEST_CODE))
         if raw.recv(1) != b"S":
             _fail(PreflightCode.TLS_FAILED)
-        context = ssl.create_default_context()
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context = _create_postgres_ssl_context()
         with context.wrap_socket(raw, server_hostname=host):
             return
     except PreflightFailure:
@@ -153,6 +167,7 @@ def _connect(config: PreflightConfig):
             password=config.password,
             connect_timeout=PREFLIGHT_TIMEOUT,
             sslmode="verify-full",
+            sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
             options="-c statement_timeout=5000",
         )
