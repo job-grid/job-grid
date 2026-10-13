@@ -25,11 +25,16 @@ from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, Safety
 
 
 PG_RESTORE = "/usr/lib/postgresql/17/bin/pg_restore"
+ARTIFACT_DUMP = "database.dump.enc"
+ARTIFACT_DUMP_SHA = "database.dump.sha256"
+ARTIFACT_MANIFEST = "manifest.json.enc"
+ARTIFACT_MANIFEST_SHA = "manifest.json.sha256"
+
 ARTIFACTS = (
-    "database.dump.enc",
-    "database.dump.sha256",
-    "manifest.json.enc",
-    "manifest.json.sha256",
+    ARTIFACT_DUMP,
+    ARTIFACT_DUMP_SHA,
+    ARTIFACT_MANIFEST,
+    ARTIFACT_MANIFEST_SHA,
 )
 
 

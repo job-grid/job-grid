@@ -4,7 +4,33 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from recovery_procedure import RecoveryFailure, restore_backup, validate_schema_counts
+from recovery_procedure import (
+    ARTIFACTS,
+    ARTIFACT_DUMP,
+    ARTIFACT_DUMP_SHA,
+    ARTIFACT_MANIFEST,
+    ARTIFACT_MANIFEST_SHA,
+    RecoveryFailure,
+    restore_backup,
+    validate_schema_counts,
+)
+
+
+class RecoveryArtifactNameTests(unittest.TestCase):
+    def test_recovery_artifact_constants_match_backup_executor_contract(self):
+        self.assertEqual(
+            (ARTIFACT_DUMP, ARTIFACT_DUMP_SHA, ARTIFACT_MANIFEST, ARTIFACT_MANIFEST_SHA),
+            (
+                "database.dump.enc",
+                "database.dump.sha256",
+                "manifest.json.enc",
+                "manifest.json.sha256",
+            ),
+        )
+        self.assertEqual(
+            ARTIFACTS,
+            (ARTIFACT_DUMP, ARTIFACT_DUMP_SHA, ARTIFACT_MANIFEST, ARTIFACT_MANIFEST_SHA),
+        )
 
 
 class RecoverySchemaCountTests(unittest.TestCase):
