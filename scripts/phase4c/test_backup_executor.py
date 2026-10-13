@@ -226,22 +226,32 @@ class BackupExecutorTests(unittest.TestCase):
                 self.make_config(Path(tempfile.gettempdir())).r2.validate()
 
     def test_child_environment_excludes_unrelated_secrets(self):
-        with patch.dict(
-            os.environ,
-            {
-                "UNRELATED_PROTECTED_SECRET": "must-not-cross-boundary",
-                "ANOTHER_SECRET": "also-must-not-cross-boundary",
-                "AWS_SECRET_ACCESS_KEY": "must-not-cross-boundary",
-            },
-            clear=False,
-        ):
-            env = _child_env(self.make_config(Path(tempfile.gettempdir())).source)
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "synthetic-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                {
+                    "UNRELATED_PROTECTED_SECRET": "must-not-cross-boundary",
+                    "ANOTHER_SECRET": "also-must-not-cross-boundary",
+                    "AWS_SECRET_ACCESS_KEY": "must-not-cross-boundary",
+                    "PGSSLROOTCERT": str(ca_file),
+                },
+                clear=False,
+            ):
+                env = _child_env(self.make_config(Path(temp)).source)
         self.assertEqual(env["PGPASSWORD"], "synthetic-password")
         self.assertEqual(env["PGSSLMODE"], "verify-full")
+        self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
         self.assertIn("PATH", env)
         self.assertNotIn("UNRELATED_PROTECTED_SECRET", env)
         self.assertNotIn("ANOTHER_SECRET", env)
         self.assertNotIn("AWS_SECRET_ACCESS_KEY", env)
+
+    def test_child_environment_rejects_missing_root_ca(self):
+        with patch.dict(os.environ, {"PGSSLROOTCERT": ""}, clear=False):
+            with self.assertRaises(SafetyError):
+                _child_env(self.make_config(Path(tempfile.gettempdir())).source)
 
     def test_database_upload_then_manifest_upload_failure_reconciles_all_objects(self):
         with tempfile.TemporaryDirectory() as temp:
