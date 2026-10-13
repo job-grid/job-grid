@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#004ef5" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="View details for a currently published Job Grid vacancy." />
+    <title>Job details | Job Grid</title>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href="/styles/jobs.css" />
+    <script type="module" src="/scripts/components.js"></script>
+    <script type="module" src="/scripts/job-detail.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="top"></div>
+    <job-grid-header></job-grid-header>
+    <main id="main">
+      <section class="job-detail-page section-wrap" aria-labelledby="job-detail-title">
+        <a class="job-back-link" href="/jobs.html">← Back to job search</a>
+        <p id="job-detail-status" class="jobs-status" role="status" aria-live="polite" data-tone="neutral">Looking for a published vacancy…</p>
+        <article id="job-detail-panel" class="job-detail-panel" hidden>
+          <div class="job-detail-heading">
+            <p id="job-detail-reference" class="eyebrow"></p>
+            <h1 id="job-detail-title">Job details</h1>
+            <p id="job-detail-employer" class="job-detail-employer"></p>
+            <p id="job-detail-location" class="job-result-location"></p>
+            <div class="job-result-facts">
+              <span id="job-detail-employment"></span>
+              <span id="job-detail-salary"></span>
+            </div>
+          </div>
+          <section class="job-detail-section" aria-labelledby="job-description-title">
+            <h2 id="job-description-title">About this role</h2>
+            <p id="job-detail-description" class="job-description"></p>
+          </section>
+          <section class="job-detail-section" aria-labelledby="job-instructions-title">
+            <h2 id="job-instructions-title">Application information</h2>
+            <p id="job-detail-instructions" class="job-description"></p>
+            <p class="jobs-safety-note">Applications are not connected in this preview. Do not send identity documents, CVs, passwords, or payments through this page.</p>
+          </section>
+        </article>
+      </section>
+    </main>
+    <job-grid-footer></job-grid-footer>
+  </body>
+</html>
