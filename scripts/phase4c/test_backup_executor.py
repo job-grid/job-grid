@@ -483,7 +483,7 @@ class BackupExecutorTests(unittest.TestCase):
 
         message = str(raised.exception)
         self.assertIn("category=authorization", message)
-        self.assertIn("detail=generic_pg_dump_error", message)
+        self.assertIn("detail=query_failed", message)
         self.assertIn("stderr_sha256=", message)
         self.assertNotIn("DO-NOT-LOG", message)
         self.assertNotIn("private-host", message)
