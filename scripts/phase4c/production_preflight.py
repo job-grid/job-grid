@@ -167,6 +167,7 @@ def _connect(config: PreflightConfig):
             password=config.password,
             connect_timeout=PREFLIGHT_TIMEOUT,
             sslmode="verify-full",
+            sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
             options="-c statement_timeout=5000",
         )
