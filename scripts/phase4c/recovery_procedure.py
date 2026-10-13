@@ -56,6 +56,7 @@ def assert_recovery_credentials(env: Mapping[str, str]) -> None:
         "RECOVERY_POSTGRES_USER",
         "RECOVERY_POSTGRES_PASSWORD",
         "RECOVERY_PROJECT_REF",
+        "PGSSLROOTCERT",
         "BACKUP_R2_ENDPOINT_URL",
         "BACKUP_R2_BUCKET",
         "BACKUP_R2_ACCESS_KEY_ID",
@@ -66,6 +67,8 @@ def assert_recovery_credentials(env: Mapping[str, str]) -> None:
         _fixed("RECOVERY_CREDENTIALS_FAILED")
     if env["RECOVERY_PROJECT_REF"] != RECOVERY_PROJECT_REF:
         _fixed("RECOVERY_TARGET_FAILED")
+    if not Path(env["PGSSLROOTCERT"]).is_file():
+        _fixed("RECOVERY_TLS_CA_FAILED")
     if "BACKUP_SOURCE_POSTGRES_PASSWORD" in env or "PRODUCTION_POSTGRES_PASSWORD" in env:
         _fixed("RECOVERY_CREDENTIALS_FAILED")
 
@@ -140,6 +143,9 @@ def restore_backup(
     username: str,
     password: str,
 ) -> None:
+    ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
+    if not ca_file or not Path(ca_file).is_file():
+        _fixed("RECOVERY_TLS_CA_FAILED")
     argv = [
         PG_RESTORE,
         "--host", host,
@@ -156,6 +162,8 @@ def restore_backup(
         "LANG": "C",
         "LC_ALL": "C",
         "PGPASSWORD": password,
+        "PGSSLMODE": "verify-full",
+        "PGSSLROOTCERT": ca_file,
     }
     try:
         result = subprocess.run(
@@ -258,6 +266,7 @@ def validate_recovery(
             password=password,
             connect_timeout=5,
             sslmode="verify-full",
+            sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
             options="-c statement_timeout=5000",
         ) as conn:
