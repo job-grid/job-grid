@@ -44,6 +44,10 @@ async function loadData() {
   const data=await response.json();
   if(!Array.isArray(data.rows)||data.rows.length!==496||data.mapping_approved!==false)
     throw new Error("The crosswalk data did not pass its safety/count check.");
+  if(!data.rows.every(row => row &&
+    typeof row.starterCategorySlug === "string" && row.starterCategorySlug.length > 0 &&
+    typeof row.starterCategoryName === "string" && row.starterCategoryName.length > 0))
+    throw new Error("Crosswalk rows are missing their Job Grid category labels.");
   return data;
 }
 function init(data) {
@@ -55,10 +59,19 @@ function init(data) {
   const more=document.querySelector("#load-more-crosswalk");
   const clear=document.querySelector("#clear-crosswalk-filters");
   let visible=PAGE_SIZE;
-  for(const cat of data.categories){
-    const option=document.createElement("option");
-    option.value=cat.slug;option.textContent=cat.name;category.append(option);
+
+  // The dataset stores category labels on each row, not in a data.categories array.
+  // Derive unique filter options from those validated source rows.
+  const categories=new Map();
+  for(const row of data.rows) {
+    if(!categories.has(row.starterCategorySlug))
+      categories.set(row.starterCategorySlug,row.starterCategoryName);
   }
+  for(const [slug,name] of categories) {
+    const option=document.createElement("option");
+    option.value=slug;option.textContent=name;category.append(option);
+  }
+
   document.querySelector("#starter-title-total").textContent=String(data.rows.length);
   function filteredRows(){
     const term=normalize(search.value);
