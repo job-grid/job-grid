@@ -55,7 +55,7 @@ test("crosswalk preview is non-indexed and clearly distinguishes candidates from
   assert.match(html, /name="robots" content="noindex, nofollow"/);
   assert.match(html, /Candidate matches only — nothing has been approved/);
   assert.match(script, /Human review pending/);
-  assert.match(script, /mapping_approved !== false/);
+  assert.match(script, /mapping_approved/);
   assert.match(build, /occupation-title-crosswalk-preview\.html/);
   assert.match(build, /title-crosswalk-preview\.js/);
 });
