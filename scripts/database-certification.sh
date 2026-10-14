@@ -48,6 +48,51 @@ echo "PASS: baseline snapshot captured (25 categories, 249 country options, 0 jo
 echo "== Apply the proposed PR #45 migration in isolation =="
 psqlx -q -f supabase/migrations/20261014190000_add_verified_international_job_workflow.sql
 
+echo "== Execute the Excel base-title seed migration in isolated PostgreSQL =="
+psqlx -q -f supabase/migrations/20261015120000_seed_base_occupation_catalogue.sql
+
+seed_state="$(psql -XAtq -F '|' -v ON_ERROR_STOP=1 -c "
+SELECT
+  count(*),
+  count(*) FILTER (WHERE verification_status = 'pending' AND is_active = false),
+  count(DISTINCT normalized_title),
+  count(DISTINCT category_slug),
+  count(*) FILTER (
+    WHERE category_slug NOT IN (
+      SELECT slug FROM public.job_categories WHERE is_active = true
+    )
+  ),
+  (SELECT count(*) FROM public.jobs)
+FROM public.occupations;
+")"
+if [[ "$seed_state" != "496|496|496|25|0|0" ]]; then
+  echo "FAIL: seeded catalogue must contain 496 unique pending/inactive job types across the 25 active categories and create zero vacancies; got $seed_state" >&2
+  exit 1
+fi
+echo "PASS: seed migration created exactly 496 unique pending/inactive job types, mapped to 25 active categories, with zero vacancy rows"
+
+echo "== Re-run the seed migration to verify idempotency =="
+psqlx -q -f supabase/migrations/20261015120000_seed_base_occupation_catalogue.sql
+seed_state_after="$(psql -XAtq -F '|' -v ON_ERROR_STOP=1 -c "
+SELECT
+  count(*),
+  count(*) FILTER (WHERE verification_status = 'pending' AND is_active = false),
+  count(DISTINCT normalized_title),
+  count(DISTINCT category_slug),
+  count(*) FILTER (
+    WHERE category_slug NOT IN (
+      SELECT slug FROM public.job_categories WHERE is_active = true
+    )
+  ),
+  (SELECT count(*) FROM public.jobs)
+FROM public.occupations;
+")"
+if [[ "$seed_state_after" != "$seed_state" ]]; then
+  echo "FAIL: re-running the occupation catalogue seed changed the certified seed state (before=$seed_state after=$seed_state_after)" >&2
+  exit 1
+fi
+echo "PASS: seed migration is idempotent and keeps the public.jobs row count at zero"
+
 after="$(psql -XAtq -F '|' -v ON_ERROR_STOP=1 -c "
 SELECT
   (SELECT count(*) FROM public.job_categories),
