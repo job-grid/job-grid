@@ -419,6 +419,180 @@ SELECT pg_temp.seed_synthetic_vacancy(
   true,true
 );
 
+-- Runtime foreign-key matrix: exercise the remaining table-reference boundaries using synthetic IDs only.
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.occupation_aliases (occupation_id,alternative_title)
+      VALUES ('51515151-5151-4151-8151-515151515151','Missing Occupation Alias Fixture')$fk$,
+  '23503', 'occupation_aliases.occupation_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.occupations (category_slug,canonical_title,verification_status,verified_by)
+      VALUES ('health-care-caregiving','Missing Occupation Reviewer Fixture','pending','51525252-5252-4252-8252-525252525252')$fk$,
+  '23503', 'occupations.verified_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.employers (legal_name,country_code)
+      VALUES ('Employer with missing country fixture','ZZ')$fk$,
+  '23503', 'employers.country_code foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.employers (legal_name,country_code,verified_by)
+      VALUES ('Employer with missing reviewer fixture','CA','51535353-5353-4353-8353-535353535353')$fk$,
+  '23503', 'employers.verified_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.job_sources (name,domain,source_type,access_method,permission_status,permission_reviewed_by)
+      VALUES ('Source with missing reviewer fixture','missing-reviewer-source.synthetic.example','employer_careers','permitted_structured_page','pending_review','51545454-5454-4454-8454-545454545454')$fk$,
+  '23503', 'job_sources.permission_reviewed_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.source_connections (source_id,adapter_key,configuration,enabled)
+      VALUES ('51555555-5555-4555-8555-555555555555','missing-source-adapter','{}',false)$fk$,
+  '23503', 'source_connections.source_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,occupation_id,employer_id,skill_level,employment_type,country_code)
+      VALUES ('Missing employer foreign key fixture','missing-employer-fk-fixture','Synthetic Employer','Fixture description','health-care-caregiving','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','51565656-5656-4656-8656-565656565656','skilled','full_time','CA')$fk$,
+  '23503', 'jobs.employer_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.job_dedupe_keys (job_id,key_type,normalized_value)
+      VALUES ('51575757-5757-4757-8757-575757575757','canonical_url','https://careers.synthetic.example/invalid-parent-job')$fk$,
+  '23503', 'job_dedupe_keys.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.job_duplicate_candidates (job_a_id,job_b_id,match_type)
+      VALUES ('00000000-0000-4000-8000-000000000001','dddddddd-dddd-4ddd-8ddd-dddddddddddd','reviewer_flag')$fk$,
+  '23503', 'job_duplicate_candidates.job_a_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.job_duplicate_candidates (job_a_id,job_b_id,match_type)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','51585858-5858-4858-8858-585858585858','reviewer_flag')$fk$,
+  '23503', 'job_duplicate_candidates.job_b_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.job_duplicate_candidates (job_a_id,job_b_id,match_type,reviewed_by,reviewed_at)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','reviewer_flag','51595959-5959-4959-8959-595959595959',now())$fk$,
+  '23503', 'job_duplicate_candidates.reviewed_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_sources (job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url)
+      VALUES ('515a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a','cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        (SELECT id FROM public.job_dedupe_keys WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'),
+        'missing-job-source-link','https://careers.synthetic.example/fk-missing-job',
+        'https://careers.synthetic.example/fk-missing-job')$fk$,
+  '23503', 'vacancy_sources.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_sources (job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','515b5b5b-5b5b-4b5b-8b5b-5b5b5b5b5b5b',
+        (SELECT id FROM public.job_dedupe_keys WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'),
+        'missing-source-id-link','https://careers.synthetic.example/fk-missing-source',
+        'https://careers.synthetic.example/fk-missing-source')$fk$,
+  '23503', 'vacancy_sources.source_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_sources (job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url)
+      VALUES ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        (SELECT id FROM public.job_dedupe_keys WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'),
+        'mismatched-dedupe-job','https://careers.synthetic.example/fk-mismatched-dedupe',
+        'https://careers.synthetic.example/fk-mismatched-dedupe')$fk$,
+  '23503', 'vacancy_sources canonical dedupe key must belong to same job');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_evidence (job_id,source_id,evidence_type,evidence_url)
+      VALUES ('515c5c5c-5c5c-4c5c-8c5c-5c5c5c5c5c5c','cccccccc-cccc-4ccc-8ccc-cccccccccccc','other','https://evidence.synthetic.example/missing-job')$fk$,
+  '23503', 'vacancy_evidence.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_evidence (job_id,source_id,evidence_type,evidence_url)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','515d5d5d-5d5d-4d5d-8d5d-5d5d5d5d5d5d','other','https://evidence.synthetic.example/missing-source')$fk$,
+  '23503', 'vacancy_evidence.source_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.vacancy_evidence (job_id,source_id,evidence_type,evidence_url,captured_by)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','cccccccc-cccc-4ccc-8ccc-cccccccccccc','other','https://evidence.synthetic.example/missing-captor','515e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e5e')$fk$,
+  '23503', 'vacancy_evidence.captured_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.eligibility_assessments (job_id,applicant_scope,sponsorship_status,assessment_status)
+      VALUES ('515f5f5f-5f5f-4f5f-8f5f-5f5f5f5f5f5f','unknown','unknown','pending')$fk$,
+  '23503', 'eligibility_assessments.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.eligibility_assessments (job_id,applicant_scope,sponsorship_status,assessment_status,eligibility_evidence_id)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','unknown','unknown','pending',
+        (SELECT id FROM public.vacancy_evidence WHERE job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' AND evidence_type='international_eligibility' LIMIT 1))$fk$,
+  '23503', 'eligibility evidence must belong to the same job');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.eligibility_assessments (job_id,applicant_scope,sponsorship_status,assessment_status,sponsorship_evidence_id)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','unknown','unknown','pending',
+        (SELECT id FROM public.vacancy_evidence WHERE job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' AND evidence_type='posting_status' LIMIT 1))$fk$,
+  '23503', 'sponsorship evidence must belong to the same job');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.eligibility_assessments (job_id,applicant_scope,sponsorship_status,assessment_status,assessed_by)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','unknown','unknown','pending','51606060-6060-4060-8060-606060606060')$fk$,
+  '23503', 'eligibility_assessments.assessed_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.staff_roles (user_id,role)
+      VALUES ('51616161-6161-4161-8161-616161616161','auditor')$fk$,
+  '23503', 'staff_roles.user_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.staff_roles (user_id,role,granted_by)
+      VALUES ('11111111-1111-4111-8111-111111111111','auditor','51626262-6262-4262-8262-626262626262')$fk$,
+  '23503', 'staff_roles.granted_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.verification_reviews (job_id,reviewer_id,decision,reason,reviewed_record_version)
+      VALUES ('51636363-6363-4363-8363-636363636363','11111111-1111-4111-8111-111111111111','rejected','Invalid job reference fixture',1)$fk$,
+  '23503', 'verification_reviews.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.verification_reviews (job_id,reviewer_id,decision,reason,reviewed_record_version)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','51646464-6464-4464-8464-646464646464','rejected','Invalid reviewer reference fixture',1)$fk$,
+  '23503', 'verification_reviews.reviewer_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.publication_records (job_id,publication_version,job_record_version,published_by)
+      VALUES ('51656565-6565-4565-8565-656565656565',1,1,'22222222-2222-4222-8222-222222222222')$fk$,
+  '23503', 'publication_records.job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.publication_records (job_id,publication_version,job_record_version,published_by)
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd',99,1,'51666666-6666-4666-8666-666666666666')$fk$,
+  '23503', 'publication_records.published_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.publication_records (
+      job_id,publication_version,job_record_version,published_by,published_at,unpublished_by,unpublished_at,unpublished_reason
+    )
+    VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd',98,1,
+      '22222222-2222-4222-8222-222222222222',now()-interval '1 day',
+      '51676767-6767-4767-8767-676767676767',now(),'Invalid unpublisher fixture')$fk$,
+  '23503', 'publication_records.unpublished_by foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.ingestion_jobs (source_id,request_key)
+      VALUES ('51686868-6868-4868-8868-686868686868','fk-invalid-source-ingestion-run-001')$fk$,
+  '23503', 'ingestion_jobs.source_id foreign key');
+
+INSERT INTO public.ingestion_jobs (source_id,request_key)
+VALUES ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','fk-valid-ingestion-parent-001');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.ingestion_errors (ingestion_job_id,error_code,safe_message)
+      VALUES ('51696969-6969-4969-8969-696969696969','synthetic_fk','Missing ingestion run fixture')$fk$,
+  '23503', 'ingestion_errors.ingestion_job_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.audit_logs (actor_id,action,entity_type,entity_id)
+      VALUES ('51707070-7070-4070-8070-707070707070','foreign_key_test','test_entity','synthetic')$fk$,
+  '23503', 'audit_logs.actor_id foreign key');
+
 -- Exact dedupe identity and per-source external identifiers must be unique.
 SELECT pg_temp.assert_sqlstate(
   $$INSERT INTO public.job_dedupe_keys (job_id,key_type,normalized_value)
