@@ -48,6 +48,26 @@ test("crosswalk remains a review aid and cannot approve or activate data", () =>
   assert.equal(crosswalk.match_assessment_counts.strong_text_candidate, 25);
 });
 
+test("crosswalk category filter uses the 25 existing category slugs and labels", async () => {
+  const expectedCategories = new Map(starterCatalog.categories.map(category => [category.slug, category.name]));
+  const actualCategories = new Map();
+  for (const row of crosswalk.rows) {
+    assert.equal(expectedCategories.get(row.starterCategorySlug), row.starterCategoryName);
+    if (!actualCategories.has(row.starterCategorySlug))
+      actualCategories.set(row.starterCategorySlug, row.starterCategoryName);
+  }
+  assert.equal(expectedCategories.size, 25);
+  assert.deepEqual(
+    [...actualCategories.entries()].sort(([a], [b]) => a.localeCompare(b)),
+    [...expectedCategories.entries()].sort(([a], [b]) => a.localeCompare(b))
+  );
+
+  const script = await readFile(new URL("../scripts/title-crosswalk-preview.js", import.meta.url), "utf8");
+  assert.match(script, /const categories=new Map\(\)/);
+  assert.match(script, /categories\.set\(row\.starterCategorySlug,row\.starterCategoryName\)/);
+  assert.doesNotMatch(script, /for\s*\(const\s+cat\s+of\s+data\.categories\)/);
+});
+
 test("crosswalk preview is non-indexed and clearly distinguishes candidates from approvals", async () => {
   const html = await readFile(new URL("../occupation-title-crosswalk-preview.html", import.meta.url), "utf8");
   const script = await readFile(new URL("../scripts/title-crosswalk-preview.js", import.meta.url), "utf8");
