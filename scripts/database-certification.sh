@@ -36,6 +36,13 @@ if [[ "$category_count" != "25" || "$country_count" != "249" || "$job_count" != 
   echo "FAIL: baseline row counts unexpected: $before" >&2
   exit 1
 fi
+if [[ "$category_hash" != "480311db1f5387645f67aa8cadf91d37" || "$country_hash" != "b7b741c57938e86b7593723bce9a6f26" ]]; then
+  echo "FAIL: synthetic baseline does not match the read-only production category/country content fingerprints." >&2
+  echo "Category fingerprint: $category_hash" >&2
+  echo "Country fingerprint:  $country_hash" >&2
+  exit 1
+fi
+echo "PASS: isolated baseline content fingerprints match the read-only production snapshot"
 echo "PASS: baseline snapshot captured (25 categories, 249 country options, 0 jobs)"
 
 echo "== Apply the proposed PR #45 migration in isolation =="
