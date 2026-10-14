@@ -45,7 +45,7 @@ CREATE TABLE public.occupations (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT occupations_verified_has_evidence CHECK (
     verification_status <> 'verified'
-    OR (verification_source_url IS NOT NULL AND verified_at IS NOT NULL)
+    OR (verification_source_url IS NOT NULL AND verified_at IS NOT NULL AND verified_by IS NOT NULL)
   ),
   CONSTRAINT occupations_normalized_title_unique UNIQUE (normalized_title)
 );
@@ -94,7 +94,7 @@ CREATE TABLE public.employers (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT employers_verified_has_evidence CHECK (
     verification_status <> 'verified'
-    OR (verification_evidence_url IS NOT NULL AND verified_at IS NOT NULL)
+    OR (verification_evidence_url IS NOT NULL AND verified_at IS NOT NULL AND verified_by IS NOT NULL)
   )
 );
 
@@ -140,10 +140,15 @@ CREATE TABLE public.job_sources (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT job_sources_approval_requires_evidence CHECK (
     permission_status <> 'approved'
-    OR (permission_evidence_url IS NOT NULL AND permission_reviewed_at IS NOT NULL)
+    OR (permission_evidence_url IS NOT NULL AND permission_reviewed_at IS NOT NULL AND permission_reviewed_by IS NOT NULL)
   ),
   CONSTRAINT job_sources_enabled_requires_permission CHECK (
-    NOT enabled OR (permission_status = 'approved' AND permission_evidence_url IS NOT NULL)
+    NOT enabled OR (
+      permission_status = 'approved'
+      AND permission_evidence_url IS NOT NULL
+      AND permission_reviewed_at IS NOT NULL
+      AND permission_reviewed_by IS NOT NULL
+    )
   )
 );
 
@@ -609,9 +614,11 @@ BEGIN
         AND pr.job_id IN (SELECT j.id FROM public.jobs j WHERE j.occupation_id = NEW.id);
     END IF;
   ELSIF TG_TABLE_NAME = 'job_sources' THEN
-    IF ROW(NEW.permission_status, NEW.permission_evidence_url, NEW.recheck_interval_hours)
+    IF ROW(NEW.permission_status, NEW.permission_evidence_url, NEW.permission_reviewed_at,
+            NEW.permission_reviewed_by, NEW.recheck_interval_hours, NEW.enabled)
        IS DISTINCT FROM
-       ROW(OLD.permission_status, OLD.permission_evidence_url, OLD.recheck_interval_hours) THEN
+       ROW(OLD.permission_status, OLD.permission_evidence_url, OLD.permission_reviewed_at,
+           OLD.permission_reviewed_by, OLD.recheck_interval_hours, OLD.enabled) THEN
       UPDATE public.jobs j
       SET record_version = j.record_version + 1,
           verification_status = 'needs_review',
@@ -691,9 +698,33 @@ AS $function$
           AND src.permission_status = 'approved'
           AND src.permission_evidence_url IS NOT NULL
           AND src.permission_reviewed_at IS NOT NULL
+          AND src.permission_reviewed_by IS NOT NULL
+          AND src.enabled = true
+          AND EXISTS (
+            SELECT 1 FROM public.source_connections sc
+            WHERE sc.source_id = src.id AND sc.enabled = true
+          )
           AND vs.last_checked_at IS NOT NULL
           AND vs.last_checked_at >= now() - pg_catalog.make_interval(hours => src.recheck_interval_hours)
+          AND j.last_checked_at IS NOT NULL
           AND j.last_checked_at >= now() - pg_catalog.make_interval(hours => src.recheck_interval_hours)
+          AND EXISTS (
+            SELECT 1
+            FROM public.vacancy_evidence posting_ev
+            WHERE posting_ev.job_id = j.id
+              AND posting_ev.source_id = src.id
+              AND posting_ev.evidence_type = 'posting_status'
+              AND posting_ev.captured_at >= now() - pg_catalog.make_interval(hours => src.recheck_interval_hours)
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM public.vacancy_evidence application_ev
+            WHERE application_ev.job_id = j.id
+              AND application_ev.source_id = src.id
+              AND application_ev.evidence_type = 'application_url'
+              AND application_ev.evidence_url = j.application_url
+              AND application_ev.captured_at >= now() - pg_catalog.make_interval(hours => src.recheck_interval_hours)
+          )
           AND (
             ea.sponsorship_status = 'unknown'
             OR (
@@ -984,7 +1015,16 @@ BEGIN
     RAISE EXCEPTION 'Source was not found' USING ERRCODE = 'P0002';
   END IF;
 
-  IF p_enabled AND (v_permission_status <> 'approved' OR v_permission_evidence_url IS NULL) THEN
+  IF p_enabled AND (
+    v_permission_status <> 'approved'
+    OR v_permission_evidence_url IS NULL
+    OR NOT EXISTS (
+      SELECT 1 FROM public.job_sources js
+      WHERE js.id = p_source_id
+        AND js.permission_reviewed_at IS NOT NULL
+        AND js.permission_reviewed_by IS NOT NULL
+    )
+  ) THEN
     RAISE EXCEPTION 'A source cannot be enabled without approved access and permission evidence';
   END IF;
 
