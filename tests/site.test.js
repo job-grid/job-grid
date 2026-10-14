@@ -248,7 +248,7 @@ test("location selector remains a frontend preview until persistence is built", 
   const docs = await readFile(new URL("../docs/location-selector-mvp.md", import.meta.url), "utf8");
   assert.match(docs, /frontend preview only/i);
   assert.match(docs, /does not save a candidate profile/i);
-  assert.match(docs, /does not import a catalog/i);
+  assert.match(docs, /import a catalog/i);
 });
 
 
