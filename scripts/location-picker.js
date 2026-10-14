@@ -1,4 +1,3 @@
-const COUNTRIES_ENDPOINT = "https://restcountries.com/v3.1/all?fields=name,cca2";
 const GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";
 const FALLBACK_COUNTRIES = [
   { code: "KE", name: "Kenya" },
@@ -212,27 +211,17 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
     async loadCountries() {
       this.status.textContent = "Loading country list…";
       try {
-        const response = await fetch(COUNTRIES_ENDPOINT, { headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("Country source unavailable.");
+        const response = await fetch("/data/countries.en.json", { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("Bundled country list unavailable.");
         const countries = normalizeCountries(await response.json());
-        if (countries.length < 200) throw new Error("Country source returned an incomplete list.");
+        if (countries.length < 200) throw new Error("Bundled country list is incomplete.");
         this.countries = countries;
         this.renderCountryOptions();
         this.status.textContent = "Choose a country to begin.";
       } catch {
-        try {
-          const response = await fetch("/data/countries.en.json", { headers: { Accept: "application/json" } });
-          if (!response.ok) throw new Error("Bundled country list unavailable.");
-          const bundledCountries = normalizeCountries(await response.json());
-          if (bundledCountries.length < 200) throw new Error("Bundled country list is incomplete.");
-          this.countries = bundledCountries;
-          this.renderCountryOptions();
-          this.status.textContent = "Country list loaded from the bundled backup. Place search still requires an internet connection.";
-        } catch {
-          this.countries = normalizeCountries(FALLBACK_COUNTRIES);
-          this.renderCountryOptions();
-          this.status.innerHTML = 'The full country list could not be loaded. A limited fallback list is available; <button class="inline-retry" type="button" data-action="retry-countries">try loading all countries again</button>.';
-        }
+        this.countries = normalizeCountries(FALLBACK_COUNTRIES);
+        this.renderCountryOptions();
+        this.status.innerHTML = 'The full country list could not be loaded. A limited fallback list is available; <button class="inline-retry" type="button" data-action="retry-countries">try loading all countries again</button>.';
       }
     }
 
