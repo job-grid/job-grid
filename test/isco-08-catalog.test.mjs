@@ -75,7 +75,7 @@ test("review preview is explicitly labelled and excluded from indexing", async (
   const build = await readFileExtra(new URL("../scripts/build.mjs", import.meta.url), "utf8");
   assert.match(html, /name="robots" content="noindex, nofollow"/);
   assert.match(html, /Review preview — not yet approved for production/);
-  assert.match(html, /not live job vacancies/i);
+  assert.match(html, /not a real job vacancy/i);
   assert.match(script, /occupations-isco08-review\.json/);
   assert.match(script, /catalog\.groups\.length !== 436/);
   assert.match(script, /occupation-category-filter/);
