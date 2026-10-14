@@ -262,6 +262,17 @@ def main() -> None:
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     readme = README_PATH.read_text(encoding="utf-8")
+    readme = re.sub(
+        r"A first-pass, title-keyword rule set suggests an existing Job Grid category for 431 of the 436 records\\..*?No suggestion changes source verification status or public activation\\.",
+        "An earlier substring-oriented mapping proposal has been superseded by title_phrase_rules_v2. "
+        "The replacement checks official occupation titles with whole-word/phrase matches, avoids "
+        "false matches such as bus within business and roof within proofreading, and sends ambiguous "
+        "or unmatched titles to manual review. Suggestions remain unapproved; formal category fields "
+        "stay unset and no record is active.",
+        readme,
+        count=1,
+        flags=re.DOTALL,
+    )
     readme += (
         "\n\n## Conservative category mapping audit (latest)\n\n"
         f"- Rule set: {RULE_VERSION} (whole-word/phrase matches on occupation title only).\n"
