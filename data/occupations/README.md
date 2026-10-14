@@ -29,3 +29,9 @@ The existing 496 starter job types and the earlier 5,000-row generated workbook 
 3. Crosswalk the existing 496 starter role titles to ISCO-08 codes, retaining ambiguous matches for review.
 4. Add aliases only when supported by a source or reviewed mapping.
 5. Generate a data-only migration after PR #45 and the live recovery/security release gates have been separately resolved and approved.
+
+## Proposed Job Grid category mappings
+
+A first-pass, title-keyword rule set suggests an existing Job Grid category for 431 of the 436 records. 5 records remain unmapped for manual review. Counts are recorded in `public/data/occupations-isco08-review.json`.
+
+These suggestions are not authoritative classifications. The CSV keeps `job_grid_category_slug` empty and leaves the existing `category_mapping_status` pending. Proposed values are stored separately under `proposed_job_grid_category_slug` and related fields, with the rule method and a reason recorded per row. No suggestion changes source verification status or public activation. A reviewer must approve mappings after primary-source reconciliation.
