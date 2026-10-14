@@ -783,6 +783,19 @@ AS $function$
       AND j.expires_at IS NOT NULL
       AND j.expires_at > now()
       AND public.job_approval_current(j.id)
+      AND EXISTS (
+        SELECT 1
+        FROM public.publication_records pr
+        WHERE pr.job_id = j.id
+          AND pr.unpublished_at IS NULL
+          AND pr.job_record_version = j.record_version
+          AND pr.published_at = j.published_at
+          AND pr.publication_version = (
+            SELECT max(latest_pr.publication_version)
+            FROM public.publication_records latest_pr
+            WHERE latest_pr.job_id = j.id
+          )
+      )
   );
 $function$;
 
