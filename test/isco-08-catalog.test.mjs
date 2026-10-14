@@ -66,3 +66,18 @@ test("unit groups cover the expected ISCO-08 hierarchy prefixes", () => {
   assert.equal(new Set(records.map(row => row.sub_major_group_code)).size, 43);
   assert.equal(new Set(records.map(row => row.minor_group_code)).size, 130);
 });
+
+import { readFile as readFileExtra } from "node:fs/promises";
+
+test("review preview is explicitly labelled and excluded from indexing", async () => {
+  const html = await readFileExtra(new URL("../occupations-preview.html", import.meta.url), "utf8");
+  const script = await readFileExtra(new URL("../scripts/occupations-preview.js", import.meta.url), "utf8");
+  const build = await readFileExtra(new URL("../scripts/build.mjs", import.meta.url), "utf8");
+  assert.match(html, /name="robots" content="noindex, nofollow"/);
+  assert.match(html, /Review preview — not yet approved for production/);
+  assert.match(html, /not a real job vacancy/i);
+  assert.match(script, /occupations-isco08-review\.json/);
+  assert.match(script, /catalog\.groups\.length !== 436/);
+  assert.match(build, /occupations-preview\.html/);
+  assert.match(build, /occupations-preview\.js/);
+});
