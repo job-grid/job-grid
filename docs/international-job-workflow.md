@@ -26,7 +26,7 @@ This migration is additive and designed around the existing data model.
 - Adds \`public.occupations\` and \`public.occupation_aliases\`; every occupation links to an existing category slug.
 - Extends existing \`public.jobs\` with occupation/employer links, source freshness, international applicant scope, sponsorship evidence status, verification status, and a revision number.
 - Adds source permission/connection records, employers, deduplication identities/candidates, vacancy-source provenance, evidence references, international eligibility assessments, reviewer decisions, publication history, ingestion runs/errors, staff roles, and audit records.
-- Does not create a second category table or a parallel \`job_vacancies\` table.
+- Does not create a second category table. There is no parallel vacancy table: \`public.jobs\` remains the one job-advertisement table.
 - Does not seed any source, enable any connector, import the 5,000 workbook rows, or create any advertised vacancy.
 
 ## Publication safety
