@@ -4,3 +4,5 @@
 # https://supabase.com/docs/guides/getting-started/api-keys
 # The key is constrained by country_options table grants and row-level security; no secret key is stored here.
 06c5be98c7098921757368081d06e62df925e58b:scripts/supabase-config.js:generic-api-key:11
+# Squash-merge fingerprint for the same public publishable key; still a single exact finding.
+5483d063e2733bfa5b2a7153432b561ef5e197f4:scripts/supabase-config.js:generic-api-key:11
