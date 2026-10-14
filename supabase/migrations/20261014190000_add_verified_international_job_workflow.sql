@@ -1104,7 +1104,7 @@ GRANT SELECT ON TABLE public.occupations TO anon, authenticated;
 CREATE POLICY occupations_public_read
   ON public.occupations
   FOR SELECT TO anon, authenticated
-  USING (is_active = true AND verification_status IN ('pending', 'verified'));
+  USING (is_active = true AND verification_status = 'verified');
 
 -- Do not permit public writes to job data. Publication is through the checked publisher function only.
 REVOKE ALL ON TABLE public.jobs FROM PUBLIC, anon, authenticated;
