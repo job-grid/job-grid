@@ -1,6 +1,6 @@
 # Job Grid — Phase 1 website foundation
 
-A responsive public website shell and reusable brand/design foundation. This phase deliberately does not connect to Supabase, query live jobs, collect candidate information, authenticate users, deploy, or alter database schemas.
+A responsive public website shell and reusable brand/design foundation. The country selector now reads the public, read-only `country_options` catalog from the existing Supabase project. Live job listings, candidate data collection, authentication and deployment are still not connected.
 
 ## Brand system
 
@@ -31,7 +31,7 @@ The owner-supplied image remains the source of truth. If a full-resolution or tr
 
 - Vacancy cards are clearly labelled sample design content, not active listings.
 - Job search, filtering, registration, authentication, application tracking, and employer tools are not implemented.
-- No production credentials or backend URLs are required.
+- `scripts/supabase-config.js` contains only the Supabase project URL and a browser-safe publishable key so the country dropdown can read the public catalog. Never place a secret/service-role key in that file.
 - No migration, backup workflow, deployment workflow, or production setting was changed.
 
 ## Next planned phases
