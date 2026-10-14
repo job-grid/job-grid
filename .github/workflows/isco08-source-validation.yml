@@ -1,0 +1,30 @@
+name: ISCO-08 official source validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "data/occupations/**"
+      - "scripts/validate_isco08_source.py"
+      - ".github/workflows/isco08-source-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "data/occupations/**"
+      - "scripts/validate_isco08_source.py"
+      - ".github/workflows/isco08-source-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-official-ilo-source:
+    name: ISCO-08 official codes and titles
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Compare every group with the ILO-hosted source
+        run: python3 scripts/validate_isco08_source.py

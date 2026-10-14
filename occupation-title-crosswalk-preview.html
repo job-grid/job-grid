@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#004ef5" />
+    <meta name="description" content="Review-only mapping suggestions between Job Grid's 496 starter role types and candidate ISCO-08 groups." />
+    <title>Starter Title Crosswalk Review — Job Grid</title>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href="/styles/job-types.css" />
+    <link rel="stylesheet" href="/styles/title-crosswalk-preview.css" />
+    <script type="module" src="/scripts/components.js"></script>
+    <script type="module" src="/scripts/main.js"></script>
+    <script type="module" src="/scripts/title-crosswalk-preview.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="top"></div>
+    <job-grid-header></job-grid-header>
+    <main id="main" class="crosswalk-page">
+      <section class="directory-hero">
+        <div class="section-wrap">
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> Occupation catalogue · Crosswalk review</p>
+          <h1>Match starter titles to <span class="text-accent">ISCO-08.</span></h1>
+          <p class="directory-intro">Review suggested links from Job Grid’s existing starter directory to the international occupation-group structure. These are candidate matches to help a reviewer—not approved classifications.</p>
+          <div class="directory-facts" aria-label="Crosswalk summary">
+            <span><strong id="starter-title-total">496</strong> starter titles</span>
+            <span><strong>436</strong> candidate ISCO-08 groups</span>
+            <span><strong>Review only</strong> never vacancies</span>
+          </div>
+        </div>
+      </section>
+      <section class="section-wrap directory-content" aria-labelledby="crosswalk-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Human review required</p>
+            <h2 id="crosswalk-title">Review suggested matches</h2>
+            <p class="section-description">Search by the Job Grid role or ISCO code/title. Filter by the existing Job Grid category and the match assessment.</p>
+          </div>
+        </div>
+        <div class="crosswalk-warning" role="note">
+          <strong>Candidate matches only — nothing has been approved.</strong>
+          <span>The matcher compares title words and uses the current category only as a ranking hint. Its score is not a probability or proof. Occupational index aliases, group definitions, and reviewer decisions are still needed for a real crosswalk.</span>
+          <a href="/occupations-preview.html">Return to the 436-group catalogue ↗</a>
+        </div>
+        <div class="directory-tools crosswalk-tools">
+          <div class="filter-field">
+            <label for="crosswalk-search">Search titles and codes</label>
+            <input id="crosswalk-search" type="search" maxlength="120" placeholder="e.g. Nurse, Farm Worker, 2211" autocomplete="off" />
+          </div>
+          <div class="filter-field">
+            <label for="crosswalk-category">Job Grid category</label>
+            <select id="crosswalk-category"><option value="">All 25 categories</option></select>
+          </div>
+          <div class="filter-field">
+            <label for="crosswalk-assessment">Match assessment</label>
+            <select id="crosswalk-assessment">
+              <option value="">All assessments</option>
+              <option value="exact_title_candidate">Exact title candidate</option>
+              <option value="strong_text_candidate">Strong text candidate</option>
+              <option value="possible_text_candidate">Possible text candidate</option>
+              <option value="manual_review_required">Manual review required</option>
+            </select>
+          </div>
+          <div class="filter-actions"><button class="button button-secondary" id="clear-crosswalk-filters" type="button">Clear filters</button></div>
+        </div>
+        <p id="crosswalk-count" class="directory-count" role="status" aria-live="polite">Loading crosswalk candidates…</p>
+        <div id="crosswalk-results" class="crosswalk-grid" aria-live="polite" aria-busy="true"></div>
+        <div class="directory-more"><button class="button button-primary" id="load-more-crosswalk" type="button">Load more titles</button></div>
+        <p class="crosswalk-footer">Review and correct candidates before adding any alias or category mapping to the approved occupation catalogue. <a href="https://isco.ilo.org/en/isco-08/" target="_blank" rel="noopener noreferrer">Official ILO ISCO-08 reference ↗</a></p>
+      </section>
+    </main>
+    <job-grid-footer></job-grid-footer>
+  </body>
+</html>

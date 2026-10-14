@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#004ef5" />
+    <meta name="description" content="A review-only preview of ISCO-08 occupational unit groups being prepared for Job Grid. These are not vacancies." />
+    <title>Occupation Catalogue Review Preview — Job Grid</title>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href="/styles/job-types.css" />
+    <link rel="stylesheet" href="/styles/occupations-preview.css" />
+    <script type="module" src="/scripts/components.js"></script>
+    <script type="module" src="/scripts/main.js"></script>
+    <script type="module" src="/scripts/occupations-preview.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="top"></div>
+    <job-grid-header></job-grid-header>
+    <main id="main" class="occupation-review-page">
+      <section class="directory-hero">
+        <div class="section-wrap">
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> Occupation catalogue · Review preview</p>
+          <h1>Explore occupation <span class="text-accent">groups.</span></h1>
+          <p class="directory-intro">The first ISCO-08 catalogue preview brings occupational groups into one searchable directory while we verify official codes, titles, and their relationship to Job Grid categories.</p>
+          <div class="directory-facts" aria-label="Preview summary">
+            <span><strong id="occupation-total">436</strong> candidate groups</span>
+            <span><strong id="mapping-total">—</strong> suggested category matches</span>
+            <span><strong id="manual-review-total">—</strong> need manual review</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-wrap directory-content" aria-labelledby="occupation-directory-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Browse the classification</p>
+            <h2 id="occupation-directory-title">Search the candidate catalogue</h2>
+            <p class="section-description">Search by title, code, or group name. Use the major-group filter to narrow the results.</p>
+          </div>
+        </div>
+
+        <div class="occupation-review-warning" role="note">
+          <strong>Review preview — not yet approved for production</strong>
+          <span>Official ILO source comparison has matched the codes, titles and parent labels for all 436 unit groups. Job Grid category suggestions use conservative whole-word title rules; ambiguous and unmatched titles are sent to manual review. Nothing on this page is a real job vacancy; every record remains inactive and the catalogue is not approved for production.</span>
+          <a href="https://isco.ilo.org/en/isco-08/" target="_blank" rel="noopener noreferrer">Open the official ILO ISCO-08 reference ↗</a>
+        </div>
+
+        <div class="directory-tools occupation-tools">
+          <div class="filter-field">
+            <label for="occupation-search">Search occupations</label>
+            <input id="occupation-search" type="search" maxlength="120" placeholder="e.g. Nurse, 2211, manager" autocomplete="off" />
+          </div>
+          <div class="filter-field">
+            <label for="occupation-major-filter">Major group</label>
+            <select id="occupation-major-filter">
+              <option value="">All 10 major groups</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="occupation-category-filter">Job Grid category suggestion</label>
+            <select id="occupation-category-filter">
+              <option value="">All suggested categories</option>
+              <option value="__unmapped">Manual review required</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="button button-secondary" id="clear-occupation-filters" type="button">Clear filters</button>
+          </div>
+        </div>
+
+        <p id="occupation-count" class="directory-count" role="status" aria-live="polite">Loading candidate groups…</p>
+        <div id="occupation-results" class="occupation-grid" aria-live="polite" aria-busy="true"></div>
+        <div class="directory-more">
+          <button class="button button-primary" id="load-more-occupations" type="button">Load more groups</button>
+        </div>
+        <p class="occupation-source-note">Source and verification notes are recorded in the <a href="https://github.com/job-grid/job-grid/blob/feat/isco08-occupation-catalog-foundation/data/occupations/README.md" target="_blank" rel="noopener noreferrer">catalogue README</a>. This page is deliberately excluded from search indexing.</p>
+      </section>
+    </main>
+    <job-grid-footer></job-grid-footer>
+  </body>
+</html>
