@@ -52,13 +52,15 @@ test("every record carries matching hierarchy codes and parent titles", () => {
   ));
 });
 
-test("candidate records stay unmapped, unverified, and inactive", () => {
+test("candidate records stay unmapped and inactive before or after the official-source sync", () => {
+  const allowedSourceStates = new Set(["requires_official_source_crosscheck", "verified_source_match"]);
   assert.ok(records.every(row =>
     row.job_grid_category_slug === "" &&
     row.category_mapping_status === "pending" &&
-    row.source_verification_status === "requires_official_source_crosscheck" &&
+    allowedSourceStates.has(row.source_verification_status) &&
     row.publicly_active === "false"
   ));
+  assert.equal(new Set(records.map(row => row.source_verification_status)).size, 1);
 });
 
 test("unit groups cover the expected ISCO-08 hierarchy prefixes", () => {
@@ -95,8 +97,13 @@ test("proposed category mappings use existing slugs but remain unapproved and in
   assert.equal(catalog.mapping_summary.proposed_category_mappings, 431);
   assert.equal(catalog.mapping_summary.manual_mapping_review_required, 5);
   assert.equal(catalog.mapping_summary.mapping_approved, false);
-  assert.equal(catalog.mapping_summary.source_verified_records, 0);
-  assert.ok(catalog.groups.every(group => group.active === false && group.sourceStatus === "requires_official_source_crosscheck"));
+  const verified = catalog.source_verification_status === "verified_source_match";
+  assert.ok(["requires_official_source_crosscheck", "verified_source_match"].includes(catalog.source_verification_status));
+  assert.equal(catalog.mapping_summary.source_verified_records, verified ? 436 : 0);
+  assert.ok(catalog.groups.every(group =>
+    group.active === false &&
+    group.sourceStatus === (verified ? "verified_source_match" : "requires_official_source_crosscheck")
+  ));
   assert.ok(catalog.groups.filter(group => group.proposedCategorySlug).every(group =>
     allowed.has(group.proposedCategorySlug) &&
     group.mappingStatus === "proposed_rule_match" &&
@@ -105,4 +112,14 @@ test("proposed category mappings use existing slugs but remain unapproved and in
   assert.ok(catalog.groups.filter(group => !group.proposedCategorySlug).every(group =>
     group.mappingStatus === "manual_review_required"
   ));
+});
+
+test("official-source sync tooling is branch-scoped and never enables production import", async () => {
+  const sync = await readFileExtra(new URL("../scripts/sync_isco08_from_ilo.py", import.meta.url), "utf8");
+  const workflow = await readFileExtra(new URL("../.github/workflows/sync-isco08-from-ilo.yml", import.meta.url), "utf8");
+  assert.match(sync, /webapps\.ilo\.org/);
+  assert.match(sync, /verified_source_match/);
+  assert.match(sync, /production_import_authorized.*False/s);
+  assert.match(workflow, /feat\/isco08-occupation-catalog-foundation/);
+  assert.match(workflow, /npm test/);
 });
