@@ -1,5 +1,8 @@
 \set ON_ERROR_STOP on
 
+CREATE TEMP TABLE certification_temp_initializer (id integer);
+DROP TABLE certification_temp_initializer;
+
 CREATE OR REPLACE FUNCTION pg_temp.assert_sqlstate(
   p_statement text,
   p_expected_state text,
@@ -423,10 +426,26 @@ SELECT pg_temp.assert_sqlstate(
   '23505', 'global canonical-URL dedupe identity prevents exact duplicate vacancy identity');
 
 SELECT pg_temp.assert_sqlstate(
-  $$INSERT INTO public.vacancy_sources (job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url)
-    SELECT 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url
-    FROM public.vacancy_sources WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'$$,
-  '23505', 'source-specific external ID and URL are unique');
+  $INSERT INTO public.vacancy_sources (
+      job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url,first_seen_at,last_checked_at
+    )
+    SELECT
+      'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      valid_source.source_id,
+      unknown_dedupe.id,
+      valid_source.external_id,
+      unknown_source.source_url,
+      unknown_source.canonical_url,
+      now(),now()
+    FROM public.vacancy_sources valid_source
+    CROSS JOIN public.vacancy_sources unknown_source
+    CROSS JOIN LATERAL (
+      SELECT id FROM public.job_dedupe_keys
+      WHERE job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    ) unknown_dedupe
+    WHERE valid_source.job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+      AND unknown_source.job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'$,
+  '23505', 'source-specific external ID remains unique across distinct vacancy records');
 
 -- Unverified aliases and all private workflow tables stay inaccessible to browser users.
 DO $privileges$
