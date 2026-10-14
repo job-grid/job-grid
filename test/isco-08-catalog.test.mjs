@@ -78,6 +78,8 @@ test("review preview is explicitly labelled and excluded from indexing", async (
   assert.match(html, /not live job vacancies/i);
   assert.match(script, /occupations-isco08-review\.json/);
   assert.match(script, /catalog\.groups\.length !== 436/);
+  assert.match(script, /major\.value = ""/);
+  assert.match(script, /render\(true\)/);
   assert.match(build, /occupations-preview\.html/);
   assert.match(build, /occupations-preview\.js/);
 });
