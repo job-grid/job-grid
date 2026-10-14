@@ -42,3 +42,20 @@ These suggestions are not authoritative classifications. The CSV keeps `job_grid
 - Official CSV: https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv
 - SHA-256: 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49
 - Result: 436/436 unit-group codes and titles matched; parent labels matched; Job Grid category mappings remain unapproved; no record is active.
+
+
+## Latest official source audit
+
+- Retrieval time (UTC): 2026-10-14T22:22:45Z
+- Official CSV: https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv
+- SHA-256: 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49
+- Result: 436/436 unit-group codes and titles matched; parent labels matched; Job Grid category mappings remain unapproved; no record is active.
+
+
+## Conservative category mapping audit (latest)
+
+- Rule set: title_phrase_rules_v2 (whole-word/phrase matches on occupation title only).
+- Suggested category matches: 286.
+- Manual review required: 150 (9 ambiguous, 0 weak, 141 with no rule match).
+- The earlier substring-oriented suggestions were replaced because matching bus inside business or roof inside proofreading can create false matches.
+- Suggestions remain unapproved. The formal job_grid_category_slug is blank and category_mapping_status remains pending for every record.
