@@ -57,7 +57,12 @@ def read_csv_bytes(content: bytes, delimiter: str) -> tuple[list[dict[str, str]]
 def code_map(rows: list[dict[str, str]], label: str) -> dict[str, dict[str, str]]:
     for needed in ("Level", "ISCO 08 Code", "Title EN"):
         if not rows or needed not in rows[0]:
-            fail(f"{label} is missing the required column {needed!r}.")
+            parsed_headers = list(rows[0]) if rows else []
+            fail(
+                f"{label} is missing required column {needed!r}. "
+                f"Parsed headers={parsed_headers!r}; first-row-sample="
+                f"{dict(list(rows[0].items())[:3]) if rows else {}}"
+            )
     groups: dict[str, dict[str, str]] = {}
     for row in rows:
         level = row.get("Level", "").strip()
