@@ -292,7 +292,7 @@ def main() -> None:
 
     bad_flags = sum(
         1 for row in candidate_rows
-        if row.get("source_verification_status") != "requires_official_source_crosscheck"
+        if row.get("source_verification_status") != "verified_source_match"
         or row.get("category_mapping_status") != "pending"
         or row.get("job_grid_category_slug", "").strip()
         or row.get("publicly_active") != "false"
@@ -300,8 +300,20 @@ def main() -> None:
     if bad_flags:
         fail(
             f"{bad_flags} candidate records do not retain the required "
-            "pending/unmapped/inactive flags."
+            "source-matched/unmapped/inactive flags."
         )
+
+    manifest_path = ROOT / "data/occupations/isco-08-source-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("source_status") != "official_source_crosscheck_passed":
+        fail("Source manifest has not recorded a successful official-source synchronization.")
+    if manifest.get("source_sha256") != official_hash:
+        fail(
+            "The current ILO source SHA-256 differs from the recorded manifest; "
+            "resynchronize and review the updated source."
+        )
+    if manifest.get("verified_unit_group_records") != 436:
+        fail("Source manifest does not record 436 verified unit groups.")
 
     print(json.dumps({
         "result": "PASS",
@@ -317,6 +329,7 @@ def main() -> None:
         "title_mismatches": 0,
         "hierarchy_labels_compared": 436 * 3,
         "job_grid_mapping": "PENDING (separate review gate)",
+        "source_manifest_matches_current_download": True,
         "production_import_authorized": False,
         "publicly_active_records": 0,
     }, indent=2, ensure_ascii=False))
