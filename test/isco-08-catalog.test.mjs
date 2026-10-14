@@ -92,8 +92,8 @@ test("proposed category mappings use existing slugs but remain unapproved and in
   const existing = JSON.parse(await readFileExtra(new URL("../public/data/job-types.json", import.meta.url), "utf8"));
   const allowed = new Set(existing.categories.map(category => category.slug));
   assert.equal(catalog.groups.length, 436);
-  assert.equal(catalog.mapping_summary.proposed_category_mappings, 428);
-  assert.equal(catalog.mapping_summary.manual_mapping_review_required, 8);
+  assert.equal(catalog.mapping_summary.proposed_category_mappings, 431);
+  assert.equal(catalog.mapping_summary.manual_mapping_review_required, 5);
   assert.equal(catalog.mapping_summary.mapping_approved, false);
   assert.equal(catalog.mapping_summary.source_verified_records, 0);
   assert.ok(catalog.groups.every(group => group.active === false && group.sourceStatus === "requires_official_source_crosscheck"));
