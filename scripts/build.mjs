@@ -4,7 +4,7 @@ const output = new URL("../dist/", import.meta.url);
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
-for (const name of ["index.html", "job-types.html"]) {
+for (const name of ["index.html", "job-types.html", "occupations-preview.html"]) {
   await cp(new URL(`../${name}`, import.meta.url), new URL(name, output));
 }
 await cp(new URL("../styles", import.meta.url), new URL("styles/", output), { recursive: true });
@@ -13,7 +13,7 @@ await cp(new URL("../styles", import.meta.url), new URL("styles/", output), { re
 // Keep repository tooling, backup/recovery scripts, tests, and validation
 // utilities out of the downloadable website artifact.
 await mkdir(new URL("scripts/", output), { recursive: true });
-for (const name of ["components.js", "main.js", "location-picker.js", "job-types.js", "supabase-config.js"]) {
+for (const name of ["components.js", "main.js", "location-picker.js", "job-types.js", "occupations-preview.js", "supabase-config.js"]) {
   await cp(new URL(`../scripts/${name}`, import.meta.url), new URL(`scripts/${name}`, output));
 }
 
