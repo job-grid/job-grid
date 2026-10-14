@@ -1,0 +1,54 @@
+name: PR #45 Database Certification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "tests/database-certification.sql"
+      - "tests/fixtures/supabase-postgres-compat.sql"
+      - "scripts/database-certification.sh"
+      - ".github/workflows/database-certification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-postgres-certification:
+    name: PR #45 isolated PostgreSQL 17 certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_grid_certification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d job_grid_certification"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: job_grid_certification
+    steps:
+      - name: Checkout exact PR commit
+        uses: actions/checkout@v6
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Assert isolated target database identity
+        run: |
+          set -euo pipefail
+          test "$(psql -XAtq -c 'SELECT current_database()')" = "job_grid_certification"
+          test "$(psql -XAtq -c 'SELECT current_user')" = "postgres"
+          echo "PASS: connected only to isolated GitHub Actions PostgreSQL service"
+      - name: Apply baseline migrations, execute PR migration, and run database certification tests
+        run: bash scripts/database-certification.sh
