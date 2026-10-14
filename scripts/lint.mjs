@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
+const locationPicker = await readFile(new URL("../scripts/location-picker.js", import.meta.url), "utf8");
 const checks = [
   [html.includes('<html lang="en">'), "HTML language is declared"],
   [html.includes('href="#main"'), "Skip navigation link exists"],
@@ -15,6 +16,7 @@ const checks = [
   [tokens.includes("--color-primary:") && tokens.includes("--color-text:") && tokens.includes("--color-border:"), "Core design tokens exist"],
   [!html.includes('href="#"'), "No empty placeholder links exist"],
   [!html.includes("supabase.from(") && !html.includes("DATABASE_URL"), "Homepage does not query a database"],
+  [locationPicker.includes("A new query invalidates the previous selection and its suggestions immediately.") && locationPicker.includes("this.matches = [];"), "Place search clears stale suggestions before debounce"],
 ];
 let failed = false;
 for (const [passed, description] of checks) {

@@ -12,9 +12,12 @@ for (const name of ["index.html", "styles"]) {
 // Keep repository tooling, backup/recovery scripts, tests, and validation
 // utilities out of the downloadable website artifact.
 await mkdir(new URL("scripts/", output), { recursive: true });
-for (const name of ["components.js", "main.js"]) {
+for (const name of ["components.js", "main.js", "location-picker.js"]) {
   await cp(new URL(`../scripts/${name}`, import.meta.url), new URL(`scripts/${name}`, output));
 }
+
+// Ship the bundled country list and its required license notice with the static app.
+await cp(new URL("../public/data/", import.meta.url), new URL("data/", output), { recursive: true });
 
 // Serve the official owner-supplied PNG at the site root.
 await cp(new URL("../public/job-grid-logo.png", import.meta.url), new URL("job-grid-logo.png", output));
