@@ -71,6 +71,7 @@ function initHome(catalog) {
     if (query && filtered.length === 0) {
       container.innerHTML = '<p class="empty-results">No role types match that search. Try another title or browse all categories.</p>';
     }
+    container.setAttribute("aria-busy", "false");
   }
 
   input?.addEventListener("input", render);
@@ -122,6 +123,7 @@ function initDirectory(catalog) {
     if (filtered.length === 0) {
       container.innerHTML = '<p class="empty-results">No role types match those filters. Clear the filters or try a broader search.</p>';
     }
+    container.setAttribute("aria-busy", "false");
   }
 
   input.addEventListener("input", () => { visibleCount = PAGE_SIZE; render(); });
