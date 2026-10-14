@@ -9,39 +9,37 @@ const script = await readFile(new URL("../scripts/job-types.js", import.meta.url
 const build = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
 
-test("starter role catalogue contains 496 unique titles across 25 categories", () => {
-  assert.equal(catalog.categories.length, 25);
+test("starter role titles are distinct and reference category slugs, not a copied category catalogue", () => {
   assert.equal(catalog.roles.length, 496);
-  assert.equal(new Set(catalog.categories.map((category) => category.name)).size, 25);
-  assert.equal(new Set(catalog.categories.map((category) => category.slug)).size, 25);
-  const titles = catalog.roles.map(([title]) => title.trim().toLocaleLowerCase());
-  assert.equal(new Set(titles).size, 496, "role titles must not repeat");
-  for (const [title, categoryIndex] of catalog.roles) {
-    assert.ok(title.length >= 2);
-    assert.ok(Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < catalog.categories.length);
+  assert.equal(new Set(catalog.roles.map(([title]) => title.trim().toLocaleLowerCase())).size, 496);
+  assert.equal(Object.hasOwn(catalog, "categories"), false, "static data must not duplicate production categories");
+  for (const row of catalog.roles) {
+    assert.equal(row.length, 2);
+    assert.ok(typeof row[0] === "string" && row[0].trim().length >= 2);
+    assert.ok(typeof row[1] === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(row[1]));
   }
 });
 
-test("role directory clearly distinguishes job types from employer vacancies", () => {
+test("website obtains active categories from the existing Supabase category table", () => {
+  assert.match(script, /from "\.\/supabase-config\.js"/);
+  assert.match(script, /rest\/v1\/job_categories\?select=slug,name,sort_order&is_active=eq\.true&order=sort_order\.asc/);
+  assert.match(script, /apikey:\s*SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(home, /496 distinct base role titles/);
+  assert.match(home, /not confirmed vacancies/i);
   assert.match(directory, /Important: job types are not vacancies/);
-  assert.match(directory, /employer-supplied details/);
+  assert.doesNotMatch(script, /const categories = \[/);
+});
+
+test("role directory supports title search, category filters, and incremental results", () => {
   assert.match(directory, /id="job-type-search"/);
   assert.match(directory, /id="job-type-category"/);
   assert.match(directory, /id="load-more-role-types"/);
-  assert.match(home, /not confirmed vacancies/i);
-  assert.match(home, /id="home-job-types"/);
-  assert.doesNotMatch(home, /Sample employer/);
-});
-
-test("browser catalogue escapes dynamic text and supports title/category filters", () => {
-  assert.match(script, /function escapeHtml/);
-  assert.match(script, /aria-label="Explore /);
-  assert.match(script, /job-type-category/);
   assert.match(script, /URLSearchParams/);
   assert.match(script, /PAGE_SIZE = 30/);
+  assert.match(script, /function escapeHtml/);
 });
 
-test("static build includes the new directory page and script", () => {
+test("static build includes the new directory page and browser module", () => {
   assert.match(build, /job-types\.html/);
   assert.match(build, /job-types\.js/);
   assert.match(build, /public\/data\//);
