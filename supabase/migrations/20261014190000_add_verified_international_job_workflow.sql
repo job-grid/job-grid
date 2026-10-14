@@ -599,6 +599,53 @@ CREATE TRIGGER eligibility_assessments_invalidate_review
 AFTER INSERT OR UPDATE OR DELETE ON public.eligibility_assessments
 FOR EACH ROW EXECUTE FUNCTION public.invalidate_job_after_linked_record_change();
 
+-- Identity changes invalidate prior employer/occupation verification. The linked vacancy trigger
+-- then returns each affected job to draft; a new verification and review are required.
+CREATE OR REPLACE FUNCTION public.reset_employer_verification_on_identity_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+  IF ROW(NEW.legal_name, NEW.website, NEW.country_code)
+     IS DISTINCT FROM
+     ROW(OLD.legal_name, OLD.website, OLD.country_code) THEN
+    NEW.verification_status := 'pending';
+    NEW.verification_evidence_url := NULL;
+    NEW.verified_at := NULL;
+    NEW.verified_by := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER employers_reset_verification_before_identity_change
+BEFORE UPDATE OF legal_name, website, country_code ON public.employers
+FOR EACH ROW EXECUTE FUNCTION public.reset_employer_verification_on_identity_change();
+
+CREATE OR REPLACE FUNCTION public.reset_occupation_verification_on_identity_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+  IF ROW(NEW.category_slug, NEW.canonical_title, NEW.isco08_code)
+     IS DISTINCT FROM
+     ROW(OLD.category_slug, OLD.canonical_title, OLD.isco08_code) THEN
+    NEW.verification_status := 'pending';
+    NEW.verification_source_url := NULL;
+    NEW.verified_at := NULL;
+    NEW.verified_by := NULL;
+    NEW.is_active := false;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER occupations_reset_verification_before_identity_change
+BEFORE UPDATE OF category_slug, canonical_title, isco08_code ON public.occupations
+FOR EACH ROW EXECUTE FUNCTION public.reset_occupation_verification_on_identity_change();
+
 CREATE OR REPLACE FUNCTION public.invalidate_jobs_for_parent_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1160,6 +1207,8 @@ GRANT SELECT ON TABLE public.jobs TO anon, authenticated;
 REVOKE ALL ON FUNCTION public.bump_job_record_version() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.invalidate_job_after_linked_record_change() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.invalidate_jobs_for_parent_change() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.reset_employer_verification_on_identity_change() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.reset_occupation_verification_on_identity_change() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_source_connection_enabled() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.job_evidence_ready(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.job_approval_current(uuid) FROM PUBLIC, anon, authenticated;
