@@ -11,7 +11,7 @@ The International Labour Organization (ILO) identifies ISCO-08 as a four-level c
 - **Classification authority:** International Labour Organization, ISCO-08.
 - **Official landing page:** https://isco.ilo.org/en/isco-08/
 - **Source copy used for this first extraction:** https://github.com/ails-lab/Sure-GB/blob/main/ISCO-08-EN.csv
-- The official page advertises downloadable ISCO-08 structure and occupational-title materials. During preparation on 14 October 2026, the download links for the current Excel/CSV assets returned 404 in this review session. The available CSV copy was therefore used only to prepare a candidate dataset.
+- The official page advertises downloadable ISCO-08 structure and occupational-title materials. On 14 October 2026, the clickable CSV/XLSX links on the current landing page resolved to legacy `www.ilo.org` URLs that returned 404. Direct `webapps.ilo.org` URLs for the corresponding CSV/XLSX responded as binary files, but this workflow could not read their bytes for a row-by-row comparison. The available CSV mirror was therefore used only to prepare a candidate dataset; reconciliation to the primary file remains outstanding.
 - The repository test verifies record counts, code shapes, unique unit-group IDs, hierarchy prefixes, and that all records remain unmapped/inactive. **It does not prove that every code/title is identical to the current ILO primary-source file.**
 
 Every record is labelled `requires_official_source_crosscheck`; category mapping is `pending`; `job_grid_category_slug` is blank; and `publicly_active` is `false`. These flags are deliberate.
