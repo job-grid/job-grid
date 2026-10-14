@@ -128,3 +128,41 @@ jobs:
         if: steps.detect.outputs.has_app == 'false'
         run: >-
           echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
+
+  database-certification:
+    name: Phase 0 CI / Isolated PostgreSQL certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_grid_certification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d job_grid_certification"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: job_grid_certification
+    steps:
+      - name: Checkout exact PR commit
+        uses: actions/checkout@v6
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Confirm isolated database target
+        run: |
+          set -euo pipefail
+          test "$(psql -XAtq -c 'SELECT current_database()')" = "job_grid_certification"
+          test "$(psql -XAtq -c 'SELECT current_user')" = "postgres"
+          echo "PASS: connected only to isolated GitHub Actions PostgreSQL service"
+      - name: Apply real baseline migrations and certify PR #45
+        run: bash scripts/database-certification.sh
