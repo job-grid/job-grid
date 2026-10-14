@@ -38,3 +38,12 @@
   .occupation-card { padding: 1rem; }
   .occupation-status { max-width: 130px; }
 }
+
+.occupation-map { display:grid; gap:0.28rem; margin:0.85rem 0 0; padding:0.7rem 0.75rem; border-radius:0.7rem; border:1px solid #dbe5ff; background:#f6f8ff; }
+.occupation-map span { color:#69748b; font-size:0.68rem; }
+.occupation-map strong { color:var(--color-secondary); font-size:0.83rem; line-height:1.4; }
+.occupation-map-unassigned { background:#fffaf0; border-color:#eadab8; }
+.occupation-map-unassigned strong { color:#73541b; }
+.occupation-card-foot { flex-wrap:wrap; }
+@media (max-width:920px) { .occupation-tools { grid-template-columns:1fr 1fr; } }
+@media (max-width:600px) { .occupation-tools { grid-template-columns:1fr; } }
