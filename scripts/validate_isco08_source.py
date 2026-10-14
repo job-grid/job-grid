@@ -32,8 +32,15 @@ def fail(message: str) -> "NoReturn":
     raise SystemExit(1)
 
 
-def read_csv_bytes(content: bytes, delimiter: str) -> list[dict[str, str]]:
-    text = content.decode("utf-8-sig")
+def read_csv_bytes(content: bytes, delimiter: str) -> tuple[list[dict[str, str]], str]:
+    # The official ILO CSV is currently served with legacy Windows-1252 bytes.
+    # Prefer UTF-8 for candidate data and use CP1252 only when UTF-8 decoding fails.
+    try:
+        text = content.decode("utf-8-sig")
+        encoding = "utf-8-sig"
+    except UnicodeDecodeError:
+        text = content.decode("cp1252")
+        encoding = "windows-1252"
     reader = csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter)
     if not reader.fieldnames:
         fail("CSV has no header row.")
@@ -44,7 +51,7 @@ def read_csv_bytes(content: bytes, delimiter: str) -> list[dict[str, str]]:
                for key, value in raw.items() if key is not None}
         if any(row.values()):
             rows.append(row)
-    return rows
+    return rows, encoding
 
 
 def code_map(rows: list[dict[str, str]], label: str) -> dict[str, dict[str, str]]:
@@ -99,8 +106,8 @@ def main() -> None:
     official_hash = hashlib.sha256(official_bytes).hexdigest()
 
     try:
-        official_rows = read_csv_bytes(official_bytes, ";")
-        candidate_rows = read_csv_bytes(CANDIDATE.read_bytes(), ",")
+        official_rows, official_encoding = read_csv_bytes(official_bytes, ";")
+        candidate_rows, candidate_encoding = read_csv_bytes(CANDIDATE.read_bytes(), ",")
     except (UnicodeDecodeError, csv.Error) as exc:
         fail(f"CSV parsing failed: {exc}")
 
@@ -184,6 +191,8 @@ def main() -> None:
         "source_url": SOURCE_URL,
         "source_sha256": official_hash,
         "source_bytes": len(official_bytes),
+        "source_encoding": official_encoding,
+        "candidate_encoding": candidate_encoding,
         "group_counts": EXPECTED_COUNTS,
         "unit_group_codes_compared": len(candidate_unit_keys),
         "all_level_titles_compared": len(official),
