@@ -197,14 +197,30 @@ assert_public_job_count "0" "content edit invalidation"
 echo "PASS: job revision trigger increments version and invalidates the current publication"
 reapprove_and_publish_valid_job
 
-echo "== Exercise employer-parent invalidation trigger =="
+echo "== Exercise employer identity verification reset and linked-job invalidation =="
 psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.employers SET website='https://employer-revised.synthetic.example/' WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';" >/dev/null
-assert_job_retracted_for_review "employer record change"
+assert_job_retracted_for_review "employer identity change"
+employer_state="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT verification_status || '|' || (verification_evidence_url IS NULL)::text || '|' || (verified_at IS NULL)::text || '|' || (verified_by IS NULL)::text FROM public.employers WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';")"
+if [[ "$employer_state" != "pending|true|true|true" ]]; then
+  echo "FAIL: employer identity change did not reset verification evidence (state=$employer_state)" >&2
+  exit 1
+fi
+expect_failure "reviewer cannot reapprove a vacancy after employer identity change until reverified" "lacks current employer, occupation, source, application, or international-eligibility evidence" \
+  "$(set_role_sql '11111111-1111-4111-8111-111111111111' "SELECT public.review_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd','approved','attempt before employer reverification');")"
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.employers SET verification_status='verified', verification_evidence_url='https://employer-revised.synthetic.example/test-verification-evidence', verified_at=now(), verified_by='33333333-3333-4333-8333-333333333333' WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';" >/dev/null
 reapprove_and_publish_valid_job
 
-echo "== Exercise occupation-parent invalidation trigger =="
+echo "== Exercise occupation identity verification reset and linked-job invalidation =="
 psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.occupations SET canonical_title = canonical_title || ' Revised' WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';" >/dev/null
-assert_job_retracted_for_review "occupation record change"
+assert_job_retracted_for_review "occupation identity change"
+occupation_state="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT verification_status || '|' || is_active::text || '|' || (verification_source_url IS NULL)::text || '|' || (verified_at IS NULL)::text || '|' || (verified_by IS NULL)::text FROM public.occupations WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';")"
+if [[ "$occupation_state" != "pending|false|true|true|true" ]]; then
+  echo "FAIL: occupation identity change did not reset verification evidence and active flag (state=$occupation_state)" >&2
+  exit 1
+fi
+expect_failure "reviewer cannot reapprove a vacancy after occupation identity change until reverified" "lacks current employer, occupation, source, application, or international-eligibility evidence" \
+  "$(set_role_sql '11111111-1111-4111-8111-111111111111' "SELECT public.review_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd','approved','attempt before occupation reverification');")"
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.occupations SET verification_status='verified', verification_source_url='https://occupations.synthetic.example/test-occupation-evidence-revised', verified_at=now(), verified_by='33333333-3333-4333-8333-333333333333', is_active=true WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';" >/dev/null
 reapprove_and_publish_valid_job
 
 echo "== Exercise source-link invalidation trigger =="
