@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, "feat/isco08-occupation-catalog-foundation"]
   workflow_dispatch:
 
 permissions:
@@ -128,3 +128,49 @@ jobs:
         if: steps.detect.outputs.has_app == 'false'
         run: >-
           echo 'Application validation: SKIPPED — repository contains no application/package manifest yet; no fake tests were created.'
+
+  sync-isco08-official-source:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/isco08-occupation-catalog-foundation'
+    name: Phase 0 CI / Official ISCO-08 source synchronization
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/isco08-occupation-catalog-foundation
+      - name: Synchronize code, title and hierarchy fields from the official ILO CSV
+        run: python3 scripts/sync_isco08_from_ilo.py
+      - name: Validate exact ILO source match and pending production gates
+        run: python3 scripts/validate_isco08_source.py
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Build preview assets
+        run: npm run build
+      - name: Commit synchronized catalogue only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/occupations/isco-08-unit-groups.csv
+          git add data/occupations/isco-08-source-manifest.json
+          git add data/occupations/README.md
+          git add public/data/occupations-isco08-review.json
+          git add occupations-preview.html
+          if git diff --cached --quiet; then
+            echo "The catalogue already matches the official ILO source; no commit needed."
+          else
+            git commit -m "data(occupations): sync titles from official ILO ISCO-08 source"
+            git push origin HEAD:feat/isco08-occupation-catalog-foundation
+          fi
