@@ -48,7 +48,7 @@ test("public access is read-only and only returns published non-expired jobs", (
 
 test("job skill level labels and the admin-managed boundary are documented", async () => {
   const docs = await readFile(new URL("../docs/jobs-catalog-mvp.md", import.meta.url), "utf8");
-  assert.match(docs, /manually manage job posts in the Supabase dashboard/i);
-  assert.match(docs, /no employer accounts or public write access/i);
+  assert.match(docs, /administrator manually creates and updates job advertisements using the existing Supabase Dashboard/i);
+  assert.match(docs, /there is no browser INSERT, UPDATE, or DELETE grant/i);
   assert.match(docs, /entry-level \/ no specialist skill required/i);
 });
