@@ -64,6 +64,15 @@ if [[ "$before" != "$after" ]]; then
 fi
 echo "PASS: exact category/country/job baseline counts and content hashes unchanged"
 
+echo "== Test public category and country policies used by the website =="
+anon_category_count="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SET ROLE anon; SELECT count(*) FROM public.job_categories WHERE is_active = true;")"
+anon_country_count="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SET ROLE anon; SELECT count(*) FROM public.country_options;")"
+if [[ "$anon_category_count" != "25" || "$anon_country_count" != "249" ]]; then
+  echo "FAIL: anonymous website lookup counts wrong (categories=$anon_category_count countries=$anon_country_count)" >&2
+  exit 1
+fi
+echo "PASS: anonymous category and country lookups return 25 and 249 rows"
+
 echo "== Test the existing website's category contract against anonymous PostgreSQL results =="
 category_file="$(mktemp)"
 trap 'rm -f "$category_file"' EXIT
@@ -72,6 +81,14 @@ JOB_GRID_ACTIVE_CATEGORY_FILE="$category_file" node scripts/check-role-category-
 
 echo "== Run catalog, constraints, synthetic data, and role permission checks =="
 psqlx -f tests/database-certification.sql
+
+echo "== Verify public occupation directory excludes active but unverified titles =="
+anon_occupation_count="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SET ROLE anon; SELECT count(*) FROM public.occupations;")"
+if [[ "$anon_occupation_count" != "1" ]]; then
+  echo "FAIL: public occupation directory should expose only the one verified synthetic title; got $anon_occupation_count" >&2
+  exit 1
+fi
+echo "PASS: active-but-pending occupation title is not visible anonymously"
 
 expect_failure() {
   local label="$1"
@@ -94,6 +111,39 @@ set_role_sql() {
   local user_id="$1"
   local command="$2"
   printf "SET ROLE authenticated; SET request.jwt.claim.sub = '%s'; %s" "$user_id" "$command"
+}
+
+assert_public_job_count() {
+  local expected_count="$1"
+  local label="$2"
+  local actual_count
+  actual_count="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SET ROLE anon; SELECT count(*) FROM public.jobs;")"
+  if [[ "$actual_count" != "$expected_count" ]]; then
+    echo "FAIL: $label expected $expected_count public jobs, got $actual_count" >&2
+    exit 1
+  fi
+}
+
+assert_job_retracted_for_review() {
+  local label="$1"
+  local state
+  state="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT j.status || '|' || j.verification_status || '|' || ((j.published_at IS NULL AND NOT EXISTS (SELECT 1 FROM public.publication_records pr WHERE pr.job_id=j.id AND pr.unpublished_at IS NULL))::text) FROM public.jobs j WHERE j.id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
+  if [[ "$state" != "draft|needs_review|true" ]]; then
+    echo "FAIL: $label did not invalidate the published record correctly (state=$state)" >&2
+    exit 1
+  fi
+  assert_public_job_count "0" "$label"
+  echo "PASS: $label retracts the published job and requires review"
+}
+
+reapprove_and_publish_valid_job() {
+  local reviewer_sql publisher_sql
+  reviewer_sql="$(set_role_sql '11111111-1111-4111-8111-111111111111' "SELECT public.review_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd','approved','Synthetic trigger revalidation for database certification.');")"
+  publisher_sql="$(set_role_sql '22222222-2222-4222-8222-222222222222' "SELECT public.publish_verified_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd');")"
+  psql -X -qAt -v ON_ERROR_STOP=1 -c "$reviewer_sql" >/dev/null
+  psql -X -qAt -v ON_ERROR_STOP=1 -c "$publisher_sql" >/dev/null
+  assert_public_job_count "1" "reapproved synthetic vacancy"
+  echo "PASS: authorized reviewer and publisher can reapprove after evidence refresh"
 }
 
 echo "== Test reviewer/publisher/administrator function permissions =="
@@ -135,6 +185,57 @@ echo "PASS: anon and ordinary authenticated visitors see only the single approve
 expect_failure "public visitors cannot insert jobs directly" "permission denied" \
   "SET ROLE anon; INSERT INTO public.jobs(title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code) VALUES ('Unauthorized public insertion','unauthorized-public-insertion','Synthetic Employer','Not allowed','health-care-caregiving','skilled','full_time','CA');"
 
+echo "== Exercise the job revision trigger on a published row =="
+version_before="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT record_version FROM public.jobs WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.jobs SET description = description || ' edited during certification' WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';" >/dev/null
+revision_state="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT status || '|' || verification_status || '|' || (record_version > $version_before)::text FROM public.jobs WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
+if [[ "$revision_state" != "draft|needs_review|true" ]]; then
+  echo "FAIL: job revision trigger did not invalidate changed content (state=$revision_state)" >&2
+  exit 1
+fi
+assert_public_job_count "0" "content edit invalidation"
+echo "PASS: job revision trigger increments version and invalidates the current publication"
+reapprove_and_publish_valid_job
+
+echo "== Exercise employer-parent invalidation trigger =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.employers SET website='https://employer-revised.synthetic.example/' WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';" >/dev/null
+assert_job_retracted_for_review "employer record change"
+reapprove_and_publish_valid_job
+
+echo "== Exercise occupation-parent invalidation trigger =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.occupations SET canonical_title = canonical_title || ' Revised' WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';" >/dev/null
+assert_job_retracted_for_review "occupation record change"
+reapprove_and_publish_valid_job
+
+echo "== Exercise source-link invalidation trigger =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.vacancy_sources SET content_hash=repeat('a',64) WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';" >/dev/null
+assert_job_retracted_for_review "source content hash change"
+reapprove_and_publish_valid_job
+
+echo "== Exercise evidence invalidation trigger =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.vacancy_evidence SET short_excerpt=short_excerpt || ' rechecked' WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd' AND evidence_type='international_eligibility';" >/dev/null
+assert_job_retracted_for_review "international-eligibility evidence change"
+reapprove_and_publish_valid_job
+
+echo "== Exercise eligibility-assessment invalidation trigger =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.eligibility_assessments SET assessment_status='superseded' WHERE id=(SELECT id FROM public.eligibility_assessments WHERE job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd' ORDER BY assessed_at DESC,id DESC LIMIT 1);" >/dev/null
+assert_job_retracted_for_review "eligibility assessment status change"
+psql -X -qAt -v ON_ERROR_STOP=1 -c "
+INSERT INTO public.eligibility_assessments (
+  job_id,applicant_scope,sponsorship_status,assessment_status,eligibility_evidence_id,
+  assessment_reason,assessed_by,assessed_at
+)
+SELECT 'dddddddd-dddd-4ddd-8ddd-dddddddddddd','explicitly_open','unknown','approved',
+       ev.id,'Synthetic re-assessment after evidence recertification',
+       '11111111-1111-4111-8111-111111111111',clock_timestamp()
+FROM public.vacancy_evidence ev
+WHERE ev.job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  AND ev.evidence_type='international_eligibility'
+ORDER BY ev.captured_at DESC,ev.id
+LIMIT 1;
+" >/dev/null
+reapprove_and_publish_valid_job
+
 echo "== Test unpublish function role checks =="
 expect_failure "unauthorized user cannot unpublish" "Publisher permission is required" \
   "$(set_role_sql '44444444-4444-4444-8444-444444444444' "SELECT public.unpublish_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd','suspended','unauthorized unpublish');")"
@@ -166,16 +267,6 @@ if [[ "$audit_count" -lt "1" ]]; then
   exit 1
 fi
 echo "PASS: authorized system administrator source toggle is audited"
-
-echo "== Test data revision trigger invalidates previously approved publication =="
-version_before="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT record_version FROM public.jobs WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
-psql -X -qAt -v ON_ERROR_STOP=1 -c "UPDATE public.jobs SET description = description || ' changed during certification' WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';" >/dev/null
-state_after_change="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT status || '|' || verification_status || '|' || (record_version > $version_before)::text FROM public.jobs WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
-if [[ "$state_after_change" != "draft|needs_review|true" ]]; then
-  echo "FAIL: content change did not require a fresh review (state=$state_after_change)" >&2
-  exit 1
-fi
-echo "PASS: publish-relevant content edits invalidate current approval and return the vacancy to draft"
 
 echo "== Final synthetic-data integrity checks =="
 psql -XAtq -v ON_ERROR_STOP=1 -c "
