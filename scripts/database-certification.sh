@@ -256,6 +256,16 @@ if [[ "$revoked_source" != "true" || "$connection_enabled" != "false" || "$visib
 fi
 echo "PASS: revoked source is disabled, connection is shut off, linked publication disappears"
 
+echo "== Test authorized publisher unpublish path and its audit record =="
+psql -X -qAt -v ON_ERROR_STOP=1 -c "$(set_role_sql '22222222-2222-4222-8222-222222222222' "SELECT public.unpublish_job('dddddddd-dddd-4ddd-8ddd-dddddddddddd','suspended','Source permission revoked during certification');")" >/dev/null
+unpublish_audit="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.audit_logs WHERE actor_id='22222222-2222-4222-8222-222222222222' AND action='job_unpublished' AND entity_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
+terminal_status="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT status FROM public.jobs WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';")"
+if [[ "$unpublish_audit" -lt "1" || "$terminal_status" != "suspended" ]]; then
+  echo "FAIL: authorized unpublish did not change the listing and record the action" >&2
+  exit 1
+fi
+echo "PASS: authorized publisher can suspend a listing and the action is audited"
+
 expect_failure "administrator cannot re-enable a revoked source" "cannot be enabled without approved access" \
   "$(set_role_sql '33333333-3333-4333-8333-333333333333' "SELECT public.set_job_source_enabled('cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);")"
 
