@@ -1,0 +1,6 @@
+# Narrow, evidence-backed false positive only; never ignore the file or rule globally.
+# This exact finding is the Supabase sb_publishable_ key in scripts/supabase-config.js.
+# Supabase documents publishable keys as intended for browser/mobile/public source use:
+# https://supabase.com/docs/guides/getting-started/api-keys
+# The key is constrained by country_options table grants and row-level security; no secret key is stored here.
+06c5be98c7098921757368081d06e62df925e58b:scripts/supabase-config.js:generic-api-key:11

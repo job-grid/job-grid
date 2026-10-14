@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { normalizeCountries, buildGeocodingUrl, normalizeLocations, buildPlaceLabel, buildLocationSelectionPayload, escapeLocationText } from "../scripts/location-picker.js";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../scripts/supabase-config.js";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const tokens = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
@@ -62,6 +63,21 @@ test("vacancy cards are clearly marked sample content and no live features are c
   assert.match(html, /not live vacancies/);
   assert.match(html, /Search, filters, applications, and employer accounts are not connected yet/);
   assert.doesNotMatch(html, /action="https?:\/\//);
+});
+
+test("country selector reads the public country catalog from Supabase first", async () => {
+  const picker = await readFile(new URL("../scripts/location-picker.js", import.meta.url), "utf8");
+  assert.equal(SUPABASE_URL, "https://tnrdovdhlwitjzecduxa.supabase.co");
+  assert.match(SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_[A-Za-z0-9_-]+$/);
+  assert.doesNotMatch(SUPABASE_PUBLISHABLE_KEY, /^sb_secret_/);
+  assert.match(picker, /\/rest\/v1\/country_options\?select=code,name&order=name\.asc/);
+  assert.match(picker, /apikey:\s*SUPABASE_PUBLISHABLE_KEY/);
+  assert.doesNotMatch(picker, /Authorization\s*:/);
+  assert.ok(
+    picker.indexOf("fetch(COUNTRY_OPTIONS_ENDPOINT") < picker.indexOf('fetch("/data/countries.en.json"'),
+    "Supabase should be tried before the bundled country-list fallback",
+  );
+  assert.ok(buildScript.includes('"supabase-config.js"'), "public config must be included in static output");
 });
 
 test("country selector is included in the homepage and shipped in the static build", async () => {
