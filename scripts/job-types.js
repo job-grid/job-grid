@@ -1,4 +1,8 @@
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
+
 const CATALOG_URL = "/data/job-types.json";
+const CATEGORY_OPTIONS_ENDPOINT = SUPABASE_URL +
+  "/rest/v1/job_categories?select=slug,name,sort_order&is_active=eq.true&order=sort_order.asc";
 const PAGE_SIZE = 30;
 
 function escapeHtml(value) {
@@ -11,12 +15,19 @@ function normalize(value) {
   return String(value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim();
 }
 
-function makeRoles(catalog) {
-  return catalog.roles.map(([title, categoryIndex]) => ({
-    title,
-    category: catalog.categories[categoryIndex].name,
-    categorySlug: catalog.categories[categoryIndex].slug
-  }));
+function makeRoles(roleData, categories) {
+  const categoriesBySlug = new Map(categories.map((category) => [category.slug, category]));
+  return roleData.roles.flatMap((row) => {
+    if (!Array.isArray(row) || row.length !== 2) return [];
+    const [title, categorySlug] = row;
+    const category = categoriesBySlug.get(categorySlug);
+    if (typeof title !== "string" || !category || !title.trim()) return [];
+    return [{
+      title: title.trim(),
+      category: category.name,
+      categorySlug: category.slug
+    }];
+  });
 }
 
 function makeRoleCard(role) {
@@ -33,13 +44,43 @@ function makeRoleCard(role) {
 }
 
 async function loadCatalog() {
-  const response = await fetch(CATALOG_URL, { headers: { Accept: "application/json" } });
-  if (!response.ok) throw new Error("The job-type catalogue could not be loaded.");
-  const catalog = await response.json();
-  if (!Array.isArray(catalog.categories) || !Array.isArray(catalog.roles)) {
-    throw new Error("The job-type catalogue has an invalid format.");
+  const [roleResponse, categoryResponse] = await Promise.all([
+    fetch(CATALOG_URL, { headers: { Accept: "application/json" } }),
+    fetch(CATEGORY_OPTIONS_ENDPOINT, {
+      headers: {
+        Accept: "application/json",
+        apikey: SUPABASE_PUBLISHABLE_KEY
+      }
+    })
+  ]);
+
+  if (!roleResponse.ok) throw new Error("The starter role list could not be loaded.");
+  if (!categoryResponse.ok) throw new Error("The existing Job Grid categories could not be loaded.");
+
+  const roleData = await roleResponse.json();
+  const categories = await categoryResponse.json();
+
+  if (!Array.isArray(roleData.roles) || !Array.isArray(categories)) {
+    throw new Error("The role or category catalogue has an invalid format.");
   }
-  return { ...catalog, roleRecords: makeRoles(catalog) };
+
+  const validCategories = categories.filter((category) =>
+    category &&
+    typeof category.slug === "string" &&
+    typeof category.name === "string" &&
+    Number.isInteger(category.sort_order)
+  );
+  if (validCategories.length === 0) {
+    throw new Error("No active categories are available in the existing Job Grid database.");
+  }
+
+  const roleRecords = makeRoles(roleData, validCategories);
+  return {
+    categories: validCategories,
+    roleRecords,
+    totalRoleRows: roleData.roles.length,
+    unmappedRoleCount: roleData.roles.length - roleRecords.length
+  };
 }
 
 function initHome(catalog) {
@@ -67,7 +108,10 @@ function initHome(catalog) {
     container.innerHTML = featured.map(makeRoleCard).join("");
     status.textContent = query
       ? filtered.length + " matching role type" + (filtered.length === 1 ? "" : "s") + ". Showing up to 6."
-      : catalog.roleRecords.length + " role types across " + catalog.categories.length + " categories.";
+      : catalog.roleRecords.length + " role types across " + catalog.categories.length + " active database categories.";
+    if (catalog.unmappedRoleCount > 0) {
+      status.textContent += " " + catalog.unmappedRoleCount + " titles with unknown categories are hidden for review.";
+    }
     if (query && filtered.length === 0) {
       container.innerHTML = '<p class="empty-results">No role types match that search. Try another title or browse all categories.</p>';
     }
@@ -118,7 +162,11 @@ function initDirectory(catalog) {
     const visible = filtered.slice(0, visibleCount);
     container.innerHTML = visible.map(makeRoleCard).join("");
     status.textContent = "Showing " + visible.length + " of " + filtered.length +
-      " matching role types (" + catalog.roleRecords.length + " total).";
+      " matching role types (" + catalog.roleRecords.length + " mapped titles across " +
+      catalog.categories.length + " active database categories).";
+    if (catalog.unmappedRoleCount > 0) {
+      status.textContent += " " + catalog.unmappedRoleCount + " unmapped titles are held out of view.";
+    }
     loadMoreButton.hidden = visibleCount >= filtered.length;
     if (filtered.length === 0) {
       container.innerHTML = '<p class="empty-results">No role types match those filters. Clear the filters or try a broader search.</p>';
@@ -153,6 +201,6 @@ if (homepage || directory) {
         if (target) target.innerHTML = '<p class="empty-results">The role catalogue is temporarily unavailable. Please refresh this page shortly.</p>';
       }
       const status = document.querySelector("#home-role-count, #job-type-count");
-      if (status) status.textContent = "The role catalogue could not be loaded.";
+      if (status) status.textContent = "The existing category catalogue or starter role data could not be loaded.";
     });
 }
