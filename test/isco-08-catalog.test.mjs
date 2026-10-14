@@ -78,8 +78,31 @@ test("review preview is explicitly labelled and excluded from indexing", async (
   assert.match(html, /not live job vacancies/i);
   assert.match(script, /occupations-isco08-review\.json/);
   assert.match(script, /catalog\.groups\.length !== 436/);
+  assert.match(script, /occupation-category-filter/);
+  assert.match(script, /Proposed Job Grid category/);
+  assert.match(script, /mapping_summary\.proposed_category_mappings/);
   assert.match(script, /major\.value = ""/);
   assert.match(script, /render\(true\)/);
   assert.match(build, /occupations-preview\.html/);
   assert.match(build, /occupations-preview\.js/);
+});
+
+test("proposed category mappings use existing slugs but remain unapproved and inactive", async () => {
+  const catalog = JSON.parse(await readFileExtra(new URL("../public/data/occupations-isco08-review.json", import.meta.url), "utf8"));
+  const existing = JSON.parse(await readFileExtra(new URL("../public/data/job-types.json", import.meta.url), "utf8"));
+  const allowed = new Set(existing.categories.map(category => category.slug));
+  assert.equal(catalog.groups.length, 436);
+  assert.equal(catalog.mapping_summary.proposed_category_mappings, 428);
+  assert.equal(catalog.mapping_summary.manual_mapping_review_required, 8);
+  assert.equal(catalog.mapping_summary.mapping_approved, false);
+  assert.equal(catalog.mapping_summary.source_verified_records, 0);
+  assert.ok(catalog.groups.every(group => group.active === false && group.sourceStatus === "requires_official_source_crosscheck"));
+  assert.ok(catalog.groups.filter(group => group.proposedCategorySlug).every(group =>
+    allowed.has(group.proposedCategorySlug) &&
+    group.mappingStatus === "proposed_rule_match" &&
+    group.mappingMethod === "title_keyword_rules_v1"
+  ));
+  assert.ok(catalog.groups.filter(group => !group.proposedCategorySlug).every(group =>
+    group.mappingStatus === "manual_review_required"
+  ));
 });
