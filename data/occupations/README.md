@@ -14,7 +14,7 @@ The International Labour Organization (ILO) identifies ISCO-08 as a four-level c
 - The official ILO-hosted source CSV was retrieved at 2026-10-14T22:12:54Z; its SHA-256 is 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49. The sync compared all 436 unit-group codes and titles plus all parent labels from the official hierarchy. The older public mirror was used only for the initial extraction and its title differences were replaced from the official file.
 - The separate GitHub Actions workflow `.github/workflows/isco08-source-validation.yml` runs `scripts/validate_isco08_source.py`, which downloads the ILO-hosted primary CSV directly, compares all 436 unit-group codes, all 619 level titles (including parent labels), and checks that every candidate remains unmapped/inactive. A PASS proves an exact comparison to the bytes returned by the official URL at that run time; the log records a SHA-256 digest. A download failure is reported as a failure/unverified result and must never be interpreted as a source match. Job Grid category mapping remains a separate review gate.
 
-Every record is labelled verified_source_match for its official ILO code/title/hierarchy fields; category mapping remains pending; job_grid_category_slug is blank; and publicly_active is false. The 431 category suggestions are still unapproved, with 5 records requiring manual mapping review.
+Every record is labelled verified_source_match for official ILO code/title/hierarchy fields. Conservative title-rule suggestions: 286; manual review required: 150. Formal category fields remain unset and all records remain inactive.
 
 ## Do not import to live Supabase
 
@@ -24,29 +24,13 @@ The existing 496 starter job types and the earlier 5,000-row generated workbook 
 
 ## Next steps
 
-1. Review the 431 suggested Job Grid category mappings and manually decide the 5 unmapped records.
-2. Crosswalk the existing 496 starter role titles to ISCO-08 codes, retaining ambiguous matches for human review.
-3. Add aliases only when supported by a source or reviewed mapping.
-4. Prepare a data-only migration after PR #45 and the live recovery/security release gates have been separately resolved and approved.
-
-## Proposed Job Grid category mappings
-
-A first-pass, title-keyword rule set suggests an existing Job Grid category for 431 of the 436 records. 5 records remain unmapped for manual review. Counts are recorded in `public/data/occupations-isco08-review.json`.
-
-These suggestions are not authoritative classifications. The CSV keeps `job_grid_category_slug` empty and leaves the existing `category_mapping_status` pending. Proposed values are stored separately under `proposed_job_grid_category_slug` and related fields, with the rule method and a reason recorded per row. No suggestion changes source verification status or public activation. A reviewer must approve mappings after primary-source reconciliation.
-
-
+1. Review the 286 title-rule category suggestions and resolve the 150 records retained for human review.
+2. Review the 496 starter-title crosswalk candidate list; every candidate remains pending human review.
+3. Add occupation aliases only when supported by an official source or a reviewed decision.
+4. Prepare a data-only migration only after PR #45 and the live recovery/security gates are resolved and explicitly approved.
 ## Latest official source audit
 
-- Retrieval time (UTC): 2026-10-14T22:12:54Z
-- Official CSV: https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv
-- SHA-256: 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49
-- Result: 436/436 unit-group codes and titles matched; parent labels matched; Job Grid category mappings remain unapproved; no record is active.
-
-
-## Latest official source audit
-
-- Retrieval time (UTC): 2026-10-14T22:22:45Z
+- Retrieval time (UTC): 2026-10-14T22:31:08Z
 - Official CSV: https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv
 - SHA-256: 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49
 - Result: 436/436 unit-group codes and titles matched; parent labels matched; Job Grid category mappings remain unapproved; no record is active.

@@ -8511,7 +8511,7 @@
     "status": "official_source_crosscheck_passed",
     "source_url": "https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv",
     "source_sha256": "9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49",
-    "retrieved_at_utc": "2026-10-14T22:22:45Z",
+    "retrieved_at_utc": "2026-10-14T22:31:08Z",
     "source_bytes": 224299,
     "source_encoding": "windows-1252",
     "group_counts": {
