@@ -9,7 +9,7 @@ const migration = await readFile(
 
 test("country options migration seeds the complete pinned country/area dropdown source", () => {
   const match = migration.match(
-    /INSERT INTO public\.country_options \(code, name\) VALUES\n([\s\S]*?)\n;/,
+    /INSERT INTO public\.country_options \(code, name\) VALUES\n([\s\S]*?);/,
   );
   assert.ok(match, "seed INSERT exists");
 
