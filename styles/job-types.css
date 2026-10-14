@@ -1,0 +1,46 @@
+.directory-hero {
+  padding-block: 4.3rem 3.6rem;
+  background: linear-gradient(120deg, #f6f8ff 0%, #ffffff 65%, #edf2ff 100%);
+  border-bottom: 1px solid var(--color-border);
+}
+.directory-hero h1 { margin-bottom: 1.15rem; }
+.directory-intro { max-width: 760px; margin-bottom: 1.5rem; font-size: 1.08rem; line-height: 1.8; }
+.directory-facts { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+.directory-facts span { padding: 0.6rem 0.9rem; border: 1px solid var(--color-border); border-radius: 999px; background: white; color: #59657f; font-size: 0.78rem; }
+.directory-facts strong { color: var(--color-secondary); }
+.directory-content { padding-block: 3.8rem 5rem; }
+.catalogue-notice { display: grid; gap: 0.3rem; margin-bottom: 1.6rem; padding: 1rem 1.15rem; border: 1px solid #dbe5ff; border-left: 4px solid var(--color-primary); border-radius: 0.8rem; background: #f5f8ff; color: #3c4966; font-size: 0.85rem; line-height: 1.7; }
+.catalogue-notice strong { color: var(--color-secondary); }
+.directory-tools { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr) auto; gap: 1rem; align-items: end; padding: 1.15rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: 0 4px 18px rgb(18 39 86 / 3%); }
+.filter-field { display: grid; gap: 0.45rem; min-width: 0; }
+.filter-field label { color: var(--color-secondary); font-size: 0.8rem; font-weight: 700; }
+.filter-field input, .filter-field select { width: 100%; min-height: 48px; padding: 0.7rem 0.85rem; border: 1px solid var(--color-border); border-radius: 0.7rem; color: var(--color-text); background: white; }
+.filter-field input::placeholder { color: #929bb0; }
+.filter-field input:focus-visible, .filter-field select:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.filter-actions { display: flex; justify-content: flex-end; }
+.directory-count { margin: 1.2rem 0; color: #59657f; font-size: 0.82rem; }
+.type-card .role-card-subtitle { margin: 0.75rem 0 0.3rem; color: #6b7690; font-size: 0.78rem; line-height: 1.6; }
+.type-card .role-card-bottom { align-items: center; }
+.type-card .tag { max-width: calc(100% - 42px); overflow-wrap: anywhere; }
+.empty-results { grid-column: 1 / -1; margin: 0; padding: 1.6rem; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-lg); color: #59657f; background: var(--color-bg-subtle); }
+.directory-more { display: flex; justify-content: center; padding-top: 2rem; }
+.directory-more [hidden] { display: none; }
+.home-directory-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; margin-bottom: 1.5rem; }
+.home-directory-tools form { display: grid; gap: 0.45rem; }
+.home-directory-tools label { color: var(--color-secondary); font-size: 0.8rem; font-weight: 700; }
+.home-directory-search { display: flex; gap: 0.65rem; }
+.home-directory-search input { min-width: 0; flex: 1; min-height: 48px; padding: 0.7rem 0.85rem; border: 1px solid var(--color-border); border-radius: 0.7rem; color: var(--color-text); background: white; }
+.home-directory-search input:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+#home-role-count { margin: 0; align-self: end; padding-bottom: 0.8rem; color: #59657f; font-size: 0.78rem; text-align: right; }
+@media (max-width: 740px) {
+  .directory-hero { padding-block: 3rem 2.6rem; }
+  .directory-intro { font-size: 0.98rem; }
+  .directory-content { padding-block: 3rem 3.5rem; }
+  .directory-tools { grid-template-columns: 1fr; padding: 0.9rem; }
+  .filter-actions { justify-content: stretch; }
+  .filter-actions .button { width: 100%; }
+  .home-directory-tools { grid-template-columns: 1fr; }
+  .home-directory-search { flex-direction: column; }
+  .home-directory-search .button { width: 100%; }
+  #home-role-count { text-align: left; padding-bottom: 0; }
+}
