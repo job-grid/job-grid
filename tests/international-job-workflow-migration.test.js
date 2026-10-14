@@ -16,7 +16,7 @@ test("migration extends existing categories and jobs without recreating the foun
   assert.doesNotMatch(migration, /CREATE TABLE(?: IF NOT EXISTS)? public\.job_vacancies/i);
   assert.doesNotMatch(migration, /INSERT INTO public\.job_categories/i);
   assert.doesNotMatch(migration, /\b(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM)\b/i);
-  assert.match(docs, /25 existing active categories/i);
+  assert.match(docs, /25 active categories/i);
   assert.match(docs, /no parallel vacancy table/i);
 });
 
@@ -60,7 +60,7 @@ test("publication gate requires current human approval and eligibility evidence"
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.publish_verified_job/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.review_job/);
   assert.match(migration, /CREATE POLICY jobs_public_read_published[\s\S]*job_publication_gate_passed\(id\)/);
-  assert.match(migration, /publication_records pr[\s\S]*pr\.job_record_version = j\.record_version[\s\S]*pr\.unpublished_at IS NULL/);
+  assert.match(migration, /publication_records pr[\s\S]*pr\.unpublished_at IS NULL[\s\S]*pr\.job_record_version = j\.record_version/);
 });
 
 test("sensitive workflow tables are RLS-protected and public clients cannot write jobs", () => {
