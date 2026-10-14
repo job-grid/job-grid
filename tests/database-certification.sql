@@ -62,10 +62,15 @@ BEGIN
   SELECT count(*) INTO v_fk_count
   FROM pg_constraint
   WHERE contype = 'f'
-    AND connamespace = 'public'::regnamespace
-    AND convalidated = false;
-  IF v_fk_count <> 0 THEN
-    RAISE EXCEPTION 'FAIL: % foreign-key constraints are not validated', v_fk_count;
+    AND connamespace = 'public'::regnamespace;
+  IF v_fk_count < 30 THEN
+    RAISE EXCEPTION 'FAIL: expected at least 30 declared foreign-key constraints, found %', v_fk_count;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE contype = 'f' AND connamespace = 'public'::regnamespace AND NOT convalidated
+  ) THEN
+    RAISE EXCEPTION 'FAIL: one or more foreign-key constraints are not validated';
   END IF;
 
   SELECT string_agg(t.table_name, ', ' ORDER BY t.table_name)
@@ -185,9 +190,9 @@ SELECT pg_temp.assert_sqlstate(
   '23503', 'jobs.country_code foreign key');
 
 SELECT pg_temp.assert_sqlstate(
-  $$INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code)
-    VALUES ('Invalid occupation test','invalid-occupation-test','Synthetic Employer','Fixture description','health-care-caregiving','skilled','full_time','CA')$$,
-  '23503', 'baseline jobs required fields and valid category accepted';
+  $INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,occupation_id,skill_level,employment_type,country_code)
+    VALUES ('Invalid occupation test','invalid-occupation-test','Synthetic Employer','Fixture description','health-care-caregiving','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','skilled','full_time','CA')$,
+  '23503', 'jobs.occupation_id foreign key');
 -- The following invalid-reference checks use explicit nullable workflow foreign keys.
 SELECT pg_temp.assert_sqlstate(
   $$INSERT INTO public.occupations (category_slug,canonical_title) VALUES ('missing-category','Synthetic Occupation')$$,
