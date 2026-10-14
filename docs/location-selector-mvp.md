@@ -18,7 +18,7 @@ This file is a **country picker fallback only**. It is not treated as a newly ap
 - Place suggestions use the Open-Meteo Geocoding API, which documents the `countryCode` parameter and uses GeoNames-derived location data.
 - The request is constrained by the selected country code; results are filtered again client-side. This protects users from similarly named towns in other countries.
 - Selectability uses an explicit feature-code allowlist: current populated-place categories `PPL`, `PPLA`, `PPLA2`–`PPLA5`, `PPLC`, `PPLCD`, `PPLF`, `PPLG`, `PPLL`, `PPLR`, and `PPLS`; current administrative divisions `ADM1`–`ADM5` and `ADMD`. Historical administrative divisions, historical/abandoned/destroyed populated places, and sections of populated places (for example `ADM2H`, `PPLH`, `PPLQ`, `PPLW`, and `PPLX`) are not shown as selectable. They must be assessed under the approved catalog review policy rather than admitted by prefix matching. See the [GeoNames feature-code definitions](https://www.geonames.org/export/codes.html).
-- A limited fallback list is provided if the country-list service is unavailable. The interface explicitly says it is only a fallback rather than silently claiming that it is the full list.
+- An 11-country fallback list is provided only if the bundled country file cannot be loaded. The interface explicitly says it is limited rather than silently claiming that it is the full list.
 - User-visible remote strings are escaped before insertion into the page. Search requests are debounced and stale responses are discarded.
 
 ## Selection event contract
