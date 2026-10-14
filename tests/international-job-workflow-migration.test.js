@@ -79,3 +79,26 @@ test("sensitive workflow tables are RLS-protected and public clients cannot writ
   assert.match(migration, /staff_roles sr[\s\S]*sr\.role IN \('publisher', 'system_admin'\)/);
   assert.match(migration, /staff_roles sr[\s\S]*sr\.role IN \('reviewer', 'system_admin'\)/);
 });
+
+test("Excel base-title seed imports 496 pending inactive job types and never creates vacancies", async () => {
+  const seedMigration = await readFile(
+    new URL("../supabase/migrations/20261015120000_seed_base_occupation_catalogue.sql", import.meta.url),
+    "utf8",
+  );
+  const roleData = JSON.parse(await readFile(new URL("../public/data/job-types.json", import.meta.url), "utf8"));
+  assert.equal(roleData.roles.length, 496);
+  assert.equal(new Set(roleData.roles.map(([title]) => title.trim().toLocaleLowerCase())).size, 496);
+  assert.equal(new Set(roleData.roles.map(([, slug]) => slug)).size, 25);
+  assert.match(seedMigration, /INSERT INTO public\.occupations/);
+  assert.match(seedMigration, /'pending'/);
+  assert.match(seedMigration, /is_active\s*\)/);
+  assert.match(seedMigration, /ON CONFLICT \(normalized_title\) DO NOTHING/);
+  assert.match(seedMigration, /Expected the 25 existing active Job Grid categories/i);
+  assert.match(seedMigration, /expected all 496 unique base titles/i);
+  assert.doesNotMatch(seedMigration, /INSERT INTO public\.jobs/i);
+  assert.doesNotMatch(seedMigration, /UPDATE public\.jobs|DELETE FROM public\.jobs|TRUNCATE/i);
+  for (const [title, slug] of roleData.roles) {
+    assert.ok(seedMigration.includes(`('${slug}', '${title.replace(/'/g, "''")}', 'pending'`), `Missing seeded role: ${title}`);
+  }
+});
+
