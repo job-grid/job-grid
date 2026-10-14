@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the candidate ISCO-08 structure with the ILO-hosted primary CSV.
-
-This check uses the official ILO file host directly because the current ILO
-landing page still links some downloads through legacy www.ilo.org URLs.
-No data are downloaded into the public web bundle or imported into a database.
-"""
+"""Compare the Job Grid candidate catalogue with the ILO-hosted ISCO-08 CSV."""
 from __future__ import annotations
 
 import csv
@@ -32,9 +27,11 @@ def fail(message: str) -> "NoReturn":
     raise SystemExit(1)
 
 
-def read_csv_bytes(content: bytes, delimiter: str) -> tuple[list[dict[str, str]], str]:
-    # The official ILO CSV is currently served with legacy Windows-1252 bytes.
-    # Prefer UTF-8 for candidate data and use CP1252 only when UTF-8 decoding fails.
+def read_csv_bytes(
+    content: bytes, delimiter: str
+) -> tuple[list[dict[str, str]], str]:
+    # The ILO-hosted source contains legacy Windows-1252 bytes; use UTF-8
+    # whenever possible, with CP1252 fallback for the official file.
     try:
         text = content.decode("utf-8-sig")
         encoding = "utf-8-sig"
@@ -47,41 +44,135 @@ def read_csv_bytes(content: bytes, delimiter: str) -> tuple[list[dict[str, str]]
     reader.fieldnames = [name.strip().lstrip("\ufeff") for name in reader.fieldnames]
     rows: list[dict[str, str]] = []
     for raw in reader:
-        row = {(key or "").strip().lstrip("\ufeff"): (value or "").strip()
-               for key, value in raw.items() if key is not None}
+        row = {
+            (key or "").strip().lstrip("\ufeff"): (value or "").strip()
+            for key, value in raw.items()
+            if key is not None
+        }
         if any(row.values()):
             rows.append(row)
     return rows, encoding
 
 
-def code_map(rows: list[dict[str, str]], label: str) -> dict[str, dict[str, str]]:
-    for needed in ("Level", "ISCO 08 Code", "Title EN"):
+def add_group(
+    groups: dict[str, dict[str, str]],
+    level: str,
+    code: str,
+    title: str,
+    source_label: str,
+) -> None:
+    code = code.strip()
+    title = title.strip()
+    if len(code) != EXPECTED_CODE_WIDTH[level] or not code.isdigit():
+        fail(f"{source_label}: invalid level-{level} code {code!r}.")
+    if not title:
+        fail(f"{source_label}: blank title for level {level}, code {code}.")
+    key = f"{level}:{code}"
+    record = {"level": level, "code": code, "title": title}
+    if key in groups and groups[key] != record:
+        fail(
+            f"{source_label}: inconsistent title/parent labels for {key}: "
+            f"{groups[key]['title']!r} vs {title!r}."
+        )
+    groups[key] = record
+
+
+def parse_official_source(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    # The ILO's current CSV format contains a row per unit group, with the
+    # full hierarchy columns: major/major_label/.../unit/description.
+    required = {
+        "ISCO_version", "major", "major_label", "sub_major",
+        "sub_major_label", "minor", "minor_label", "unit", "description",
+    }
+    actual = set(rows[0]) if rows else set()
+    if not required.issubset(actual):
+        fail(
+            "ILO source columns did not match the expected official hierarchy format. "
+            f"Missing={sorted(required - actual)}; headers={sorted(actual)}."
+        )
+
+    groups: dict[str, dict[str, str]] = {}
+    seen_units: set[str] = set()
+    for row in rows:
+        if row.get("ISCO_version", "").strip() not in ("ISCO-08", "ISCO 08"):
+            # Ignore unrelated rows, but do not silently accept malformed ISCO rows.
+            continue
+        major = row.get("major", "").strip()
+        sub_major = row.get("sub_major", "").strip()
+        minor = row.get("minor", "").strip()
+        unit = row.get("unit", "").strip()
+        if not unit:
+            continue
+        if len(sub_major) != 2 or not sub_major.startswith(major):
+            fail(f"ILO source: unit {unit} has invalid sub-major parent {sub_major}.")
+        if len(minor) != 3 or not minor.startswith(sub_major):
+            fail(f"ILO source: unit {unit} has invalid minor parent {minor}.")
+        if len(unit) != 4 or not unit.startswith(minor):
+            fail(f"ILO source: invalid unit/parent hierarchy {unit}/{minor}.")
+        if unit in seen_units:
+            fail(f"ILO source: duplicate unit-group code {unit}.")
+        seen_units.add(unit)
+        add_group(groups, "1", major, row.get("major_label", ""), "ILO source")
+        add_group(groups, "2", sub_major, row.get("sub_major_label", ""), "ILO source")
+        add_group(groups, "3", minor, row.get("minor_label", ""), "ILO source")
+        add_group(groups, "4", unit, row.get("description", ""), "ILO source")
+
+    counts = {
+        level: sum(record["level"] == level for record in groups.values())
+        for level in EXPECTED_COUNTS
+    }
+    if counts != EXPECTED_COUNTS:
+        fail(
+            "ILO source hierarchy counts did not match ISCO-08. "
+            f"Counts={counts}; expected={EXPECTED_COUNTS}."
+        )
+    if len(seen_units) != 436:
+        fail(f"ILO source contains {len(seen_units)} unique unit groups, not 436.")
+    return groups
+
+
+def parse_candidate_source(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    for needed in ("isco_version", "isco08_code", "canonical_title_en"):
         if not rows or needed not in rows[0]:
-            parsed_headers = list(rows[0]) if rows else []
             fail(
-                f"{label} is missing required column {needed!r}. "
-                f"Parsed headers={parsed_headers!r}; first-row-sample="
-                f"{dict(list(rows[0].items())[:3]) if rows else {}}"
+                f"Job Grid candidate CSV is missing {needed!r}; "
+                f"headers={list(rows[0]) if rows else []!r}."
             )
     groups: dict[str, dict[str, str]] = {}
     for row in rows:
-        level = row.get("Level", "").strip()
-        if level not in EXPECTED_COUNTS:
-            continue
-        code = row.get("ISCO 08 Code", "").strip()
-        title = row.get("Title EN", "").strip()
-        if len(code) != EXPECTED_CODE_WIDTH[level] or not code.isdigit():
-            fail(f"{label}: invalid code {code!r} for level {level}.")
-        key = f"{level}:{code}"
-        if key in groups:
-            fail(f"{label}: duplicate level/code {key}.")
-        if not title:
-            fail(f"{label}: blank title for {key}.")
-        groups[key] = {"level": level, "code": code, "title": title}
-    counts = {level: sum(row["level"] == level for row in groups.values())
-              for level in EXPECTED_COUNTS}
+        level = ""
+        code = ""
+        title = ""
+        if row.get("isco_version", "").strip() != "ISCO-08":
+            fail("Job Grid candidate CSV contains a non-ISCO-08 record.")
+        code = row.get("isco08_code", "").strip()
+        if not re.fullmatch(r"\d{4}", code):
+            fail(f"Job Grid candidate CSV has invalid unit-group code {code!r}.")
+        title = row.get("canonical_title_en", "").strip()
+        add_group(groups, "4", code, title, "Job Grid candidate CSV")
+        for code_field, title_field, level in (
+            ("major_group_code", "major_group_title", "1"),
+            ("sub_major_group_code", "sub_major_group_title", "2"),
+            ("minor_group_code", "minor_group_title", "3"),
+        ):
+            parent_code = row.get(code_field, "").strip()
+            parent_title = row.get(title_field, "").strip()
+            expected_prefix = code[:EXPECTED_CODE_WIDTH[level]]
+            if parent_code != expected_prefix:
+                fail(
+                    f"Job Grid candidate code {code} has wrong {level}-level parent "
+                    f"{parent_code!r}; expected {expected_prefix!r}."
+                )
+            add_group(groups, level, parent_code, parent_title, "Job Grid candidate CSV")
+    counts = {
+        level: sum(record["level"] == level for record in groups.values())
+        for level in EXPECTED_COUNTS
+    }
     if counts != EXPECTED_COUNTS:
-        fail(f"{label}: group counts were {counts}; expected {EXPECTED_COUNTS}.")
+        fail(
+            "Job Grid candidate hierarchy counts differ. "
+            f"Counts={counts}; expected={EXPECTED_COUNTS}."
+        )
     return groups
 
 
@@ -111,59 +202,64 @@ def main() -> None:
     official_hash = hashlib.sha256(official_bytes).hexdigest()
 
     try:
-        official_rows, official_encoding = read_csv_bytes(official_bytes, ";")
+        official_rows, official_encoding = read_csv_bytes(official_bytes, ",")
         candidate_rows, candidate_encoding = read_csv_bytes(CANDIDATE.read_bytes(), ",")
     except (UnicodeDecodeError, csv.Error) as exc:
         fail(f"CSV parsing failed: {exc}")
 
-    official = code_map(official_rows, "ILO source")
-    candidate = code_map(candidate_rows, "Job Grid candidate CSV")
+    official = parse_official_source(official_rows)
+    candidate = parse_candidate_source(candidate_rows)
 
-    code_keys = {key for key in official if key.startswith("4:")}
-    candidate_unit_keys = {key for key in candidate if key.startswith("4:")}
-    missing = sorted(code_keys - candidate_unit_keys)
-    extra = sorted(candidate_unit_keys - code_keys)
-    if missing or extra:
-        fail(f"unit-group code set differs; missing={missing[:12]}, extra={extra[:12]}")
-
-    mismatches: list[dict[str, str]] = []
+    mismatches = []
     for key in sorted(official):
         if key not in candidate:
-            fail(f"candidate file is missing hierarchical group {key}.")
-        left = official[key]["title"]
-        right = candidate[key]["title"]
-        if left != right:
             mismatches.append({
-                "level": official[key]["level"],
-                "code": official[key]["code"],
-                "ilo_title": left,
-                "candidate_title": right,
+                "group": key, "issue": "missing_candidate_record",
+                "ilo_title": official[key]["title"],
+            })
+            continue
+        if candidate[key]["title"] != official[key]["title"]:
+            mismatches.append({
+                "group": key,
+                "issue": "title_mismatch",
+                "ilo_title": official[key]["title"],
+                "candidate_title": candidate[key]["title"],
             })
 
-    # Compare every candidate's parent labels to the same official source rows.
+    candidate_only = sorted(set(candidate) - set(official))
+    for key in candidate_only:
+        mismatches.append({
+            "group": key,
+            "issue": "extra_candidate_parent_or_unit",
+            "candidate_title": candidate[key]["title"],
+        })
+
+    # Also confirm the explicit per-row hierarchy fields correspond to the codes.
     for row in candidate_rows:
         code = row.get("isco08_code", "").strip()
         if not re.fullmatch(r"\d{4}", code):
             continue
-        hierarchy = [
+        for code_field, title_field, level, parent_code in (
             ("major_group_code", "major_group_title", "1", code[:1]),
             ("sub_major_group_code", "sub_major_group_title", "2", code[:2]),
             ("minor_group_code", "minor_group_title", "3", code[:3]),
-        ]
-        for code_field, title_field, level, parent_code in hierarchy:
+        ):
             source = official.get(f"{level}:{parent_code}")
             if source is None:
-                fail(f"missing official parent level={level} code={parent_code} for {code}.")
-            if row.get(code_field, "").strip() != parent_code:
-                fail(f"wrong candidate parent code for unit group {code}: {code_field}.")
-            candidate_parent_title = row.get(title_field, "").strip()
-            if candidate_parent_title != source["title"]:
                 mismatches.append({
-                    "level": level,
-                    "code": parent_code,
-                    "ilo_title": source["title"],
-                    "candidate_title": candidate_parent_title,
+                    "group": f"{level}:{parent_code}",
+                    "issue": f"missing_official_parent_for_{code}",
+                })
+            elif (
+                row.get(code_field, "").strip() != parent_code
+                or row.get(title_field, "").strip() != source["title"]
+            ):
+                mismatches.append({
+                    "group": f"{level}:{parent_code}",
                     "context_unit_group": code,
+                    "issue": "candidate_parent_label_mismatch",
+                    "ilo_title": source["title"],
+                    "candidate_title": row.get(title_field, "").strip(),
                 })
 
     if mismatches:
@@ -173,20 +269,20 @@ def main() -> None:
             "first_mismatches": mismatches[:25],
             "source_url": SOURCE_URL,
             "source_sha256": official_hash,
+            "source_encoding": official_encoding,
         }, indent=2, ensure_ascii=False))
         raise SystemExit(1)
 
-    # Ensure only the ISCO source fields were compared; mapping status remains a separate gate.
-    unverified = sum(
+    bad_flags = sum(
         1 for row in candidate_rows
         if row.get("source_verification_status") != "requires_official_source_crosscheck"
         or row.get("category_mapping_status") != "pending"
         or row.get("job_grid_category_slug", "").strip()
         or row.get("publicly_active") != "false"
     )
-    if unverified:
+    if bad_flags:
         fail(
-            f"{unverified} candidate records do not retain the required "
+            f"{bad_flags} candidate records do not retain the required "
             "pending/unmapped/inactive flags."
         )
 
@@ -199,11 +295,11 @@ def main() -> None:
         "source_encoding": official_encoding,
         "candidate_encoding": candidate_encoding,
         "group_counts": EXPECTED_COUNTS,
-        "unit_group_codes_compared": len(candidate_unit_keys),
+        "unit_group_codes_compared": 436,
         "all_level_titles_compared": len(official),
-        "hierarchy_labels_compared": len(candidate_unit_keys) * 3,
         "title_mismatches": 0,
-        "job_grid_mapping": "PENDING (not part of source comparison)",
+        "hierarchy_labels_compared": 436 * 3,
+        "job_grid_mapping": "PENDING (separate review gate)",
         "production_import_authorized": False,
         "publicly_active_records": 0,
     }, indent=2, ensure_ascii=False))
