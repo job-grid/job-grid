@@ -294,7 +294,7 @@ def main() -> None:
         count=1,
     )
     readme = re.sub(
-        r"\n{2,}## Latest official source audit\n.*?(?=\n## |\Z)",
+        r"\n+## Latest official source audit\n.*?(?=\n## |\Z)",
         "",
         readme,
         flags=re.DOTALL,
