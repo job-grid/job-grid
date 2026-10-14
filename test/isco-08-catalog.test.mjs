@@ -93,34 +93,50 @@ test("proposed category mappings use existing slugs but remain unapproved and in
   const catalog = JSON.parse(await readFileExtra(new URL("../public/data/occupations-isco08-review.json", import.meta.url), "utf8"));
   const existing = JSON.parse(await readFileExtra(new URL("../public/data/job-types.json", import.meta.url), "utf8"));
   const allowed = new Set(existing.categories.map(category => category.slug));
+  const proposed = catalog.groups.filter(group => group.proposedCategorySlug);
+  const manual = catalog.groups.filter(group => !group.proposedCategorySlug);
   assert.equal(catalog.groups.length, 436);
-  assert.equal(catalog.mapping_summary.proposed_category_mappings, 431);
-  assert.equal(catalog.mapping_summary.manual_mapping_review_required, 5);
+  assert.equal(catalog.mapping_summary.proposed_category_mappings, proposed.length);
+  assert.equal(catalog.mapping_summary.manual_mapping_review_required, manual.length);
+  assert.equal(proposed.length + manual.length, 436);
   assert.equal(catalog.mapping_summary.mapping_approved, false);
-  const verified = catalog.source_verification_status === "verified_source_match";
-  assert.ok(["requires_official_source_crosscheck", "verified_source_match"].includes(catalog.source_verification_status));
-  assert.equal(catalog.mapping_summary.source_verified_records, verified ? 436 : 0);
-  assert.ok(catalog.groups.every(group =>
-    group.active === false &&
-    group.sourceStatus === (verified ? "verified_source_match" : "requires_official_source_crosscheck")
-  ));
-  assert.ok(catalog.groups.filter(group => group.proposedCategorySlug).every(group =>
+  assert.ok(["title_keyword_rules_v1", "title_phrase_rules_v2"].includes(catalog.mapping_summary.mapping_method));
+  assert.equal(catalog.source_verification_status, "verified_source_match");
+  assert.equal(catalog.mapping_summary.source_verified_records, 436);
+  assert.ok(catalog.groups.every(group => group.active === false && group.sourceStatus === "verified_source_match"));
+  assert.ok(proposed.every(group =>
     allowed.has(group.proposedCategorySlug) &&
     group.mappingStatus === "proposed_rule_match" &&
-    group.mappingMethod === "title_keyword_rules_v1"
+    group.mappingMethod === catalog.mapping_summary.mapping_method
   ));
-  assert.ok(catalog.groups.filter(group => !group.proposedCategorySlug).every(group =>
-    group.mappingStatus === "manual_review_required"
+  assert.ok(manual.every(group => group.mappingStatus === "manual_review_required"));
+  assert.ok(records.every(row =>
+    row.job_grid_category_slug === "" &&
+    row.category_mapping_status === "pending" &&
+    row.source_verification_status === "verified_source_match" &&
+    row.publicly_active === "false"
   ));
+  if (catalog.mapping_summary.mapping_method === "title_phrase_rules_v2") {
+    const businessServices = catalog.groups.find(group => group.code === "1219");
+    const proofreading = catalog.groups.find(group => group.title.toLowerCase().includes("proofreading"));
+    assert.notEqual(businessServices?.proposedCategorySlug, "driving-transport");
+    assert.notEqual(proofreading?.proposedCategorySlug, "construction-building");
+    assert.ok(catalog.mapping_audit.ambiguous_manual_review > 0);
+  }
 });
 
-test("official-source sync tooling is branch-scoped and never enables production import", async () => {
+test("official-source and category-suggestion tooling preserves all production gates", async () => {
   const sync = await readFileExtra(new URL("../scripts/sync_isco08_from_ilo.py", import.meta.url), "utf8");
+  const proposer = await readFileExtra(new URL("../scripts/propose_isco08_category_mappings.py", import.meta.url), "utf8");
   const workflow = await readFileExtra(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(sync, /webapps\.ilo\.org/);
   assert.match(sync, /verified_source_match/);
   assert.match(sync, /production_import_authorized.*False/s);
+  assert.match(proposer, /title_phrase_rules_v2/);
+  assert.match(proposer, /flags=re\.IGNORECASE/);
+  assert.match(proposer, /mapping_approved.*False/s);
   assert.match(workflow, /isco08-official-source-sync-artifact/);
+  assert.match(workflow, /propose_isco08_category_mappings\.py/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /permissions:\s+contents: read/);
