@@ -116,10 +116,12 @@ test("proposed category mappings use existing slugs but remain unapproved and in
 
 test("official-source sync tooling is branch-scoped and never enables production import", async () => {
   const sync = await readFileExtra(new URL("../scripts/sync_isco08_from_ilo.py", import.meta.url), "utf8");
-  const workflow = await readFileExtra(new URL("../.github/workflows/sync-isco08-from-ilo.yml", import.meta.url), "utf8");
+  const workflow = await readFileExtra(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(sync, /webapps\.ilo\.org/);
   assert.match(sync, /verified_source_match/);
   assert.match(sync, /production_import_authorized.*False/s);
-  assert.match(workflow, /feat\/isco08-occupation-catalog-foundation/);
+  assert.match(workflow, /isco08-official-source-sync-artifact/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /npm test/);
+  assert.match(workflow, /permissions:\s+contents: read/);
 });
