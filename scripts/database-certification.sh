@@ -179,7 +179,7 @@ BEGIN
   IF (SELECT count(*) FROM public.jobs) <> 4 THEN RAISE EXCEPTION 'unexpected synthetic job count'; END IF;
   IF (SELECT count(*) FROM public.vacancy_sources) <> 4 THEN RAISE EXCEPTION 'source provenance fixture count wrong'; END IF;
   IF (SELECT count(*) FROM public.publication_records WHERE unpublished_at IS NOT NULL) < 1 THEN RAISE EXCEPTION 'publication invalidation history missing'; END IF;
-  IF (SELECT count(*) FROM public.job_vacancies) <> 0 THEN RAISE EXCEPTION 'parallel vacancy table unexpectedly exists'; END IF;
+  IF to_regclass('public.job_vacancies') IS NOT NULL THEN RAISE EXCEPTION 'parallel vacancy table unexpectedly exists'; END IF;
 END;
 \$final\$;
 "
