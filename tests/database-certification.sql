@@ -104,7 +104,9 @@ BEGIN
     'employers_invalidate_related_jobs',
     'occupations_invalidate_related_jobs',
     'job_sources_invalidate_related_jobs',
-    'source_connection_enabled_guard'
+    'source_connection_enabled_guard',
+    'employers_reset_verification_before_identity_change',
+    'occupations_reset_verification_before_identity_change'
   ]) AS t(trigger_name)
   WHERE NOT EXISTS (
     SELECT 1
