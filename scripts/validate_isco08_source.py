@@ -104,7 +104,7 @@ def parse_official_source(rows: list[dict[str, str]]) -> dict[str, dict[str, str
         if not unit:
             continue
         if len(sub_major) != 2 or not sub_major.startswith(major):
-            fail(f"ILO source: unit {unit} has invalid sub-major parent {sub_major}.")
+            fail(f"ILO source: unit {unit} has invalid sub-major parent {sub_major}; row={row!r}.")
         if len(minor) != 3 or not minor.startswith(sub_major):
             fail(f"ILO source: unit {unit} has invalid minor parent {minor}.")
         if len(unit) != 4 or not unit.startswith(minor):
