@@ -53,6 +53,8 @@ function init(catalog) {
     option.textContent = code + " — " + title;
     major.append(option);
   }
+  // Always begin with the complete catalogue, even if the browser restores prior form state.
+  major.value = "";
 
   function getFiltered() {
     const term = normalize(search.value);
