@@ -190,8 +190,8 @@ SELECT pg_temp.assert_sqlstate(
   '23503', 'jobs.country_code foreign key');
 
 SELECT pg_temp.assert_sqlstate(
-  $INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,occupation_id,skill_level,employment_type,country_code)
-    VALUES ('Invalid occupation test','invalid-occupation-test','Synthetic Employer','Fixture description','health-care-caregiving','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','skilled','full_time','CA')$,
+  $stmt$INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,occupation_id,skill_level,employment_type,country_code)
+    VALUES ('Invalid occupation test','invalid-occupation-test','Synthetic Employer','Fixture description','health-care-caregiving','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','skilled','full_time','CA')$stmt$,
   '23503', 'jobs.occupation_id foreign key');
 -- The following invalid-reference checks use explicit nullable workflow foreign keys.
 SELECT pg_temp.assert_sqlstate(
