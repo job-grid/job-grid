@@ -8,11 +8,14 @@
   "official_primary_csv_url": "https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv",
   "official_primary_excel_url": "https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN%20Structure%20and%20definitions.xlsx",
   "extracted_from": "https://github.com/ails-lab/Sure-GB/blob/main/ISCO-08-EN.csv",
-  "reviewed_on": "2026-10-14",
+  "reviewed_on": "2026-10-15",
   "source_status": "requires_official_source_crosscheck",
-  "source_access_note": "Landing-page legacy www.ilo.org file links returned 404; direct webapps.ilo.org CSV/XLSX URLs responded as binary files but their bytes could not be inspected here, so no row-level diff was performed.",
-  "category_mapping_status": "pending",
+  "source_access_note": "The ILO landing-page file links resolve to legacy www.ilo.org URLs that return 404 in the current web review. Direct webapps.ilo.org CSV/XLSX endpoints reject browser text extraction due binary content; a row-by-row primary-source diff has not been completed.",
+  "category_mapping_status": "suggested_not_approved",
+  "category_mapping_method": "title_keyword_rules_v1",
+  "proposed_category_mappings": 431,
+  "manual_mapping_review_required": 5,
   "production_import_authorized": false,
   "public_visibility_authorized": false,
-  "note": "This is a candidate source extract. The primary ILO file must be fetched, checksummed, and compared row-by-row before any record is marked verified."
+  "note": "Proposed category assignments are suggestions only. The primary ILO file must be retrieved, checksummed and compared row-by-row before records are marked source-verified; category mappings still require review."
 }
