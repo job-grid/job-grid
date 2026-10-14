@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PGHOST="\${PGHOST:-127.0.0.1}"
-export PGPORT="\${PGPORT:-5432}"
-export PGUSER="\${PGUSER:-postgres}"
-export PGPASSWORD="\${PGPASSWORD:-postgres}"
-export PGDATABASE="\${PGDATABASE:-job_grid_certification}"
+export PGHOST="${PGHOST:-127.0.0.1}"
+export PGPORT="${PGPORT:-5432}"
+export PGUSER="${PGUSER:-postgres}"
+export PGPASSWORD="${PGPASSWORD:-postgres}"
+export PGDATABASE="${PGDATABASE:-job_grid_certification}"
 
 psqlx() {
   psql -X -v ON_ERROR_STOP=1 "$@"
@@ -29,7 +29,7 @@ SELECT
   (SELECT count(*) FROM public.jobs);
 ")"
 
-expected="$(psql -XAtq -F '|' -v ON_ERROR_STOP=1 -c "SELECT 25, md5(string_agg(slug || '|' || name || '|' || group_name || '|' || description || '|' || sort_order::text || '|' || is_active::text, E'\\n' ORDER BY sort_order, slug)), 249, md5(string_agg(code || '|' || name, E'\\n' ORDER BY code)), 0 FROM public.job_categories CROSS JOIN public.country_options")"
+
 # Use the actual baseline tuple as the preservation reference; additionally assert the expected counts.
 IFS='|' read -r category_count category_hash country_count country_hash job_count <<< "$before"
 if [[ "$category_count" != "25" || "$country_count" != "249" || "$job_count" != "0" ]]; then
