@@ -57,6 +57,12 @@ if [[ "$before" != "$after" ]]; then
 fi
 echo "PASS: exact category/country/job baseline counts and content hashes unchanged"
 
+echo "== Test the existing website's category contract against anonymous PostgreSQL results =="
+category_file="$(mktemp)"
+trap 'rm -f "$category_file"' EXIT
+psql -XAtq -v ON_ERROR_STOP=1 -c "SET ROLE anon; SELECT slug || E'\\t' || name || E'\\t' || sort_order::text FROM public.job_categories WHERE is_active = true ORDER BY sort_order ASC;" > "$category_file"
+JOB_GRID_ACTIVE_CATEGORY_FILE="$category_file" node scripts/check-role-category-contract.mjs
+
 echo "== Run catalog, constraints, synthetic data, and role permission checks =="
 psqlx -f tests/database-certification.sql
 
