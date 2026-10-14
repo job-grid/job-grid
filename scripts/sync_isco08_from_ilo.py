@@ -293,6 +293,12 @@ def main() -> None:
         readme,
         count=1,
     )
+    readme = re.sub(
+        r"\n{2,}## Latest official source audit\n.*?(?=\n## |\Z)",
+        "",
+        readme,
+        flags=re.DOTALL,
+    )
     readme += (
         "\n\n## Latest official source audit\n\n"
         f"- Retrieval time (UTC): {retrieved_at}\n"
