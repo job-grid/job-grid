@@ -258,6 +258,34 @@ CREATE TABLE public.job_duplicate_candidates (
 CREATE INDEX job_duplicate_candidates_pending_idx
   ON public.job_duplicate_candidates (status, created_at DESC);
 
+CREATE OR REPLACE FUNCTION public.guard_source_connection_enabled()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NEW.enabled AND NOT EXISTS (
+    SELECT 1
+    FROM public.job_sources src
+    WHERE src.id = NEW.source_id
+      AND src.enabled = true
+      AND src.permission_status = 'approved'
+      AND src.permission_evidence_url IS NOT NULL
+      AND src.permission_reviewed_at IS NOT NULL
+      AND src.permission_reviewed_by IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'A source connection cannot be enabled without an enabled, approved source and permission evidence'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER source_connection_enabled_guard
+BEFORE INSERT OR UPDATE OF source_id, enabled ON public.source_connections
+FOR EACH ROW EXECUTE FUNCTION public.guard_source_connection_enabled();
+
 CREATE TABLE public.vacancy_sources (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id uuid NOT NULL REFERENCES public.jobs (id) ON DELETE RESTRICT,
@@ -619,6 +647,13 @@ BEGIN
        IS DISTINCT FROM
        ROW(OLD.permission_status, OLD.permission_evidence_url, OLD.permission_reviewed_at,
            OLD.permission_reviewed_by, OLD.recheck_interval_hours, OLD.enabled) THEN
+      -- Disable scheduled fetching before invalidating listings whenever source permission is not valid.
+      IF NEW.permission_status <> 'approved' OR NOT NEW.enabled THEN
+        UPDATE public.source_connections
+        SET enabled = false, updated_at = now()
+        WHERE source_id = NEW.id AND enabled = true;
+      END IF;
+
       UPDATE public.jobs j
       SET record_version = j.record_version + 1,
           verification_status = 'needs_review',
@@ -1113,6 +1148,7 @@ GRANT SELECT ON TABLE public.jobs TO anon, authenticated;
 REVOKE ALL ON FUNCTION public.bump_job_record_version() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.invalidate_job_after_linked_record_change() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.invalidate_jobs_for_parent_change() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.guard_source_connection_enabled() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.job_evidence_ready(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.job_approval_current(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.job_publication_gate_passed(uuid) FROM PUBLIC, anon, authenticated;
