@@ -12,11 +12,11 @@ A read-only audit was performed on the existing Supabase production project, Job
 
 ## Occupation workbook status
 
-The workbook review shows 5,000 generated occupation/title variants, not 5,000 independently verified occupations or live advertisements. It has 41 exact normalized duplicate-title groups, no ISCO-08 codes, no official source/evidence URLs, and all rows were marked pending / do not publish. The deduplicated review list has 4,959 unique title strings, but these still require verification and do not automatically equal 4,959 canonical occupations.
+The workbook review shows 5,000 generated occupation/title variants, not 5,000 independently verified occupations or live advertisements. It has 41 exact normalized duplicate-title groups, no ISCO-08 codes, no official source/evidence URLs, and all rows were marked pending / do not publish. The `General` base-title rows yield 500 category/title entries and 496 unique base job types after resolving four duplicate titles to one category each.
 
-Do not import these rows into \`public.jobs\`. Occupation titles belong in a separate occupation directory and must remain inactive or pending until checked against suitable occupational evidence. This schema migration seeds no occupation records and imports no workbook data.
+The additive migration `20261015120000_seed_base_occupation_catalogue.sql` seeds only those 496 base job types into `public.occupations`, under the existing 25 category slugs, with `verification_status='pending'` and `is_active=false`. The generated setting/seniority variants are not imported. This migration never inserts into `public.jobs`: job types help applicants describe the work they want; live vacancies still need real employer, source, location, description, and current-posting evidence before publication.
 
-The current website has a static starter list of 496 distinct base role titles. Its category names are removed from static data; categories shown to visitors are fetched from the existing \`public.job_categories\` table. These titles remain a starter catalogue until the occupation import is separately validated and approved.
+The public applicant catalogue continues to show the 496 distinct base role titles; category labels come from the existing `public.job_categories` table. These titles remain job types, not confirmed vacancies or officially verified classifications.
 
 ## Schema extension
 
