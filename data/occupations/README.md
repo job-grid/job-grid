@@ -14,7 +14,7 @@ The International Labour Organization (ILO) identifies ISCO-08 as a four-level c
 - The official ILO-hosted source CSV was retrieved at 2026-10-14T22:12:54Z; its SHA-256 is 9afc6377d6ed6738d59aa0476777042e180397400d7dcd932e084045228b4d49. The sync compared all 436 unit-group codes and titles plus all parent labels from the official hierarchy. The older public mirror was used only for the initial extraction and its title differences were replaced from the official file.
 - The separate GitHub Actions workflow `.github/workflows/isco08-source-validation.yml` runs `scripts/validate_isco08_source.py`, which downloads the ILO-hosted primary CSV directly, compares all 436 unit-group codes, all 619 level titles (including parent labels), and checks that every candidate remains unmapped/inactive. A PASS proves an exact comparison to the bytes returned by the official URL at that run time; the log records a SHA-256 digest. A download failure is reported as a failure/unverified result and must never be interpreted as a source match. Job Grid category mapping remains a separate review gate.
 
-Every record is labelled verified_source_match for official ILO code/title/hierarchy fields. Conservative title-rule suggestions: 286; manual review required: 150. Formal category fields remain unset and all records remain inactive.
+Every record is labelled verified_source_match for official ILO code/title/hierarchy fields. Conservative title-rule suggestions: 283; manual review required: 153. Formal category fields remain unset and all records remain inactive.
 
 ## Do not import to live Supabase
 
@@ -24,7 +24,7 @@ The existing 496 starter job types and the earlier 5,000-row generated workbook 
 
 ## Next steps
 
-1. Review the 286 title-rule category suggestions and resolve the 150 records retained for human review.
+1. Review the 283 title-rule category suggestions and resolve the 153 records retained for human review.
 2. Review the 496 starter-title crosswalk candidate list; every candidate remains pending human review.
 3. Add occupation aliases only when supported by an official source or a reviewed decision.
 4. Prepare a data-only migration only after PR #45 and the live recovery/security gates are resolved and explicitly approved.
@@ -39,7 +39,14 @@ The existing 496 starter job types and the earlier 5,000-row generated workbook 
 ## Conservative category mapping audit (latest)
 
 - Rule set: title_phrase_rules_v2 (whole-word/phrase matches on occupation title only).
-- Suggested category matches: 286.
-- Manual review required: 150 (9 ambiguous, 0 weak, 141 with no rule match).
+- Suggested category matches: 283.
+- Manual review required: 153 (9 ambiguous, 0 weak, 144 with no rule match).
 - The earlier substring-oriented suggestions were replaced because matching bus inside business or roof inside proofreading can create false matches.
 - Suggestions remain unapproved. The formal job_grid_category_slug is blank and category_mapping_status remains pending for every record.
+
+
+## Public-leadership classification safeguard (latest)
+
+- ISCO-08 groups 1111 (Legislators), 1112 (Senior Government Officials), and 1113 (Traditional Chiefs and Heads of Villages) are explicitly held for human review.
+- Job Grid's existing 25 categories do not include a dedicated government/public-leadership category. These titles must not be assigned to Professional Services as a keyword side effect.
+- The proposal set now contains 283 category suggestions and 153 records requiring manual review. All suggestions remain unapproved, all formal category slugs remain unset, and all occupation records remain inactive.
