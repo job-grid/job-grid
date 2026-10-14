@@ -155,6 +155,24 @@ jobs:
         run: npm test
       - name: Build preview
         run: npm run build
+      - name: Export synchronized catalogue files for review branch update
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            "data/occupations/isco-08-unit-groups.csv"
+            "data/occupations/isco-08-source-manifest.json"
+            "data/occupations/README.md"
+            "public/data/occupations-isco08-review.json"
+            "occupations-preview.html"
+          )
+          for path in "${files[@]}"; do
+            printf 'SYNC_FILE_START|%s\\n' "$path"
+            while IFS= read -r chunk; do
+              printf 'SYNC_FILE_CHUNK|%s\\n' "$chunk"
+            done < <(base64 -w 6000 "$path")
+            printf 'SYNC_FILE_END|%s\\n' "$path"
+          done
       - name: Upload synchronized review files
         uses: actions/upload-artifact@v4
         with:
