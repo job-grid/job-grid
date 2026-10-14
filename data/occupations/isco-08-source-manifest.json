@@ -5,11 +5,14 @@
   "authority": "International Labour Organization",
   "authority_url": "https://isco.ilo.org/en/isco-08/",
   "publication_reference": "https://www.ilo.org/publications/international-standard-classification-occupations-2008-isco-08-structure",
+  "official_primary_csv_url": "https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN.csv",
+  "official_primary_excel_url": "https://webapps.ilo.org/ilostat-files/ISCO/newdocs-08-2021/ISCO-08/ISCO-08%20EN%20Structure%20and%20definitions.xlsx",
   "extracted_from": "https://github.com/ails-lab/Sure-GB/blob/main/ISCO-08-EN.csv",
   "reviewed_on": "2026-10-14",
   "source_status": "requires_official_source_crosscheck",
+  "source_access_note": "Landing-page legacy www.ilo.org file links returned 404; direct webapps.ilo.org CSV/XLSX URLs responded as binary files but their bytes could not be inspected here, so no row-level diff was performed.",
   "category_mapping_status": "pending",
   "production_import_authorized": false,
   "public_visibility_authorized": false,
-  "note": "The ILO website's linked current data downloads returned 404 during preparation. The mirror copy has not been independently reconciled row-by-row to the primary-source workbook."
+  "note": "This is a candidate source extract. The primary ILO file must be fetched, checksummed, and compared row-by-row before any record is marked verified."
 }
