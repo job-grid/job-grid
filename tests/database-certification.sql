@@ -621,12 +621,12 @@ SELECT pg_temp.assert_sqlstate(
   '23503', 'audit_logs.actor_id foreign key');
 
 SELECT pg_temp.assert_sqlstate(
-  $INSERT INTO public.eligibility_assessments (
+  $stmt$INSERT INTO public.eligibility_assessments (
       job_id,applicant_scope,sponsorship_status,assessment_status,assessment_reason
     ) VALUES (
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd','employer_sponsored','confirmed','pending',
       'Must fail: confirmation has no sponsorship evidence.'
-    )$,
+    )$stmt$,
   '23514', 'confirmed sponsorship requires vacancy-specific evidence');
 
 -- Exact dedupe identity and per-source external identifiers must be unique.
