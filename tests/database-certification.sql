@@ -445,6 +445,17 @@ SELECT pg_temp.assert_sqlstate(
       VALUES ('Source with missing reviewer fixture','missing-reviewer-source.synthetic.example','employer_careers','permitted_structured_page','pending_review','51545454-5454-4454-8454-545454545454')$fk$,
   '23503', 'job_sources.permission_reviewed_by foreign key');
 
+INSERT INTO public.job_sources (name,domain,source_type,access_method,permission_status,enabled)
+VALUES ('Pending source guard fixture','pending-source-guard.synthetic.example','employer_careers','permitted_structured_page','pending_review',false);
+
+SELECT pg_temp.assert_sqlstate(
+  $fk$INSERT INTO public.source_connections (source_id,adapter_key,configuration,enabled)
+      SELECT id,'must-remain-disabled','{}',true
+      FROM public.job_sources
+      WHERE domain='pending-source-guard.synthetic.example'$fk$,
+  '23514', 'source connection cannot be enabled before approved access evidence');
+
+
 SELECT pg_temp.assert_sqlstate(
   $fk$INSERT INTO public.source_connections (source_id,adapter_key,configuration,enabled)
       VALUES ('51555555-5555-4555-8555-555555555555','missing-source-adapter','{}',false)$fk$,
@@ -467,7 +478,7 @@ SELECT pg_temp.assert_sqlstate(
 
 SELECT pg_temp.assert_sqlstate(
   $fk$INSERT INTO public.job_duplicate_candidates (job_a_id,job_b_id,match_type)
-      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','51585858-5858-4858-8858-585858585858','reviewer_flag')$fk$,
+      VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','f1585858-5858-4858-8858-585858585858','reviewer_flag')$fk$,
   '23503', 'job_duplicate_candidates.job_b_id foreign key');
 
 SELECT pg_temp.assert_sqlstate(
