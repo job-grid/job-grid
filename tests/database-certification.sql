@@ -37,6 +37,7 @@ $function$;
 DO $certification$
 DECLARE
   v_fk_count integer;
+  v_check_count integer;
   v_missing_rls text;
   v_missing_triggers text;
   v_missing_functions text;
@@ -74,6 +75,19 @@ BEGIN
     WHERE contype = 'f' AND connamespace = 'public'::regnamespace AND NOT convalidated
   ) THEN
     RAISE EXCEPTION 'FAIL: one or more foreign-key constraints are not validated';
+  END IF;
+
+  SELECT count(*) INTO v_check_count
+  FROM pg_constraint
+  WHERE contype = 'c' AND connamespace = 'public'::regnamespace;
+  IF v_check_count < 40 THEN
+    RAISE EXCEPTION 'FAIL: expected at least 40 declared CHECK constraints, found %', v_check_count;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE contype = 'c' AND connamespace = 'public'::regnamespace AND NOT convalidated
+  ) THEN
+    RAISE EXCEPTION 'FAIL: one or more CHECK constraints are not validated';
   END IF;
 
   SELECT string_agg(t.table_name, ', ' ORDER BY t.table_name)
@@ -605,6 +619,15 @@ SELECT pg_temp.assert_sqlstate(
   $fk$INSERT INTO public.audit_logs (actor_id,action,entity_type,entity_id)
       VALUES ('51707070-7070-4070-8070-707070707070','foreign_key_test','test_entity','synthetic')$fk$,
   '23503', 'audit_logs.actor_id foreign key');
+
+SELECT pg_temp.assert_sqlstate(
+  $INSERT INTO public.eligibility_assessments (
+      job_id,applicant_scope,sponsorship_status,assessment_status,assessment_reason
+    ) VALUES (
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd','employer_sponsored','confirmed','pending',
+      'Must fail: confirmation has no sponsorship evidence.'
+    )$,
+  '23514', 'confirmed sponsorship requires vacancy-specific evidence');
 
 -- Exact dedupe identity and per-source external identifiers must be unique.
 SELECT pg_temp.assert_sqlstate(
