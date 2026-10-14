@@ -60,6 +60,7 @@ test("publication gate requires current human approval and eligibility evidence"
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.publish_verified_job/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.review_job/);
   assert.match(migration, /CREATE POLICY jobs_public_read_published[\s\S]*job_publication_gate_passed\(id\)/);
+  assert.match(migration, /publication_records pr[\s\S]*pr\.job_record_version = j\.record_version[\s\S]*pr\.unpublished_at IS NULL/);
 });
 
 test("sensitive workflow tables are RLS-protected and public clients cannot write jobs", () => {
@@ -74,7 +75,7 @@ test("sensitive workflow tables are RLS-protected and public clients cannot writ
   }
   assert.match(migration, /GRANT SELECT ON TABLE public\.occupations TO anon, authenticated/);
   assert.match(migration, /GRANT SELECT ON TABLE public\.jobs TO anon, authenticated/);
-  assert.match(migration, /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public\.jobs FROM PUBLIC, anon, authenticated/);
+  assert.match(migration, /REVOKE ALL ON TABLE public\.jobs FROM PUBLIC, anon, authenticated/);
   assert.match(migration, /staff_roles sr[\s\S]*sr\.role IN \('publisher', 'system_admin'\)/);
   assert.match(migration, /staff_roles sr[\s\S]*sr\.role IN \('reviewer', 'system_admin'\)/);
 });
