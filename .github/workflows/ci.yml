@@ -141,6 +141,8 @@ jobs:
         uses: actions/checkout@v6
       - name: Synchronize candidate fields from the official ILO CSV
         run: python3 scripts/sync_isco08_from_ilo.py
+      - name: Recompute conservative whole-word category suggestions
+        run: python3 scripts/propose_isco08_category_mappings.py
       - name: Validate the synchronized data against the source download
         run: python3 scripts/validate_isco08_source.py
       - name: Set up Node.js
