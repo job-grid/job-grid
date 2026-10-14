@@ -97,17 +97,34 @@ def parse_official_source(rows: list[dict[str, str]]) -> dict[str, dict[str, str
         if row.get("ISCO_version", "").strip() not in ("ISCO-08", "ISCO 08"):
             # Ignore unrelated rows, but do not silently accept malformed ISCO rows.
             continue
-        major = row.get("major", "").strip()
-        sub_major = row.get("sub_major", "").strip()
-        minor = row.get("minor", "").strip()
-        unit = row.get("unit", "").strip()
-        if not unit:
+        major_raw = row.get("major", "").strip()
+        sub_major_raw = row.get("sub_major", "").strip()
+        minor_raw = row.get("minor", "").strip()
+        unit_raw = row.get("unit", "").strip()
+        if not unit_raw:
             continue
-        if len(sub_major) != 2 or not sub_major.startswith(major):
-            fail(f"ILO source: unit {unit} has invalid sub-major parent {sub_major}; row={row!r}.")
-        if len(minor) != 3 or not minor.startswith(sub_major):
+
+        # The ILO CSV exports these code columns as numbers, so leading zeroes
+        # in Major Group 0 can be dropped. Restore each fixed width (1/2/3/4).
+        raw_codes = (
+            ("major", major_raw, 1),
+            ("sub-major", sub_major_raw, 2),
+            ("minor", minor_raw, 3),
+            ("unit", unit_raw, 4),
+        )
+        for label, raw_code, width in raw_codes:
+            if not raw_code.isdigit() or len(raw_code) > width:
+                fail(f"ILO source: invalid {label} code {raw_code!r}; row={row!r}.")
+        major = major_raw.zfill(1)
+        sub_major = sub_major_raw.zfill(2)
+        minor = minor_raw.zfill(3)
+        unit = unit_raw.zfill(4)
+
+        if not sub_major.startswith(major):
+            fail(f"ILO source: unit {unit} has invalid sub-major parent {sub_major}.")
+        if not minor.startswith(sub_major):
             fail(f"ILO source: unit {unit} has invalid minor parent {minor}.")
-        if len(unit) != 4 or not unit.startswith(minor):
+        if not unit.startswith(minor):
             fail(f"ILO source: invalid unit/parent hierarchy {unit}/{minor}.")
         if unit in seen_units:
             fail(f"ILO source: duplicate unit-group code {unit}.")
