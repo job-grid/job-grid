@@ -1,0 +1,40 @@
+.occupation-review-page .directory-content { padding-top: 3rem; }
+.occupation-review-warning {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1.6rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #d7e1f7;
+  border-left: 4px solid var(--color-primary);
+  border-radius: 0.9rem;
+  background: #f5f8ff;
+  color: #3c4966;
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+.occupation-review-warning strong { color: var(--color-secondary); font-size: 0.95rem; }
+.occupation-review-warning a, .occupation-source-note a { width: fit-content; font-weight: 700; color: var(--color-primary-strong); text-decoration: underline; text-underline-offset: 3px; }
+.occupation-tools { margin-bottom: 1.1rem; }
+.occupation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.occupation-card {
+  min-width: 0;
+  padding: 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  box-shadow: 0 5px 22px rgb(18 39 86 / 4%);
+}
+.occupation-card-head { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+.occupation-code { display: inline-flex; align-items: center; padding: 0.3rem 0.55rem; border-radius: 0.5rem; background: var(--color-primary-soft); color: var(--color-primary-strong); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.03em; }
+.occupation-status { color: #69748b; font-size: 0.68rem; text-align: right; }
+.occupation-card h3 { margin: 0.9rem 0 0.5rem; font-size: 1.05rem; line-height: 1.35; }
+.occupation-parent { margin: 0; color: #53617c; font-size: 0.8rem; line-height: 1.6; }
+.occupation-major { margin: 0.65rem 0 0; color: #6a7590; font-size: 0.75rem; }
+.occupation-card-foot { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border); color: #6a7590; font-size: 0.68rem; }
+.occupation-source-note { margin-top: 1.8rem; color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.7; }
+@media (max-width: 920px) { .occupation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .occupation-grid { grid-template-columns: 1fr; }
+  .occupation-card { padding: 1rem; }
+  .occupation-status { max-width: 130px; }
+}
