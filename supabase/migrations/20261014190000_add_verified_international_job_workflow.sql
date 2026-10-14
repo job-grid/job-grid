@@ -679,6 +679,18 @@ BEGIN
 END;
 $function$;
 
+CREATE TRIGGER employers_invalidate_related_jobs
+AFTER UPDATE ON public.employers
+FOR EACH ROW EXECUTE FUNCTION public.invalidate_jobs_for_parent_change();
+
+CREATE TRIGGER occupations_invalidate_related_jobs
+AFTER UPDATE ON public.occupations
+FOR EACH ROW EXECUTE FUNCTION public.invalidate_jobs_for_parent_change();
+
+CREATE TRIGGER job_sources_invalidate_related_jobs
+AFTER UPDATE ON public.job_sources
+FOR EACH ROW EXECUTE FUNCTION public.invalidate_jobs_for_parent_change();
+
 CREATE OR REPLACE FUNCTION public.job_evidence_ready(p_job_id uuid)
 RETURNS boolean
 LANGUAGE sql
