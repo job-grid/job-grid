@@ -125,6 +125,27 @@ test("proposed category mappings use existing slugs but remain unapproved and in
   }
 });
 
+test("government and public-leadership titles stay in manual review without a false Professional Services mapping", async () => {
+  const catalog = JSON.parse(await readFileExtra(new URL("../public/data/occupations-isco08-review.json", import.meta.url), "utf8"));
+  const byCode = new Map(catalog.groups.map(group => [group.code, group]));
+  for (const [code, title] of [
+    ["1111", "Legislators"],
+    ["1112", "Senior Government Officials"],
+    ["1113", "Traditional Chiefs and Heads of Villages"]
+  ]) {
+    const group = byCode.get(code);
+    assert.equal(group.title, title);
+    assert.equal(group.proposedCategorySlug, null);
+    assert.equal(group.mappingStatus, "manual_review_required");
+    assert.match(group.mappingReason, /No dedicated government\/public-leadership category/);
+    assert.deepEqual(group.suggestedCategoryOptions, []);
+  }
+  assert.equal(catalog.mapping_summary.proposed_category_mappings, 283);
+  assert.equal(catalog.mapping_summary.manual_mapping_review_required, 153);
+  assert.equal(catalog.mapping_audit.no_rule_manual_review, 144);
+  assert.equal(catalog.mapping_audit.distribution_by_category_slug["professional-services"], 12);
+});
+
 test("official-source and category-suggestion tooling preserves all production gates", async () => {
   const sync = await readFileExtra(new URL("../scripts/sync_isco08_from_ilo.py", import.meta.url), "utf8");
   const proposer = await readFileExtra(new URL("../scripts/propose_isco08_category_mappings.py", import.meta.url), "utf8");
@@ -133,6 +154,8 @@ test("official-source and category-suggestion tooling preserves all production g
   assert.match(sync, /verified_source_match/);
   assert.match(sync, /production_import_authorized.*False/s);
   assert.match(proposer, /title_phrase_rules_v2/);
+  assert.match(proposer, /MANUAL_REVIEW_TITLE_PATTERNS/);
+  assert.match(proposer, /No dedicated government\/public-leadership category exists/);
   assert.match(proposer, /flags=re\.IGNORECASE/);
   assert.match(proposer, /mapping_approved.*False/s);
   assert.match(workflow, /isco08-official-source-sync-artifact/);
