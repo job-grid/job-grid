@@ -1,6 +1,6 @@
 # Job Grid — Phase 1 website foundation
 
-A responsive public website with a searchable starter catalogue of 496 distinct job types across 25 categories. The country selector reads the public, read-only `country_options` catalog from the existing Supabase project. Real employer job listings, candidate data collection, authentication and applications are not connected to the website yet.
+A responsive public website with a searchable starter catalogue of 496 distinct role titles. The website reads its active category names from the existing read-only `job_categories` table and its country list from `country_options` in Supabase. Real employer job listings, candidate data collection, authentication and applications are not connected to the website yet.
 
 ## Brand system
 
@@ -29,8 +29,8 @@ The owner-supplied image remains the source of truth. If a full-resolution or tr
 
 ## Current boundaries
 
-- The role directory shows 496 cleaned base job types from the uploaded workbook. These are not confirmed vacancies or officially verified occupational classifications.
-- Job-type title/category search is implemented. Live vacancy querying, registration, authentication, applications, application tracking, and employer tools are not implemented.
+- The role directory shows 496 cleaned base job types from a reviewed workbook. Categories come from the existing Supabase table; titles remain a static starter list until an occupation import is separately reviewed. They are not confirmed vacancies or officially verified occupational classifications.
+- Job-type title/category search is implemented. Live vacancy querying, occupation import, registration, authentication, applications, application tracking, employer tools, and approved source connectors are not implemented.
 - `scripts/supabase-config.js` contains only the Supabase project URL and a browser-safe publishable key so the country dropdown can read the public catalog. Never place a secret/service-role key in that file.
 - No migration, backup workflow, deployment workflow, or production setting was changed.
 
