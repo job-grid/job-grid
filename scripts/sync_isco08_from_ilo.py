@@ -316,9 +316,15 @@ def main() -> None:
         "still need human review. Nothing on this page is a real job vacancy; every record remains "
         "inactive and the catalogue is not approved for production."
     )
+    mapped_notice = (
+        "Official ILO source comparison has matched the codes, titles and parent labels for all "
+        "436 unit groups. Job Grid category suggestions use conservative whole-word title rules; "
+        "ambiguous and unmatched titles are sent to manual review. Nothing on this page is a real "
+        "job vacancy; every record remains inactive and the catalogue is not approved for production."
+    )
     if old_notice in html:
         html = html.replace(old_notice, new_notice)
-    elif new_notice not in html:
+    elif new_notice not in html and mapped_notice not in html:
         stop("Could not find the preview's source-warning text to update safely.")
     HTML_PATH.write_text(html, encoding="utf-8")
 
