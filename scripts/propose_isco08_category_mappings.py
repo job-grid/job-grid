@@ -116,7 +116,7 @@ RULES: dict[str, list[tuple[int, str, str]]] = {
          "Explicit marketing, media, publishing or communications wording"),
     ],
     "professional-services": [
-        (5, r"\b(?:legislators?|government officials?|lawyers?|legal|judges?|magistrates?|attorneys?|economists?|psychologists?|sociologists?|anthropologists?|religious|clergy|social workers?|social welfare managers?|policy and planning managers?|policy managers?|traditional chiefs?|professional services managers?|parliament)\b",
+        (5, r"\b(?:lawyers?|legal|judges?|magistrates?|attorneys?|economists?|psychologists?|sociologists?|anthropologists?|religious|clergy|social workers?|social welfare managers?|policy and planning managers?|policy managers?|professional services managers?)\b",
          "Explicit legal, policy, government, social-science or professional-service wording"),
     ],
 }
@@ -131,7 +131,20 @@ def load_inputs():
     catalog = json.loads(JSON_PATH.read_text(encoding="utf-8"))
     return fields, rows, catalog
 
+MANUAL_REVIEW_TITLE_PATTERNS: list[tuple[str, str]] = [
+    (r"\blegislators?\b", "No dedicated government/public-leadership category exists in Job Grid's current 25 categories; retain this occupation for human review rather than assigning it to Professional Services."),
+    (r"\bsenior government officials?\b", "No dedicated government/public-leadership category exists in Job Grid's current 25 categories; retain this occupation for human review rather than assigning it to Professional Services."),
+    (r"\btraditional chiefs?\b", "No dedicated government/public-leadership category exists in Job Grid's current 25 categories; retain this occupation for human review rather than assigning it to Professional Services."),
+]
+
+
 def assign(title: str, category_names: dict[str, str]) -> dict[str, Any]:
+    for expression, reason in MANUAL_REVIEW_TITLE_PATTERNS:
+        if re.search(expression, title, flags=re.IGNORECASE):
+            return {
+                "slug": "", "name": "", "status": "manual_review_required",
+                "reason": reason, "options": [], "kind": "no_rule",
+            }
     found = []
     for slug, rules in RULES.items():
         hits = [
