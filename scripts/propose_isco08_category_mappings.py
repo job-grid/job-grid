@@ -263,13 +263,13 @@ def main() -> None:
 
     readme = README_PATH.read_text(encoding="utf-8")
     readme = re.sub(
-        r"\n{2,}## Conservative category mapping audit \(latest\)\n.*?(?=\n## |\Z)",
+        r"\n+## Conservative category mapping audit \(latest\)\n.*?(?=\n## |\Z)",
         "",
         readme,
         flags=re.DOTALL,
     )
     readme = re.sub(
-        r"\n{2,}## Proposed Job Grid category mappings\n.*?(?=\n## |\Z)",
+        r"\n+## Proposed Job Grid category mappings\n.*?(?=\n## |\Z)",
         "",
         readme,
         flags=re.DOTALL,
