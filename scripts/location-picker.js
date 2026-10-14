@@ -1,3 +1,6 @@
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./supabase-config.js";
+
+const COUNTRY_OPTIONS_ENDPOINT = `${SUPABASE_URL}/rest/v1/country_options?select=code,name&order=name.asc`;
 const GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";
 const FALLBACK_COUNTRIES = [
   { code: "KE", name: "Kenya" },
@@ -21,7 +24,7 @@ const SELECTABLE_FEATURE_CODES = new Set([
   "PPLC", "PPLCD", "PPLF", "PPLG", "PPLL", "PPLR", "PPLS"
 ]);
 
-/** Normalize the remote country-list response without treating it as persisted catalog data. */
+/** Normalize public country-option rows from the Job Grid database or bundled fallback. */
 export function normalizeCountries(rows) {
   if (!Array.isArray(rows)) return [];
   const unique = new Map();
@@ -209,7 +212,25 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
     }
 
     async loadCountries() {
-      this.status.textContent = "Loading country list…";
+      this.status.textContent = "Loading country list from Job Grid…";
+      try {
+        const response = await fetch(COUNTRY_OPTIONS_ENDPOINT, {
+          headers: {
+            Accept: "application/json",
+            apikey: SUPABASE_PUBLISHABLE_KEY
+          }
+        });
+        if (!response.ok) throw new Error("Job Grid country catalog unavailable.");
+        const countries = normalizeCountries(await response.json());
+        if (countries.length < 200) throw new Error("Job Grid country catalog is incomplete.");
+        this.countries = countries;
+        this.renderCountryOptions();
+        this.status.textContent = "Country list loaded from the Job Grid database. Place search still requires an internet connection.";
+        return;
+      } catch {
+        // The bundled list keeps the selector usable if Supabase is temporarily unavailable.
+      }
+
       try {
         const response = await fetch("/data/countries.en.json", { headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("Bundled country list unavailable.");
@@ -217,7 +238,7 @@ if (typeof customElements !== "undefined" && typeof HTMLElement !== "undefined" 
         if (countries.length < 200) throw new Error("Bundled country list is incomplete.");
         this.countries = countries;
         this.renderCountryOptions();
-        this.status.textContent = "Choose a country to begin.";
+        this.status.textContent = "Country list loaded from the bundled backup. The database could not be reached.";
       } catch {
         this.countries = normalizeCountries(FALLBACK_COUNTRIES);
         this.renderCountryOptions();
