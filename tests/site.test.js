@@ -244,38 +244,11 @@ test("selected location emits a versioned country-scoped integration payload wit
   assert.equal(buildLocationSelectionPayload(place, "JP", [{ code: "JP", name: "Japan" }]), null);
 });
 
-test("location RLS structural test is checked in and explicitly non-destructive", async () => {
-  const rlsTest = await readFile(new URL("../supabase/tests/location_preference_rls_contract.sql", import.meta.url), "utf8");
-  assert.ok(rlsTest.includes("pg_policies"));
-  assert.ok(rlsTest.includes("user_location_preferences_select_own"));
-  assert.ok(rlsTest.includes("user_location_preferences_insert_own"));
-  assert.ok(rlsTest.includes("user_location_preferences_update_own"));
-  assert.ok(rlsTest.includes("user_location_preferences_delete_own"));
-  assert.ok(rlsTest.includes("cross-user isolation end to end"));
-  assert.ok(rlsTest.includes("RLS must be enabled"));
-});
-
-test("proposed profile-location migration enforces owner-scoped RLS and safe coordinates", async () => {
-  const migration = await readFile(new URL("../supabase/migrations/20261012183500_add_user_location_preferences.sql", import.meta.url), "utf8");
-  for (const fragment of [
-    "CREATE TABLE public.user_location_preferences",
-    "REFERENCES auth.users (id) ON DELETE CASCADE",
-    "ENABLE ROW LEVEL SECURITY",
-    "REVOKE ALL ON TABLE public.user_location_preferences FROM PUBLIC, anon",
-    "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_location_preferences TO authenticated",
-    "CREATE POLICY user_location_preferences_select_own",
-    "CREATE POLICY user_location_preferences_insert_own",
-    "CREATE POLICY user_location_preferences_update_own",
-    "CREATE POLICY user_location_preferences_delete_own",
-    "auth.uid() = user_id",
-    "WITH CHECK (auth.uid() = user_id)",
-    "latitude BETWEEN -90 AND 90",
-    "longitude BETWEEN -180 AND 180",
-    "jsonb_typeof(admin_areas) = 'array'",
-    "DO NOT APPLY"
-  ]) {
-    assert.ok(migration.includes(fragment), `Expected migration to include: ${fragment}`);
-  }
+test("location selector remains a frontend preview until persistence is built", async () => {
+  const docs = await readFile(new URL("../docs/location-selector-mvp.md", import.meta.url), "utf8");
+  assert.match(docs, /frontend preview only/i);
+  assert.match(docs, /does not save a candidate profile/i);
+  assert.match(docs, /does not import a catalog/i);
 });
 
 
