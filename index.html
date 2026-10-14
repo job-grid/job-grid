@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#004ef5" />
-    <meta name="description" content="Job Grid is building a clearer way to discover opportunities and connect talent with employers." />
+    <meta name="description" content="Explore job types across 25 categories and discover the work that could fit your next move with Job Grid." />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Job Grid — Find work that moves you forward" />
     <meta property="og:description" content="A clearer way to discover opportunities and connect talent with employers." />
@@ -12,9 +12,11 @@
     <link rel="stylesheet" href="/styles/tokens.css" />
     <link rel="stylesheet" href="/styles/global.css" />
     <link rel="stylesheet" href="/styles/location-picker.css" />
+    <link rel="stylesheet" href="/styles/job-types.css" />
     <script type="module" src="/scripts/components.js"></script>
     <script type="module" src="/scripts/main.js"></script>
     <script type="module" src="/scripts/location-picker.js"></script>
+    <script type="module" src="/scripts/job-types.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -28,7 +30,7 @@
           <h1 id="hero-title">Your next opportunity is <span class="text-accent">out there.</span></h1>
           <p class="hero-description">A clearer way to discover work, explore new possibilities, and move your career forward.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#featured-roles">Explore opportunities <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="/job-types.html">Explore job types <span aria-hidden="true">↗</span></a>
             <a class="button button-secondary" href="#how-it-works">How Job Grid works</a>
           </div>
           <div class="hero-proof">
@@ -61,42 +63,26 @@
       <section id="featured-roles" class="section-wrap section-space" aria-labelledby="featured-title">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">A first look</p>
-            <h2 id="featured-title">Explore the possibilities</h2>
-            <p class="section-description">A preview of how opportunity cards will look. Sample roles below are design examples, not live vacancies.</p>
+            <p class="eyebrow">Starter role catalogue</p>
+            <h2 id="featured-title">Explore work by job type</h2>
+            <p class="section-description">Browse 496 distinct base role titles across 25 categories, cleaned from the uploaded workbook. Start with a title or search the full directory.</p>
           </div>
-          <span class="preview-pill"><span aria-hidden="true"></span> Design preview</span>
+          <a class="button button-secondary" href="/job-types.html">Browse all role types <span aria-hidden="true">↗</span></a>
         </div>
 
-        <div class="role-grid">
-          <article class="role-card">
-            <div class="role-card-top"><span class="company-mark mark-cobalt" aria-hidden="true">S</span><span class="role-type">Sample role</span></div>
-            <p class="role-category">OPERATIONS</p>
-            <h3>Operations Coordinator</h3>
-            <p class="sample-employer">Sample employer</p>
-            <div class="role-meta"><span aria-hidden="true">⌖</span> Nairobi, Kenya <span class="meta-divider">·</span> Full-time</div>
-            <div class="role-card-bottom"><span class="tag">Operations</span><span class="arrow-round" aria-hidden="true">↗</span></div>
-          </article>
-
-          <article class="role-card">
-            <div class="role-card-top"><span class="company-mark mark-mint" aria-hidden="true">T</span><span class="role-type">Sample role</span></div>
-            <p class="role-category">TECHNOLOGY</p>
-            <h3>Junior Support Specialist</h3>
-            <p class="sample-employer">Sample employer</p>
-            <div class="role-meta"><span aria-hidden="true">⌖</span> Remote <span class="meta-divider">·</span> Full-time</div>
-            <div class="role-card-bottom"><span class="tag">IT Support</span><span class="arrow-round" aria-hidden="true">↗</span></div>
-          </article>
-
-          <article class="role-card">
-            <div class="role-card-top"><span class="company-mark mark-peach" aria-hidden="true">C</span><span class="role-type">Sample role</span></div>
-            <p class="role-category">CUSTOMER SERVICE</p>
-            <h3>Customer Experience Associate</h3>
-            <p class="sample-employer">Sample employer</p>
-            <div class="role-meta"><span aria-hidden="true">⌖</span> Mombasa, Kenya <span class="meta-divider">·</span> Full-time</div>
-            <div class="role-card-bottom"><span class="tag">Customer Care</span><span class="arrow-round" aria-hidden="true">↗</span></div>
-          </article>
+        <div class="home-directory-tools">
+          <form id="home-role-search-form" role="search">
+            <label for="home-role-search">Search job types</label>
+            <div class="home-directory-search">
+              <input id="home-role-search" type="search" maxlength="120" placeholder="e.g. Driver, Nurse, Cleaner" autocomplete="off" />
+              <button class="button button-primary" type="submit">Search catalogue</button>
+            </div>
+          </form>
+          <p id="home-role-count" role="status" aria-live="polite">Loading role types…</p>
         </div>
-        <p class="preview-note"><span aria-hidden="true">ⓘ</span> Search, filters, applications, and employer accounts are not connected yet. This page contains no live job data.</p>
+
+        <div id="home-job-types" class="role-grid" aria-live="polite" aria-busy="true"></div>
+        <p class="preview-note"><strong>Catalogue note:</strong> These are job types, not confirmed vacancies. Employer, location, salary, application and official occupational-source details have not been verified in the workbook. Real vacancies will be shown separately when employers provide and publish genuine job details.</p>
       </section>
 
       <section id="how-it-works" class="how-section">

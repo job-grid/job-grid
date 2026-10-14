@@ -58,13 +58,14 @@ test("navigation components expose labels and accessible mobile menu state", () 
   assert.match(mainScript, /setAttribute\("aria-expanded"/);
 });
 
-test("vacancy cards are clearly marked sample content and no live features are claimed", () => {
-  assert.equal((html.match(/class="role-type">Sample role/g) ?? []).length, 3);
-  assert.match(html, /not live vacancies/);
-  assert.match(html, /Search, filters, applications, and employer accounts are not connected yet/);
-  assert.doesNotMatch(html, /action="https?:\/\//);
+test("homepage presents role types without inventing employer vacancies", () => {
+  assert.match(html, /Browse all role types/);
+  assert.match(html, /496 distinct base role titles/);
+  assert.match(html, /not confirmed vacancies/i);
+  assert.match(html, /id="home-job-types"/);
+  assert.doesNotMatch(html, /Sample employer/);
+  assert.doesNotMatch(html, /class="role-type">Sample role/);
 });
-
 test("country selector reads the public country catalog from Supabase first", async () => {
   const picker = await readFile(new URL("../scripts/location-picker.js", import.meta.url), "utf8");
   assert.equal(SUPABASE_URL, "https://tnrdovdhlwitjzecduxa.supabase.co");
