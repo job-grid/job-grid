@@ -263,12 +263,34 @@ def main() -> None:
 
     readme = README_PATH.read_text(encoding="utf-8")
     readme = re.sub(
-        r"A first-pass, title-keyword rule set suggests an existing Job Grid category for 431 of the 436 records\\..*?No suggestion changes source verification status or public activation\\.",
-        "An earlier substring-oriented mapping proposal has been superseded by title_phrase_rules_v2. "
-        "The replacement checks official occupation titles with whole-word/phrase matches, avoids "
-        "false matches such as bus within business and roof within proofreading, and sends ambiguous "
-        "or unmatched titles to manual review. Suggestions remain unapproved; formal category fields "
-        "stay unset and no record is active.",
+        r"\n{2,}## Conservative category mapping audit \\(latest\\)\n.*?(?=\n## |\Z)",
+        "",
+        readme,
+        flags=re.DOTALL,
+    )
+    readme = re.sub(
+        r"\n{2,}## Proposed Job Grid category mappings\n.*?(?=\n## |\Z)",
+        "",
+        readme,
+        flags=re.DOTALL,
+    )
+    readme = re.sub(
+        r"^Every record is labelled.*$",
+        f"Every record is labelled verified_source_match for official ILO code/title/hierarchy fields. "
+        f"Conservative title-rule suggestions: {stats['proposed']}; manual review required: {manual_count}. "
+        "Formal category fields remain unset and all records remain inactive.",
+        readme,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    readme = re.sub(
+        r"## Next steps\n.*?(?=\n## |\Z)",
+        "## Next steps\n\n"
+        f"1. Review the {stats['proposed']} title-rule category suggestions and resolve the "
+        f"{stats['ambiguous'] + stats['weak'] + stats['no_rule']} records retained for human review.\n"
+        "2. Review the 496 starter-title crosswalk candidate list; every candidate remains pending human review.\n"
+        "3. Add occupation aliases only when supported by an official source or a reviewed decision.\n"
+        "4. Prepare a data-only migration only after PR #45 and the live recovery/security gates are resolved and explicitly approved.",
         readme,
         count=1,
         flags=re.DOTALL,
