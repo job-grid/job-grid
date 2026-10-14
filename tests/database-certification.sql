@@ -426,7 +426,7 @@ SELECT pg_temp.assert_sqlstate(
   '23505', 'global canonical-URL dedupe identity prevents exact duplicate vacancy identity');
 
 SELECT pg_temp.assert_sqlstate(
-  $INSERT INTO public.vacancy_sources (
+  $stmt$INSERT INTO public.vacancy_sources (
       job_id,source_id,canonical_dedupe_key_id,external_id,source_url,canonical_url,first_seen_at,last_checked_at
     )
     SELECT
@@ -444,7 +444,7 @@ SELECT pg_temp.assert_sqlstate(
       WHERE job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
     ) unknown_dedupe
     WHERE valid_source.job_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
-      AND unknown_source.job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'$,
+      AND unknown_source.job_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'$stmt$,
   '23505', 'source-specific external ID remains unique across distinct vacancy records');
 
 -- Unverified aliases and all private workflow tables stay inaccessible to browser users.
