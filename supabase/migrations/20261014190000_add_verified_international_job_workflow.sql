@@ -1107,7 +1107,7 @@ CREATE POLICY occupations_public_read
   USING (is_active = true AND verification_status IN ('pending', 'verified'));
 
 -- Do not permit public writes to job data. Publication is through the checked publisher function only.
-REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.jobs FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.jobs FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON TABLE public.jobs TO anon, authenticated;
 
 REVOKE ALL ON FUNCTION public.bump_job_record_version() FROM PUBLIC, anon, authenticated;
