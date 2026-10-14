@@ -1,0 +1,15 @@
+{
+  "catalogue": "ISCO-08 unit-group candidate extract",
+  "classification_version": "ISCO-08",
+  "candidate_record_count": 436,
+  "authority": "International Labour Organization",
+  "authority_url": "https://isco.ilo.org/en/isco-08/",
+  "publication_reference": "https://www.ilo.org/publications/international-standard-classification-occupations-2008-isco-08-structure",
+  "extracted_from": "https://github.com/ails-lab/Sure-GB/blob/main/ISCO-08-EN.csv",
+  "reviewed_on": "2026-10-14",
+  "source_status": "requires_official_source_crosscheck",
+  "category_mapping_status": "pending",
+  "production_import_authorized": false,
+  "public_visibility_authorized": false,
+  "note": "The ILO website's linked current data downloads returned 404 during preparation. The mirror copy has not been independently reconciled row-by-row to the primary-source workbook."
+}
