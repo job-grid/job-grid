@@ -1,0 +1,27 @@
+.crosswalk-page .directory-content { padding-top: 3rem; }
+.crosswalk-warning { display:grid; gap:.4rem; margin-bottom:1.5rem; padding:1rem 1.15rem; border:1px solid #d7e1f7; border-left:4px solid var(--color-primary); border-radius:.9rem; background:#f5f8ff; color:#3c4966; font-size:.85rem; line-height:1.7; }
+.crosswalk-warning strong { color:var(--color-secondary); font-size:.95rem; }
+.crosswalk-warning a,.crosswalk-footer a { width:fit-content; color:var(--color-primary-strong); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.crosswalk-tools { grid-template-columns:minmax(0,1.5fr) minmax(200px,1fr) minmax(200px,1fr) auto; margin-bottom:1.2rem; }
+.crosswalk-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.crosswalk-card { min-width:0; padding:1.05rem; border:1px solid var(--color-border); border-radius:1rem; background:var(--color-surface); box-shadow:0 5px 22px rgb(18 39 86 / 4%); }
+.crosswalk-card-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.5rem; align-items:center; }
+.crosswalk-source-category { color:#5d6881; font-size:.72rem; }
+.crosswalk-assessment { padding:.25rem .45rem; border-radius:.5rem; background:#f2f4f8; color:#4e5c76; font-size:.67rem; font-weight:700; }
+.crosswalk-card h3 { margin:.85rem 0 .65rem; font-size:1.02rem; line-height:1.4; }
+.crosswalk-label { margin:0 0 .3rem; color:#6b7690; font-size:.7rem; }
+.crosswalk-target { display:flex; gap:.6rem; align-items:flex-start; }
+.crosswalk-target strong { flex:none; padding:.25rem .4rem; border-radius:.4rem; background:var(--color-primary-soft); color:var(--color-primary-strong); font-size:.8rem; }
+.crosswalk-target span { color:var(--color-secondary); font-size:.86rem; font-weight:700; line-height:1.45; }
+.crosswalk-parent { margin:.55rem 0 0; color:#5d6881; font-size:.72rem; line-height:1.6; }
+.crosswalk-score { margin:.9rem 0 .4rem; color:#5d6881; font-size:.75rem; }
+.crosswalk-score span { color:#7b8498; }
+.crosswalk-card details { margin:.6rem 0 .25rem; padding-top:.6rem; border-top:1px solid var(--color-border); }
+.crosswalk-card summary { cursor:pointer; color:var(--color-primary-strong); font-size:.75rem; font-weight:700; }
+.crosswalk-card ol { padding-left:1.2rem; margin:.65rem 0; color:#5d6881; font-size:.72rem; }
+.crosswalk-card li { padding:.35rem 0; }
+.crosswalk-card li span { display:block; color:#7b8498; }
+.crosswalk-status { display:flex; justify-content:space-between; gap:.4rem; margin-top:.7rem; padding-top:.65rem; border-top:1px solid var(--color-border); color:#68748b; font-size:.68rem; }
+.crosswalk-footer { margin-top:1.8rem; color:var(--color-text-muted); font-size:.8rem; line-height:1.7; }
+@media(max-width:1060px) { .crosswalk-tools { grid-template-columns:repeat(2,minmax(0,1fr)); } .crosswalk-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .crosswalk-tools,.crosswalk-grid { grid-template-columns:1fr; } .crosswalk-card { padding:1rem; } }
