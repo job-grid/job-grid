@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from recovery_procedure import (
     ARTIFACTS,
@@ -10,11 +10,30 @@ from recovery_procedure import (
     ARTIFACT_DUMP_SHA,
     ARTIFACT_MANIFEST,
     ARTIFACT_MANIFEST_SHA,
+    SUPABASE_MANAGED_SCHEMAS,
     RecoveryFailure,
+    assert_application_restore_target_empty,
     classify_pg_restore_failure,
     restore_backup,
     validate_schema_counts,
 )
+
+
+class RecoveryManagedSchemaTests(unittest.TestCase):
+    def test_supabase_managed_schemas_are_excluded_from_cross_project_restore(self):
+        self.assertEqual(
+            SUPABASE_MANAGED_SCHEMAS,
+            (
+                "auth",
+                "storage",
+                "realtime",
+                "extensions",
+                "graphql",
+                "graphql_public",
+                "pgbouncer",
+                "vault",
+            ),
+        )
 
 
 class RecoveryArtifactNameTests(unittest.TestCase):
@@ -82,6 +101,71 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             self.assertNotIn("synthetic-password", str(ctx.exception))
 
 
+class RecoveryTargetEmptyGuardTests(unittest.TestCase):
+    def _connection(self, row):
+        connection = MagicMock()
+        cursor = connection.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = row
+        return connection
+
+    def test_empty_app_owned_target_is_accepted_using_verified_tls(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((False, False))
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection) as connect:
+                    assert_application_restore_target_empty(
+                        host="recovery-host.invalid",
+                        port="5432",
+                        database="postgres",
+                        username="recovery.synthetic",
+                        password="synthetic-password",
+                    )
+            self.assertEqual(connect.call_args.kwargs["sslmode"], "verify-full")
+            self.assertEqual(connect.call_args.kwargs["sslrootcert"], str(ca_file))
+
+    def test_nonempty_public_schema_is_rejected_without_deleting_anything(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((True, False))
+            cursor = connection.__enter__.return_value.cursor.return_value.__enter__.return_value
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection):
+                    with self.assertRaises(RecoveryFailure) as ctx:
+                        assert_application_restore_target_empty(
+                            host="recovery-host.invalid",
+                            port="5432",
+                            database="postgres",
+                            username="recovery.synthetic",
+                            password="synthetic-password",
+                        )
+            self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
+            self.assertEqual(cursor.execute.call_count, 1)
+            query = cursor.execute.call_args.args[0].lower()
+            self.assertIn("select", query)
+            self.assertNotIn("delete", query)
+            self.assertNotIn("truncate", query)
+
+    def test_existing_migration_ledger_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((False, True))
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection):
+                    with self.assertRaises(RecoveryFailure) as ctx:
+                        assert_application_restore_target_empty(
+                            host="recovery-host.invalid",
+                            port="5432",
+                            database="postgres",
+                            username="recovery.synthetic",
+                            password="synthetic-password",
+                        )
+            self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
+
+
 class RecoverySchemaCountTests(unittest.TestCase):
     def test_legitimate_empty_object_categories_are_accepted(self):
         counts = validate_schema_counts((0, 0, 0, 0, 0, 0, 0, 0, 1))
@@ -122,10 +206,16 @@ class RecoverySchemaCountTests(unittest.TestCase):
                         password="synthetic-password",
                     )
             env = run.call_args.kwargs["env"]
+            argv = run.call_args.args[0]
             self.assertEqual(env["PGSSLMODE"], "verify-full")
             self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
             self.assertNotIn("BACKUP_ENCRYPTION_KEY", env)
             self.assertNotIn("BACKUP_R2_SECRET_ACCESS_KEY", env)
+            self.assertIn("--single-transaction", argv)
+            self.assertIn("--exit-on-error", argv)
+            self.assertNotIn("--clean", argv)
+            for schema in SUPABASE_MANAGED_SCHEMAS:
+                self.assertIn(f"--exclude-schema={schema}", argv)
 
     def test_restore_fails_closed_when_ca_file_is_missing(self):
         with patch.dict(os.environ, {"PGSSLROOTCERT": ""}, clear=False):
