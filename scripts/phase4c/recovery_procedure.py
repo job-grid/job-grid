@@ -243,7 +243,7 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
 
     lines = listed.stdout.decode("utf-8", errors="replace").splitlines()
     public_schema_entry = re.compile(
-        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+SCHEMA\\s+-\\s+public(?:\\s|$)",
+        r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public(?:\s|$)",
         re.IGNORECASE,
     )
     filtered_lines = [line for line in lines if not public_schema_entry.search(line)]
@@ -252,7 +252,7 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
 
     toc_path = dump_path.with_name(dump_path.name + ".restore-list")
     try:
-        toc_path.write_text("\\n".join(filtered_lines) + "\\n", encoding="utf-8")
+        toc_path.write_text("\n".join(filtered_lines) + "\n", encoding="utf-8")
     except OSError:
         _fixed("RECOVERY_TOC_LIST_FAILED")
     return toc_path
