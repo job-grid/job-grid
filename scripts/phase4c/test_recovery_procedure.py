@@ -77,6 +77,15 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             ca_file.write_text("synthetic CA fixture", encoding="utf-8")
             dump_file = root / "database.dump"
             dump_file.write_bytes(b"synthetic dump")
+            list_result = type(
+                "Completed",
+                (),
+                {
+                    "returncode": 0,
+                    "stdout": b"; archive header\\n1; 2615 2200 SCHEMA - public postgres\\n2; 1259 30000 TABLE public jobs postgres\\n",
+                    "stderr": b"",
+                },
+            )()
             result = type(
                 "Completed",
                 (),
@@ -86,7 +95,7 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
                 },
             )()
             with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
-                with patch("recovery_procedure.subprocess.run", return_value=result):
+                with patch("recovery_procedure.subprocess.run", side_effect=[list_result, result]):
                     with self.assertRaises(RecoveryFailure) as ctx:
                         restore_backup(
                             dump_path=dump_file,
