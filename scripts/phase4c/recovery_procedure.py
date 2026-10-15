@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -220,6 +221,43 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     return "unknown_pg_restore_error"
 
 
+def _prepare_restore_toc(dump_path: Path) -> Path:
+    """Build a pg_restore list excluding CREATE SCHEMA public only.
+
+    Supabase recovery projects already provision the public schema. We must leave
+    that schema itself in place while restoring the production application's
+    public-schema objects, along with the migration ledger. Never use --clean.
+    """
+    try:
+        listed = subprocess.run(
+            [PG_RESTORE, "--list", str(dump_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        _fixed("RECOVERY_TOC_LIST_FAILED")
+    if listed.returncode != 0 or not listed.stdout:
+        _fixed("RECOVERY_TOC_LIST_FAILED")
+
+    lines = listed.stdout.decode("utf-8", errors="replace").splitlines()
+    public_schema_entry = re.compile(
+        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+SCHEMA\\s+-\\s+public(?:\\s|$)",
+        re.IGNORECASE,
+    )
+    filtered_lines = [line for line in lines if not public_schema_entry.search(line)]
+    if not filtered_lines:
+        _fixed("RECOVERY_TOC_LIST_FAILED")
+
+    toc_path = dump_path.with_name(dump_path.name + ".restore-list")
+    try:
+        toc_path.write_text("\\n".join(filtered_lines) + "\\n", encoding="utf-8")
+    except OSError:
+        _fixed("RECOVERY_TOC_LIST_FAILED")
+    return toc_path
+
+
 def restore_backup(
     *,
     dump_path: Path,
@@ -232,6 +270,7 @@ def restore_backup(
     ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
     if not ca_file or not Path(ca_file).is_file():
         _fixed("RECOVERY_TLS_CA_FAILED")
+    toc_path = _prepare_restore_toc(dump_path)
     argv = [
         PG_RESTORE,
         "--host", host,
@@ -242,6 +281,7 @@ def restore_backup(
         "--no-subscriptions",
         "--single-transaction",
         "--exit-on-error",
+        "--use-list", str(toc_path),
         *[f"--exclude-schema={schema}" for schema in SUPABASE_MANAGED_SCHEMAS],
         str(dump_path),
     ]
