@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from recovery_procedure import (
     ARTIFACTS,
@@ -12,6 +12,7 @@ from recovery_procedure import (
     ARTIFACT_MANIFEST_SHA,
     SUPABASE_MANAGED_SCHEMAS,
     RecoveryFailure,
+    assert_application_restore_target_empty,
     classify_pg_restore_failure,
     restore_backup,
     validate_schema_counts,
@@ -98,6 +99,66 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             self.assertEqual(str(ctx.exception), "RECOVERY_RESTORE_FAILED[authentication_failed]")
             self.assertNotIn("secret-user", str(ctx.exception))
             self.assertNotIn("synthetic-password", str(ctx.exception))
+
+
+class RecoveryTargetEmptyGuardTests(unittest.TestCase):
+    def _connection(self, row):
+        connection = MagicMock()
+        cursor = connection.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = row
+        return connection
+
+    def test_empty_app_owned_target_is_accepted_using_verified_tls(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((False, False))
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection) as connect:
+                    assert_application_restore_target_empty(
+                        host="recovery-host.invalid",
+                        port="5432",
+                        database="postgres",
+                        username="recovery.synthetic",
+                        password="synthetic-password",
+                    )
+            self.assertEqual(connect.call_args.kwargs["sslmode"], "verify-full")
+            self.assertEqual(connect.call_args.kwargs["sslrootcert"], str(ca_file))
+
+    def test_nonempty_public_schema_is_rejected_without_deleting_anything(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((True, False))
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection):
+                    with self.assertRaises(RecoveryFailure) as ctx:
+                        assert_application_restore_target_empty(
+                            host="recovery-host.invalid",
+                            port="5432",
+                            database="postgres",
+                            username="recovery.synthetic",
+                            password="synthetic-password",
+                        )
+            self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
+            connection.cursor.return_value.execute.assert_not_called()
+
+    def test_existing_migration_ledger_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            ca_file = Path(temp) / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            connection = self._connection((False, True))
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.psycopg.connect", return_value=connection):
+                    with self.assertRaises(RecoveryFailure) as ctx:
+                        assert_application_restore_target_empty(
+                            host="recovery-host.invalid",
+                            port="5432",
+                            database="postgres",
+                            username="recovery.synthetic",
+                            password="synthetic-password",
+                        )
+            self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
 
 
 class RecoverySchemaCountTests(unittest.TestCase):
