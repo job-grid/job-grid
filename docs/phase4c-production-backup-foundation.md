@@ -60,6 +60,11 @@ The repeatable recovery sequence is:
 9. Validate database access, tables, constraints, indexes, functions, triggers, RLS, policies, grants, and migration history.
 10. Record only fixed status/count evidence.
 
+When the restore command fails, the recovery workflow records a fixed diagnostic category
+(authentication, TLS verification, DNS, timeout, connection refusal, permissions, restore
+object conflict, invalid dump format, or generic restore error). Raw pg_restore stderr is
+not logged because it can contain database identifiers or other sensitive details.
+
 No production restore path exists.
 
 ## Recovery validation boundary
