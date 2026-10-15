@@ -37,6 +37,20 @@ ARTIFACTS = (
     ARTIFACT_MANIFEST_SHA,
 )
 
+# A newly provisioned Supabase project already contains these managed schemas.
+# Keep the recovery target's platform-owned objects intact; restore the app's
+# public schema and the production migration ledger from our logical backup.
+SUPABASE_MANAGED_SCHEMAS = (
+    "auth",
+    "storage",
+    "realtime",
+    "extensions",
+    "graphql",
+    "graphql_public",
+    "pgbouncer",
+    "vault",
+)
+
 
 class RecoveryFailure(RuntimeError):
     pass
@@ -227,6 +241,8 @@ def restore_backup(
         "--no-owner",
         "--no-subscriptions",
         "--single-transaction",
+        "--exit-on-error",
+        *[f"--exclude-schema={schema}" for schema in SUPABASE_MANAGED_SCHEMAS],
         str(dump_path),
     ]
     env = {
