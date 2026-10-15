@@ -130,6 +130,7 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
             ca_file = Path(temp) / "recovery-root-ca.crt"
             ca_file.write_text("synthetic CA fixture", encoding="utf-8")
             connection = self._connection((True, False))
+            cursor = connection.__enter__.return_value.cursor.return_value.__enter__.return_value
             with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
                 with patch("recovery_procedure.psycopg.connect", return_value=connection):
                     with self.assertRaises(RecoveryFailure) as ctx:
@@ -141,7 +142,11 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
                             password="synthetic-password",
                         )
             self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
-            connection.cursor.return_value.execute.assert_not_called()
+            self.assertEqual(cursor.execute.call_count, 1)
+            query = cursor.execute.call_args.args[0].lower()
+            self.assertIn("select", query)
+            self.assertNotIn("delete", query)
+            self.assertNotIn("truncate", query)
 
     def test_existing_migration_ledger_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
