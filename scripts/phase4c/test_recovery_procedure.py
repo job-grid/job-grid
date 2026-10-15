@@ -242,6 +242,7 @@ class RecoverySchemaCountTests(unittest.TestCase):
             self.assertIn("--single-transaction", argv)
             self.assertIn("--exit-on-error", argv)
             self.assertIn("--use-list", argv)
+            self.assertIn("--no-publications", argv)
             self.assertNotIn("--clean", argv)
             for schema in SUPABASE_MANAGED_SCHEMAS:
                 self.assertIn(f"--exclude-schema={schema}", argv)
