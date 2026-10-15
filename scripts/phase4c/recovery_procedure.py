@@ -400,10 +400,62 @@ def recovery_runbook() -> tuple[str, ...]:
         "9. Run the schema/security/migration validator.",
         "10. Record only fixed status codes and sanitized validation counts; never copy production data to logs.",
     )
+def assert_application_restore_target_empty(
+    *,
+    host: str,
+    port: str,
+    database: str,
+    username: str,
+    password: str,
+) -> None:
+    """Fail closed unless app-owned target objects and the migration ledger are absent."""
+    ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
+    if not ca_file or not Path(ca_file).is_file():
+        _fixed("RECOVERY_TLS_CA_FAILED")
+    try:
+        with psycopg.connect(
+            host=host,
+            port=int(port),
+            dbname=database,
+            user=username,
+            password=password,
+            connect_timeout=10,
+            sslmode="verify-full",
+            sslrootcert=ca_file,
+            autocommit=True,
+        ) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                      EXISTS (
+                        SELECT 1
+                        FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE n.nspname = 'public'
+                          AND c.relkind IN ('r','p','v','m','S','f')
+                      ),
+                      to_regclass('supabase_migrations.schema_migrations') IS NOT NULL
+                    """
+                )
+                row = cur.fetchone()
+    except Exception:
+        _fixed("RECOVERY_TARGET_CHECK_FAILED")
+    if not row or bool(row[0]) or bool(row[1]):
+        _fixed("RECOVERY_TARGET_NOT_EMPTY")
+
+
 def run_recovery(backup_id: str) -> None:
     env = os.environ
     assert_recovery_credentials(env)
     assert_recovery_target(env["RECOVERY_PROJECT_REF"], env["RECOVERY_POSTGRES_HOST"])
+    assert_application_restore_target_empty(
+        host=env["RECOVERY_POSTGRES_HOST"],
+        port=env["RECOVERY_POSTGRES_PORT"],
+        database=env["RECOVERY_POSTGRES_DB"],
+        username=env["RECOVERY_POSTGRES_USER"],
+        password=env["RECOVERY_POSTGRES_PASSWORD"],
+    )
     key = _key(env["BACKUP_ENCRYPTION_KEY"])
     client = boto3.client(
         "s3",
