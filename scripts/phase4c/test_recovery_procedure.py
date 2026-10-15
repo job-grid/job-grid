@@ -10,11 +10,29 @@ from recovery_procedure import (
     ARTIFACT_DUMP_SHA,
     ARTIFACT_MANIFEST,
     ARTIFACT_MANIFEST_SHA,
+    SUPABASE_MANAGED_SCHEMAS,
     RecoveryFailure,
     classify_pg_restore_failure,
     restore_backup,
     validate_schema_counts,
 )
+
+
+class RecoveryManagedSchemaTests(unittest.TestCase):
+    def test_supabase_managed_schemas_are_excluded_from_cross_project_restore(self):
+        self.assertEqual(
+            SUPABASE_MANAGED_SCHEMAS,
+            (
+                "auth",
+                "storage",
+                "realtime",
+                "extensions",
+                "graphql",
+                "graphql_public",
+                "pgbouncer",
+                "vault",
+            ),
+        )
 
 
 class RecoveryArtifactNameTests(unittest.TestCase):
@@ -122,10 +140,16 @@ class RecoverySchemaCountTests(unittest.TestCase):
                         password="synthetic-password",
                     )
             env = run.call_args.kwargs["env"]
+            argv = run.call_args.args[0]
             self.assertEqual(env["PGSSLMODE"], "verify-full")
             self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
             self.assertNotIn("BACKUP_ENCRYPTION_KEY", env)
             self.assertNotIn("BACKUP_R2_SECRET_ACCESS_KEY", env)
+            self.assertIn("--single-transaction", argv)
+            self.assertIn("--exit-on-error", argv)
+            self.assertNotIn("--clean", argv)
+            for schema in SUPABASE_MANAGED_SCHEMAS:
+                self.assertIn(f"--exclude-schema={schema}", argv)
 
     def test_restore_fails_closed_when_ca_file_is_missing(self):
         with patch.dict(os.environ, {"PGSSLROOTCERT": ""}, clear=False):
