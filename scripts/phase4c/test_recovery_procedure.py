@@ -196,11 +196,11 @@ class RecoverySchemaCountTests(unittest.TestCase):
             dump_file = root / "database.dump"
             dump_file.write_bytes(b"synthetic dump")
             toc_output = (
-                b"; Archive created at test time\\n"
-                b"1; 2615 2200 SCHEMA - public postgres\\n"
-                b"2; 1259 30000 TABLE public job_categories postgres\\n"
-                b"3; 1259 30001 TABLE public country_options postgres\\n"
-                b"4; 2615 4000 SCHEMA - supabase_migrations postgres\\n"
+                b"; Archive created at test time\n"
+                b"1; 2615 2200 SCHEMA - public postgres\n"
+                b"2; 1259 30000 TABLE public job_categories postgres\n"
+                b"3; 1259 30001 TABLE public country_options postgres\n"
+                b"4; 2615 4000 SCHEMA - supabase_migrations postgres\n"
             )
             list_result = type(
                 "Completed", (), {"returncode": 0, "stdout": toc_output, "stderr": b""}
