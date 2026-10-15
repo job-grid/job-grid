@@ -11,6 +11,7 @@ from recovery_procedure import (
     ARTIFACT_MANIFEST,
     ARTIFACT_MANIFEST_SHA,
     RecoveryFailure,
+    classify_pg_restore_failure,
     restore_backup,
     validate_schema_counts,
 )
@@ -31,6 +32,54 @@ class RecoveryArtifactNameTests(unittest.TestCase):
             ARTIFACTS,
             (ARTIFACT_DUMP, ARTIFACT_DUMP_SHA, ARTIFACT_MANIFEST, ARTIFACT_MANIFEST_SHA),
         )
+
+
+class RecoveryRestoreDiagnosticTests(unittest.TestCase):
+    def test_pg_restore_diagnostic_classification_never_returns_raw_error(self):
+        cases = (
+            (b'pg_restore: error: connection failed: password authentication failed for user "secret-user"', "authentication_failed"),
+            (b'could not translate host name "private-host.example"', "dns_resolution_failed"),
+            (b'ERROR: permission denied for schema auth', "permission_denied"),
+            (b'pg_restore: error: unsupported version in file header', "invalid_dump_format"),
+            (b'pg_restore: error: server returned an error', "generic_pg_restore_error"),
+            (b'undocumented output', "unknown_pg_restore_error"),
+        )
+        for stderr, expected in cases:
+            with self.subTest(expected=expected):
+                category = classify_pg_restore_failure(stderr)
+                self.assertEqual(category, expected)
+                self.assertNotIn("secret-user", category)
+                self.assertNotIn("private-host.example", category)
+
+    def test_restore_failure_emits_only_sanitized_category(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ca_file = root / "recovery-root-ca.crt"
+            ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+            dump_file = root / "database.dump"
+            dump_file.write_bytes(b"synthetic dump")
+            result = type(
+                "Completed",
+                (),
+                {
+                    "returncode": 1,
+                    "stderr": b'pg_restore: error: connection failed: password authentication failed for user "secret-user"',
+                },
+            )()
+            with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                with patch("recovery_procedure.subprocess.run", return_value=result):
+                    with self.assertRaises(RecoveryFailure) as ctx:
+                        restore_backup(
+                            dump_path=dump_file,
+                            host="recovery-host.invalid",
+                            port="5432",
+                            database="postgres",
+                            username="secret-user",
+                            password="synthetic-password",
+                        )
+            self.assertEqual(str(ctx.exception), "RECOVERY_RESTORE_FAILED[authentication_failed]")
+            self.assertNotIn("secret-user", str(ctx.exception))
+            self.assertNotIn("synthetic-password", str(ctx.exception))
 
 
 class RecoverySchemaCountTests(unittest.TestCase):
