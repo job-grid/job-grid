@@ -139,6 +139,73 @@ def download_backup(r2_client, *, bucket: str, backup_id: str, root: Path) -> No
             _fixed("RECOVERY_DOWNLOAD_FAILED")
 
 
+def classify_pg_restore_failure(stderr: bytes | str) -> str:
+    """Map pg_restore stderr to a fixed safe category; never return raw diagnostics."""
+    if isinstance(stderr, bytes):
+        message = stderr.decode("utf-8", errors="replace").lower()
+    else:
+        message = str(stderr).lower()
+
+    patterns = (
+        ("authentication_failed", (
+            "password authentication failed",
+            "no password supplied",
+            "authentication failed",
+        )),
+        ("tls_verification_failed", (
+            "certificate verify failed",
+            "root certificate file",
+            "ssl certificate problem",
+            "tlsv1 alert",
+            "ssl error",
+        )),
+        ("dns_resolution_failed", (
+            "could not translate host name",
+            "name or service not known",
+            "temporary failure in name resolution",
+        )),
+        ("connection_timeout", (
+            "connection timed out",
+            "timeout expired",
+            "could not receive data from server: timeout",
+        )),
+        ("connection_refused", (
+            "connection refused",
+            "could not connect to server",
+        )),
+        ("permission_denied", (
+            "permission denied",
+            "must be owner of",
+            "must be superuser",
+            "insufficient privilege",
+        )),
+        ("restore_object_conflict", (
+            "already exists",
+            "duplicate key value violates unique constraint",
+            "multiple primary keys",
+            "cannot drop",
+            "does not exist",
+        )),
+        ("invalid_dump_format", (
+            "unsupported version in file header",
+            "did not find magic string",
+            "input file appears to be a text format dump",
+        )),
+        ("server_terminated_connection", (
+            "server closed the connection unexpectedly",
+            "terminating connection due to administrator command",
+        )),
+    )
+    for category, needles in patterns:
+        if any(needle in message for needle in needles):
+            return category
+    if "pg_restore: error: could not execute query" in message:
+        return "restore_query_failed"
+    if "pg_restore:" in message or "fatal:" in message or "error:" in message:
+        return "generic_pg_restore_error"
+    return "unknown_pg_restore_error"
+
+
 def restore_backup(
     *,
     dump_path: Path,
@@ -175,14 +242,18 @@ def restore_backup(
             argv,
             env=env,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             check=False,
             timeout=30 * 60,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        _fixed("RECOVERY_RESTORE_FAILED")
+    except subprocess.TimeoutExpired:
+        _fixed("RECOVERY_RESTORE_FAILED[restore_timeout]")
+    except OSError:
+        _fixed("RECOVERY_RESTORE_FAILED[pg_restore_unavailable]")
     if result.returncode != 0:
-        _fixed("RECOVERY_RESTORE_FAILED")
+        # Only a fixed category is emitted. Raw pg_restore output may contain
+        # database identifiers or other sensitive details and must not enter logs.
+        _fixed(f"RECOVERY_RESTORE_FAILED[{classify_pg_restore_failure(result.stderr or b'')}]")
 
 
 VALIDATION_SQL = """
