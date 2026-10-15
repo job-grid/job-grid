@@ -56,7 +56,12 @@ The repeatable recovery sequence is:
 5. Verify encrypted-artifact SHA-256 values.
 6. Decrypt the manifest and dump with the separate recovery encryption key.
 7. Verify the manifest source boundary, backup ID, and PostgreSQL major version.
-8. Restore using PostgreSQL 17 pg_restore --single-transaction --no-owner --no-subscriptions.
+8. Restore the application-owned schema and migration ledger using PostgreSQL 17
+   pg_restore --single-transaction --no-owner --no-subscriptions --exit-on-error.
+   Exclude Supabase-managed schemas (auth, storage, realtime, extensions, graphql,
+   graphql_public, pgbouncer, vault), because a newly provisioned Supabase recovery project
+   already contains platform-managed objects in those schemas. Never use --clean to force
+   the restore; keep the target's managed schemas intact.
 9. Validate database access, tables, constraints, indexes, functions, triggers, RLS, policies, grants, and migration history.
 10. Record only fixed status/count evidence.
 
