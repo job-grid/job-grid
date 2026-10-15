@@ -195,8 +195,21 @@ class RecoverySchemaCountTests(unittest.TestCase):
             ca_file.write_text("synthetic CA fixture", encoding="utf-8")
             dump_file = root / "database.dump"
             dump_file.write_bytes(b"synthetic dump")
+            toc_output = (
+                b"; Archive created at test time\\n"
+                b"1; 2615 2200 SCHEMA - public postgres\\n"
+                b"2; 1259 30000 TABLE public job_categories postgres\\n"
+                b"3; 1259 30001 TABLE public country_options postgres\\n"
+                b"4; 2615 4000 SCHEMA - supabase_migrations postgres\\n"
+            )
+            list_result = type(
+                "Completed", (), {"returncode": 0, "stdout": toc_output, "stderr": b""}
+            )()
+            restore_result = type(
+                "Completed", (), {"returncode": 0, "stdout": b"", "stderr": b""}
+            )()
             with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
-                with patch("recovery_procedure.subprocess.run", return_value=type("Completed", (), {"returncode": 0})()) as run:
+                with patch("recovery_procedure.subprocess.run", side_effect=[list_result, restore_result]) as run:
                     restore_backup(
                         dump_path=dump_file,
                         host="recovery-host.invalid",
@@ -205,14 +218,21 @@ class RecoverySchemaCountTests(unittest.TestCase):
                         username="recovery.synthetic",
                         password="synthetic-password",
                     )
-            env = run.call_args.kwargs["env"]
-            argv = run.call_args.args[0]
+            env = run.call_args_list[1].kwargs["env"]
+            argv = run.call_args_list[1].args[0]
+            toc_path = Path(argv[argv.index("--use-list") + 1])
+            toc_text = toc_path.read_text(encoding="utf-8")
+            self.assertNotIn("SCHEMA - public", toc_text)
+            self.assertIn("TABLE public job_categories", toc_text)
+            self.assertIn("TABLE public country_options", toc_text)
+            self.assertIn("SCHEMA - supabase_migrations", toc_text)
             self.assertEqual(env["PGSSLMODE"], "verify-full")
             self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
             self.assertNotIn("BACKUP_ENCRYPTION_KEY", env)
             self.assertNotIn("BACKUP_R2_SECRET_ACCESS_KEY", env)
             self.assertIn("--single-transaction", argv)
             self.assertIn("--exit-on-error", argv)
+            self.assertIn("--use-list", argv)
             self.assertNotIn("--clean", argv)
             for schema in SUPABASE_MANAGED_SCHEMAS:
                 self.assertIn(f"--exclude-schema={schema}", argv)
