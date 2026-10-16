@@ -35,7 +35,7 @@ Every backup uses exactly:
 
 The database dump and manifest are encrypted with AES-256-GCM. SHA-256 covers each encrypted artifact. The plaintext dump is removed before any R2 operation.
 
-The manifest contains only sanitized metadata: backup ID, creation timestamp, source project reference, PostgreSQL major version, migration state, encryption format, and artifact metadata. It contains no credentials, tokens, encryption key, database password, or production data.
+The version-2 manifest contains sanitized source/project metadata, the complete ordered migration ledger identity list and digest, and a deterministic inventory of application-schema objects, definitions, RLS policies, constraints, indexes, triggers, types, and grants. It contains no credentials, tokens, encryption key, database password, or application row data. The inventory is encrypted with the manifest. Version-1 backups do not contain enough metadata for the strict recovery validator and must not be used to claim a recovery PASS.
 
 ## R2 controls
 
@@ -56,21 +56,26 @@ The repeatable recovery sequence is:
 5. Verify encrypted-artifact SHA-256 values.
 6. Decrypt the manifest and dump with the separate recovery encryption key.
 7. Verify the manifest source boundary, backup ID, and PostgreSQL major version.
-8. Build a pg_restore TOC list and omit only the CREATE SCHEMA entry for public,
-   since Supabase provisioned it on the recovery project already. Retain the public-schema
-   table/function/data entries and the supabase_migrations ledger. Restore with
-   pg_restore --use-list --single-transaction --no-owner --no-subscriptions --exit-on-error.
-   Exclude Supabase-managed schemas (auth, storage, realtime, extensions, graphql,
-   graphql_public, pgbouncer, vault), because a newly provisioned Supabase recovery project
-   already contains platform-managed objects in those schemas. Never use --clean to force
-   the restore; keep the target's managed schemas intact.
-9. Validate database access, tables, constraints, indexes, functions, triggers, RLS, policies, grants, and migration history.
+8. Require manifest format version 2 and verify the complete inventory metadata before any restore.
+9. Build a pg_restore TOC list that omits the pre-existing CREATE SCHEMA public entry and the
+   known Supabase-managed public.rls_auto_enable() function/ACL. Its current function definition
+   is present on both projects; preserve the target's object and target-specific grants.
+10. Exclude Supabase-managed schemas (auth, storage, realtime, extensions, graphql,
+    graphql_public, pgbouncer, vault) and source publications. Do not use --clean or destructive
+    cleanup. The target's application-owned schemas must be empty before restore.
+11. Restore with PostgreSQL 17 pg_restore --use-list --single-transaction --no-owner
+    --no-subscriptions --no-publications --exit-on-error.
+12. Compare the restored deterministic schema-object/grant inventory and digest with the
+    encrypted version-2 manifest; verify every migration-ledger row and digest; and confirm the
+    recovery project's existing publication definitions and memberships are unchanged.
+13. Record only sanitized status, object counts and digests. Never copy raw PostgreSQL errors,
+    database rows, credentials or secrets to logs.
 10. Record only fixed status/count evidence.
 
-When the restore command fails, the recovery workflow records a fixed diagnostic category
-(authentication, TLS verification, DNS, timeout, connection refusal, permissions, restore
-object conflict, invalid dump format, or generic restore error). Raw pg_restore stderr is
-not logged because it can contain database identifiers or other sensitive details.
+When the restore command fails, the recovery workflow records only a fixed diagnostic category.
+Missing dependencies are classified separately from genuine object conflicts. Raw pg_restore
+stderr is never logged because it can contain database identifiers or other sensitive details.
+The target's publication snapshot is compared before/after the restore.
 
 No production restore path exists.
 
