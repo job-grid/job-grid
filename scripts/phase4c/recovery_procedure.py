@@ -310,7 +310,9 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
     # the migration-ledger schema. Keep schema containers intact but retain
     # the dump's table/data entries for the ledger; never use --clean.
     existing_schema_entry = re.compile(
-        r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+(?:public|supabase_migrations)(?:\s|$)",
+        r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+"
+        r"(?:public|supabase_migrations|auth|storage|realtime|extensions|"
+        r"graphql|graphql_public|pgbouncer|vault)(?:\s|$)",
         re.IGNORECASE,
     )
     public_platform_function = re.compile(
