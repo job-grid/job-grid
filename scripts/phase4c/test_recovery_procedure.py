@@ -357,7 +357,18 @@ class RecoverySchemaCountTests(unittest.TestCase):
                 b"1; 2615 2200 SCHEMA - public postgres\n"
                 b"2; 1259 30000 TABLE public job_categories postgres\n"
                 b"3; 1259 30001 TABLE public country_options postgres\n"
+                b"5; 1259 30002 INDEX public jobs_pkey postgres\n"
+                b"6; 2606 30003 CONSTRAINT public jobs jobs_pkey postgres\n"
+                b"7; 1255 30004 FUNCTION public rls_auto_enable() postgres\n"
+                b"8; 1255 30005 FUNCTION public app_function() postgres\n"
+                b"9; 2620 30006 TRIGGER public jobs ensure_job_policy postgres\n"
+                b"10; 3256 30007 POLICY public jobs public_jobs_select postgres\n"
+                b"11; 1259 30008 SEQUENCE public jobs_id_seq postgres\n"
+                b"12; 1247 30009 TYPE public job_status postgres\n"
+                b"13; 0 0 ACL public FUNCTION rls_auto_enable() postgres\n"
+                b"14; 0 0 ACL public TABLE jobs postgres\n"
                 b"4; 2615 4000 SCHEMA - supabase_migrations postgres\n"
+                b"15; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\n"
             )
             list_result = type(
                 "Completed", (), {"returncode": 0, "stdout": toc_output, "stderr": b""}
