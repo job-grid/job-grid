@@ -202,6 +202,17 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             return "restore_publication_conflict"
         return "restore_object_conflict_unclassified"
 
+    schema_missing = re.search(r"""schema ["']?([a-z_][a-z0-9_]*)["']? (?:does not exist|is missing)""", message)
+    if schema_missing:
+        schema_name = schema_missing.group(1)
+        known_schemas = {
+            "public", "supabase_migrations", "auth", "storage", "realtime",
+            "extensions", "graphql", "graphql_public", "pgbouncer", "vault",
+        }
+        if schema_name in known_schemas:
+            return "restore_dependency_missing_schema_" + schema_name
+        return "restore_dependency_missing_schema_other"
+
     patterns = (
         ("authentication_failed", (
             "password authentication failed",
