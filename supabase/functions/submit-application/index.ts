@@ -59,6 +59,13 @@ Deno.serve(async (req) => {
   }
 
   const db = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { count: recentCount, error: rateError } = await db.from("candidate_applications")
+    .select("id", { count: "exact", head: true })
+    .eq("email", email)
+    .gte("submitted_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+  if (rateError) return json(503, { error: "Application service is temporarily unavailable." });
+  if ((recentCount ?? 0) >= 3) return json(429, { error: "We have received several applications from this email recently. Please wait before submitting again." });
+
   const { data: country, error: countryError } = await db.from("country_options").select("code").eq("code", countryCode).maybeSingle();
   if (countryError || !country) return json(422, { error: "Select a valid country." });
 
