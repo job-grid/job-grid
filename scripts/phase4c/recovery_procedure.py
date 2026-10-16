@@ -167,6 +167,12 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     else:
         message = str(stderr).lower()
 
+    if "already exists" in message and any(
+        token in message
+        for token in ('relation "', 'table "', 'sequence "', 'index "')
+    ):
+        return "restore_relation_already_exists"
+
     patterns = (
         ("authentication_failed", (
             "password authentication failed",
@@ -200,10 +206,25 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             "must be superuser",
             "insufficient privilege",
         )),
-        ("restore_object_conflict", (
-            "already exists",
+        # Keep object-conflict diagnostics specific enough to guide a safe fix,
+        # while never emitting raw PostgreSQL stderr into Actions logs.
+        ("restore_schema_already_exists", (
+            'schema "public" already exists',
+            'schema "supabase_migrations" already exists',
+        )),
+        ("restore_extension_already_exists", (
+            'extension "pgcrypto" already exists',
+            'extension "uuid-ossp" already exists',
+            'extension "pg_graphql" already exists',
+            'extension "supabase_vault" already exists',
+        )),
+        ("restore_constraint_conflict", (
             "duplicate key value violates unique constraint",
             "multiple primary keys",
+            "constraint already exists",
+        )),
+        ("restore_object_conflict", (
+            "already exists",
             "cannot drop",
             "duplicate object",
             "is already a member",

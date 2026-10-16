@@ -68,7 +68,10 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             (b'pg_restore: error: unsupported version in file header', "invalid_dump_format"),
             (b'pg_restore: error: relation "app_data" does not exist', "restore_dependency_missing"),
             (b'pg_restore: error: schema "missing_schema" does not exist', "restore_dependency_missing"),
-            (b'pg_restore: error: schema "public" already exists', "restore_object_conflict"),
+            (b'pg_restore: error: schema "public" already exists', "restore_schema_already_exists"),
+            (b'pg_restore: error: extension "pgcrypto" already exists', "restore_extension_already_exists"),
+            (b'pg_restore: error: relation "jobs" already exists', "restore_relation_already_exists"),
+            (b'pg_restore: error: duplicate key value violates unique constraint "jobs_pkey"', "restore_constraint_conflict"),
             (b'pg_restore: error: server returned an error', "generic_pg_restore_error"),
             (b'undocumented output', "unknown_pg_restore_error"),
         )
