@@ -399,6 +399,8 @@ class RecoverySchemaCountTests(unittest.TestCase):
             toc_path = Path(argv[argv.index("--use-list") + 1])
             toc_text = toc_path.read_text(encoding="utf-8")
             self.assertNotIn("SCHEMA - public", toc_text)
+            self.assertNotIn("SCHEMA - supabase_migrations", toc_text)
+            self.assertIn("TABLE supabase_migrations.schema_migrations", toc_text)
             self.assertNotIn("FUNCTION public rls_auto_enable()", toc_text)
             self.assertNotIn("ACL public FUNCTION rls_auto_enable()", toc_text)
             self.assertIn("TABLE public job_categories", toc_text)
