@@ -484,6 +484,26 @@ def assert_publications_unchanged(expected: list[dict], actual: list[dict]) -> N
         _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
 
 
+def assert_schema_inventory_matches(expected: dict, actual: dict) -> None:
+    """Compare full object identities/definitions as well as their deterministic digest."""
+    if (
+        not isinstance(expected, dict)
+        or not isinstance(actual, dict)
+        or expected.get("sha256") != actual.get("sha256")
+        or expected.get("items") != actual.get("items")
+        or expected.get("counts_by_kind") != actual.get("counts_by_kind")
+        or expected.get("item_count") != actual.get("item_count")
+    ):
+        _fixed("RECOVERY_SCHEMA_INVENTORY_MISMATCH")
+
+
+def assert_migration_history_matches(expected: dict, actual: dict) -> None:
+    """Compare every migration row via its digest plus the ordered complete version/name list."""
+    for field in ("present", "row_count", "versions", "latest_migration", "rows_sha256"):
+        if not isinstance(expected, dict) or not isinstance(actual, dict) or actual.get(field) != expected.get(field):
+            _fixed("RECOVERY_MIGRATION_HISTORY_MISMATCH")
+
+
 def validate_recovery(
     *,
     host: str,
@@ -520,17 +540,10 @@ def validate_recovery(
         counts = validate_schema_counts(values)
 
         expected_inventory = expected_migration_state["schema_inventory"]
-        if (
-            actual_inventory["sha256"] != expected_inventory["sha256"]
-            or actual_inventory["items"] != expected_inventory["items"]
-            or actual_inventory["counts_by_kind"] != expected_inventory["counts_by_kind"]
-        ):
-            _fixed("RECOVERY_SCHEMA_INVENTORY_MISMATCH")
+        assert_schema_inventory_matches(expected_inventory, actual_inventory)
 
         expected_history = expected_migration_state["migration_history"]
-        for field in ("present", "row_count", "versions", "latest_migration", "rows_sha256"):
-            if actual_history.get(field) != expected_history.get(field):
-                _fixed("RECOVERY_MIGRATION_HISTORY_MISMATCH")
+        assert_migration_history_matches(expected_history, actual_history)
         if expected_migration_state.get("latest_migration") != actual_history.get("latest_migration"):
             _fixed("RECOVERY_MIGRATION_MISMATCH")
 
