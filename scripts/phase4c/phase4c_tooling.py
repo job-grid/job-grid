@@ -103,7 +103,7 @@ def build_manifest(
             raise SafetyError("Artifact SHA-256 is missing or invalid.")
 
     manifest = {
-        "format_version": 1,
+        "format_version": 2,
         "backup_id": backup_id,
         "created_at": created_at,
         "source": {
