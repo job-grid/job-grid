@@ -258,12 +258,36 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             "duplicate object",
             "is already a member",
         )),
+        # PostgreSQL object-class diagnostics are deliberately reduced to fixed
+        # categories. Never include object/schema names or raw stderr in logs.
+        ("restore_dependency_missing_schema", (
+            "schema \"", "schema '", "schema does not exist",
+        )),
+        ("restore_dependency_missing_extension", (
+            "extension \"", "extension '", "extension does not exist",
+        )),
+        ("restore_dependency_missing_routine", (
+            "function \"", "function '", "procedure \"", "procedure '",
+            "routine \"", "routine '", "function does not exist",
+            "procedure does not exist",
+        )),
+        ("restore_dependency_missing_relation", (
+            "relation \"", "relation '", "table \"", "table '",
+            "sequence \"", "sequence '", "view \"", "view '",
+            "materialized view \"", "relation does not exist",
+        )),
+        ("restore_dependency_missing_type", (
+            "type \"", "type '", "type does not exist",
+        )),
+        ("restore_dependency_missing_operator", (
+            "operator \"", "operator '", "operator does not exist",
+        )),
+        ("restore_dependency_missing_language", (
+            "language \"", "language '", "language does not exist",
+        )),
         ("restore_dependency_missing", (
-            "does not exist",
-            "not found",
-            "could not find",
-            "has no schema",
-            "missing referenced",
+            "does not exist", "not found", "could not find",
+            "has no schema", "missing referenced",
         )),
         ("invalid_dump_format", (
             "unsupported version in file header",
