@@ -18,6 +18,8 @@ test("vacancy module queries published jobs and escapes rendered values", async 
   assert.match(source, /status=eq\.published/);
   assert.match(source, /expires_at/);
   assert.match(source, /escapeHtml/);
-  assert.match(source, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(source, /Apply through Job Grid/);
+  assert.match(source, /\/apply\.html\?job=/);
+  assert.doesNotMatch(source, /Apply on employer site/);
   assert.doesNotMatch(source, /sb_secret_|service.role/i);
 });
