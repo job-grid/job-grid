@@ -25,7 +25,7 @@ import psycopg
 from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, SafetyError
 from schema_inventory import (
     collect_migration_history,
-    collect_publication_snapshot,
+    collect_platform_state_snapshot,
     collect_schema_inventory,
     sha256_json,
 )
@@ -268,11 +268,22 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
         r"^\s*\d+;\s+\d+\s+\d+\s+ACL\s+public\s+(?:FUNCTION\s+)?rls_auto_enable\s*\(\s*\)(?:\s|$)",
         re.IGNORECASE,
     )
+    managed_event_trigger_names = (
+        "ensure_rls|issue_graphql_placeholder|issue_pg_cron_access|"
+        "issue_pg_graphql_access|issue_pg_net_access|pgrst_ddl_watch|pgrst_drop_watch"
+    )
+    managed_event_trigger = re.compile(
+        r"^\s*\d+;\s+\d+\s+\d+\s+EVENT TRIGGER\s+(?:-\s+)?(?:"
+        + managed_event_trigger_names
+        + r")(?:\s|$)",
+        re.IGNORECASE,
+    )
     filtered_lines = [
         line for line in lines
         if not public_schema_entry.search(line)
         and not public_platform_function.search(line)
         and not public_platform_function_acl.search(line)
+        and not managed_event_trigger.search(line)
     ]
     if not filtered_lines:
         _fixed("RECOVERY_TOC_LIST_FAILED")
@@ -484,6 +495,15 @@ def assert_publications_unchanged(expected: list[dict], actual: list[dict]) -> N
         _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
 
 
+def assert_platform_state_unchanged(expected: dict, actual: dict) -> None:
+    """Verify platform-managed publications, event triggers and RLS helper survive unchanged."""
+    assert_publications_unchanged(expected.get("publications"), actual.get("publications"))
+    if expected.get("event_triggers") != actual.get("event_triggers"):
+        _fixed("RECOVERY_EVENT_TRIGGER_STATE_CHANGED")
+    if expected.get("public_helper") != actual.get("public_helper"):
+        _fixed("RECOVERY_PLATFORM_HELPER_CHANGED")
+
+
 def assert_schema_inventory_matches(expected: dict, actual: dict) -> None:
     """Compare full object identities/definitions as well as their deterministic digest."""
     if (
@@ -512,7 +532,7 @@ def validate_recovery(
     username: str,
     password: str,
     expected_migration_state: dict,
-    expected_publications: list[dict],
+    expected_platform_state: dict,
 ) -> dict:
     try:
         with psycopg.connect(
@@ -534,7 +554,7 @@ def validate_recovery(
                 values = cur.fetchone()
                 actual_inventory = collect_schema_inventory(cur)
                 actual_history = collect_migration_history(cur)
-                actual_publications = collect_publication_snapshot(cur)
+                actual_platform_state = collect_platform_state_snapshot(cur)
         if opened != database:
             _fixed("RECOVERY_DATABASE_ACCESS_FAILED")
         counts = validate_schema_counts(values)
@@ -547,7 +567,7 @@ def validate_recovery(
         if expected_migration_state.get("latest_migration") != actual_history.get("latest_migration"):
             _fixed("RECOVERY_MIGRATION_MISMATCH")
 
-        assert_publications_unchanged(expected_publications, actual_publications)
+        assert_platform_state_unchanged(expected_platform_state, actual_platform_state)
         return {
             "database": opened,
             "counts": counts,
@@ -557,7 +577,7 @@ def validate_recovery(
                 "row_count": actual_history["row_count"],
                 "rows_sha256": actual_history["rows_sha256"],
             },
-            "publication_count": len(actual_publications),
+            "publication_count": len(actual_platform_state["publications"]),
         }
     except RecoveryFailure:
         raise
@@ -600,8 +620,8 @@ def assert_application_restore_target_empty(
     database: str,
     username: str,
     password: str,
-) -> list[dict]:
-    """Read-only fail-closed check of every non-platform schema plus public objects."""
+) -> dict:
+    """Read-only fail-closed check of app-owned target objects and platform state."""
     ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
     if not ca_file or not Path(ca_file).is_file():
         _fixed("RECOVERY_TLS_CA_FAILED")
@@ -649,19 +669,21 @@ def assert_application_restore_target_empty(
             with conn.cursor() as cur:
                 cur.execute(query, platform_schemas)
                 row = cur.fetchone()
-                publications = collect_publication_snapshot(cur)
+                if not row or any(bool(value) for value in row):
+                    _fixed("RECOVERY_TARGET_NOT_EMPTY")
+                platform_state = collect_platform_state_snapshot(cur)
+    except RecoveryFailure:
+        raise
     except Exception:
         _fixed("RECOVERY_TARGET_CHECK_FAILED")
-    if not row or any(bool(value) for value in row):
-        _fixed("RECOVERY_TARGET_NOT_EMPTY")
-    return publications
+    return platform_state
 
 
 def run_recovery(backup_id: str) -> None:
     env = os.environ
     assert_recovery_credentials(env)
     assert_recovery_target(env["RECOVERY_PROJECT_REF"], env["RECOVERY_POSTGRES_HOST"])
-    expected_publications = assert_application_restore_target_empty(
+    expected_platform_state = assert_application_restore_target_empty(
         host=env["RECOVERY_POSTGRES_HOST"],
         port=env["RECOVERY_POSTGRES_PORT"],
         database=env["RECOVERY_POSTGRES_DB"],
@@ -716,7 +738,7 @@ def run_recovery(backup_id: str) -> None:
             username=env["RECOVERY_POSTGRES_USER"],
             password=env["RECOVERY_POSTGRES_PASSWORD"],
             expected_migration_state=expected_state,
-            expected_publications=expected_publications,
+            expected_platform_state=expected_platform_state,
         )
         print(json.dumps({
             "status": "RECOVERY_TEST_COMPLETE",
