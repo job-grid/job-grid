@@ -283,6 +283,60 @@ def collect_migration_history(cursor) -> dict:
     }
 
 
+def collect_event_trigger_snapshot(cursor) -> list[dict]:
+    """Capture Supabase-managed database event triggers without exposing routine bodies."""
+    cursor.execute(
+        """
+        SELECT e.evtname, e.evtevent, e.evtenabled,
+               COALESCE(owner_role.rolname, '<unknown>') AS owner_role,
+               ns.nspname AS function_schema,
+               p.proname AS function_name,
+               pg_get_function_identity_arguments(p.oid) AS identity_arguments
+        FROM pg_event_trigger e
+        JOIN pg_roles owner_role ON owner_role.oid = e.evtowner
+        JOIN pg_proc p ON p.oid = e.evtfoid
+        JOIN pg_namespace ns ON ns.oid = p.pronamespace
+        ORDER BY e.evtname
+        """
+    )
+    columns = [getattr(column, "name", column[0]) for column in cursor.description]
+    return [
+        {name: _json_value(value) for name, value in zip(columns, row)}
+        for row in cursor.fetchall()
+    ]
+
+
+def collect_public_helper_snapshot(cursor) -> dict:
+    """Capture the pre-existing Supabase RLS helper and target-specific ACL for before/after checks."""
+    cursor.execute(
+        """
+        SELECT pg_get_functiondef(p.oid) AS definition,
+               COALESCE(p.proacl::text, '<default>') AS acl,
+               COALESCE(owner_role.rolname, '<unknown>') AS owner_role
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        JOIN pg_roles owner_role ON owner_role.oid = p.proowner
+        WHERE n.nspname = 'public'
+          AND p.proname = 'rls_auto_enable'
+          AND pg_get_function_identity_arguments(p.oid) = ''
+        """
+    )
+    row = cursor.fetchone()
+    if not row:
+        raise RuntimeError("Expected managed public helper is absent.")
+    columns = [getattr(column, "name", column[0]) for column in cursor.description]
+    return {name: _json_value(value) for name, value in zip(columns, row)}
+
+
+def collect_platform_state_snapshot(cursor) -> dict:
+    """Capture target-managed objects that a cross-project logical restore must not replace."""
+    return {
+        "publications": collect_publication_snapshot(cursor),
+        "event_triggers": collect_event_trigger_snapshot(cursor),
+        "public_helper": collect_public_helper_snapshot(cursor),
+    }
+
+
 def collect_publication_snapshot(cursor) -> list[dict]:
     """Capture managed publication configuration and membership for before/after comparison."""
     cursor.execute(
