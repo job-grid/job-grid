@@ -1,0 +1,9 @@
+# Supabase Edge Function JWT settings.
+# Candidate submission is intentionally public and performs strict server-side validation,
+# with private storage, rate limiting by email, and no direct table access.
+[functions.submit-application]
+verify_jwt = false
+
+# Staff review requires a valid Supabase Auth JWT; the function additionally checks staff_roles.
+[functions.staff-applications]
+verify_jwt = true

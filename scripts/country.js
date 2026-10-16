@@ -13,7 +13,7 @@ const headers = { Accept: "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }
 
 function card(job, countryName) {
   const place = [job.city, job.region, countryName].filter(Boolean).join(", ");
-  return '<article class="vacancy-card"><div class="vacancy-meta"><span class="vacancy-tag">' + escapeHtml(label(job.category_slug)) + '</span><span class="vacancy-tag">' + escapeHtml(label(job.employment_type)) + '</span></div><h2>' + escapeHtml(job.title) + '</h2><p class="vacancy-employer">' + escapeHtml(job.employer_name) + '</p><p class="vacancy-tag">' + escapeHtml(place || countryName) + '</p><p class="vacancy-description">' + escapeHtml(job.description) + '</p>' + (job.application_url ? '<a class="button button-primary button-small" href="' + escapeHtml(job.application_url) + '" target="_blank" rel="noopener noreferrer">Apply on employer site ↗</a>' : '') + '</article>';
+  return '<article class="vacancy-card"><div class="vacancy-meta"><span class="vacancy-tag">' + escapeHtml(label(job.category_slug)) + '</span><span class="vacancy-tag">' + escapeHtml(label(job.employment_type)) + '</span></div><h2>' + escapeHtml(job.title) + '</h2><p class="vacancy-employer">' + escapeHtml(job.employer_name) + '</p><p class="vacancy-tag">' + escapeHtml(place || countryName) + '</p><p class="vacancy-description">' + escapeHtml(job.description) + '</p>' + ('<a class="button button-primary button-small" href="/apply.html?job=' + encodeURIComponent(job.id) + '">Apply through Job Grid ↗</a>') + '</article>';
 }
 
 async function init() {
@@ -29,7 +29,7 @@ async function init() {
   try {
     const [countryResponse, jobsResponse] = await Promise.all([
       fetch(SUPABASE_URL + "/rest/v1/country_options?select=code,name&code=eq." + encodeURIComponent(code) + "&limit=1", { headers }),
-      fetch(SUPABASE_URL + "/rest/v1/jobs?select=id,title,employer_name,description,category_slug,employment_type,country_code,region,city,application_url,status,published_at,expires_at&country_code=eq." + encodeURIComponent(code) + "&status=eq.published&order=published_at.desc.nullslast&limit=500", { headers })
+      fetch(SUPABASE_URL + "/rest/v1/jobs?select=id,title,employer_name,description,category_slug,employment_type,country_code,region,city,status,published_at,expires_at&country_code=eq." + encodeURIComponent(code) + "&status=eq.published&order=published_at.desc.nullslast&limit=500", { headers })
     ]);
     if (!countryResponse.ok || !jobsResponse.ok) throw new Error("Country vacancy data unavailable.");
     const countryRows = await countryResponse.json();

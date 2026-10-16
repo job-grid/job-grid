@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#004ef5" />
+<meta name="description" content="Apply through Job Grid. Submit your candidate profile securely for internal recruitment review and suitable employer matching." />
+<title>Apply Through Job Grid — Job Grid</title>
+<link rel="stylesheet" href="/styles/tokens.css" /><link rel="stylesheet" href="/styles/global.css" /><link rel="stylesheet" href="/styles/vacancies.css" />
+<script type="module" src="/scripts/components.js"></script><script type="module" src="/scripts/main.js"></script><script type="module" src="/scripts/apply.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a><div id="top"></div><job-grid-header></job-grid-header>
+<main id="main" class="section-wrap section-space">
+<p class="eyebrow">Your next step</p><h1>Apply through Job Grid.</h1>
+<p class="section-description">Send your profile to our recruitment team. We review your experience and look for suitable opportunities through our verified employer and recruitment-partner network. Submitting a profile does not guarantee an interview, job, visa, or placement.</p>
+<div class="catalogue-notice" role="note"><strong>Your information is private.</strong><span>Your CV and application details are not displayed on public job pages. They are collected for recruitment review and suitable opportunity matching.</span></div>
+<form id="candidate-application-form" class="vacancy-filters" enctype="multipart/form-data" novalidate>
+<input type="hidden" id="application-job-id" name="job_id" />
+<div class="filter-field"><label for="full-name">Full name *</label><input id="full-name" name="full_name" required maxlength="160" autocomplete="name" /></div>
+<div class="filter-field"><label for="email">Email address *</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" /></div>
+<div class="filter-field"><label for="phone">Phone number with country code *</label><input id="phone" name="phone" type="tel" required maxlength="40" autocomplete="tel" placeholder="+254…" /></div>
+<div class="filter-field"><label for="country-code">Country where you live *</label><select id="country-code" name="country_code" required><option value="">Loading countries…</option></select></div>
+<div class="filter-field"><label for="city">City or region</label><input id="city" name="city" maxlength="120" autocomplete="address-level2" /></div>
+<div class="filter-field"><label for="skills">Skills and qualifications *</label><textarea id="skills" name="skills" required minlength="2" maxlength="3000" rows="4" placeholder="List your skills, certificates, languages, and qualifications."></textarea></div>
+<div class="filter-field"><label for="experience">Work experience and job preferences *</label><textarea id="experience" name="experience_summary" required minlength="20" maxlength="6000" rows="6" placeholder="Describe your experience, preferred roles, countries, and availability."></textarea></div>
+<div class="filter-field"><label for="cv">CV / résumé (PDF, DOC, DOCX; maximum 5 MB) *</label><input id="cv" name="cv" type="file" required accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></div>
+<div class="filter-field" aria-hidden="true" style="position:absolute;left:-10000px"><label for="website">Leave this field empty</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+<div class="filter-field" style="grid-column:1/-1"><label><input id="consent" name="consent" type="checkbox" required /> I agree that Job Grid may securely process my details and CV for recruitment review and matching with suitable employers. I understand that submitting an application does not guarantee placement. *</label></div>
+<div class="filter-actions" style="grid-column:1/-1"><button id="submit-application" class="button button-primary" type="submit">Submit to Job Grid</button></div>
+<p id="application-status" role="status" aria-live="polite" style="grid-column:1/-1"></p>
+</form>
+<p><a href="/vacancies.html">← Back to vacancies</a></p>
+</main><job-grid-footer></job-grid-footer>
+</body></html>
