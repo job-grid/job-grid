@@ -341,55 +341,75 @@ def restore_backup(
 
 VALIDATION_SQL = """
 WITH
-tables AS (
-  SELECT count(*)::int AS n FROM pg_class c
-  JOIN pg_namespace nsp ON nsp.oid=c.relnamespace
-  WHERE c.relkind IN ('r','p') AND nsp.nspname NOT IN ('pg_catalog','information_schema')
+app_tables AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relkind IN ('r','p')
 ),
-constraints AS (
-  SELECT count(*)::int AS n FROM pg_constraint WHERE contype IN ('p','u','f','c','x')
+app_constraints AS (
+  SELECT count(*)::int AS n
+  FROM pg_constraint con
+  JOIN pg_class c ON c.oid = con.conrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
 ),
-indexes AS (
-  SELECT count(*)::int AS n FROM pg_class WHERE relkind='i'
+app_indexes AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relkind IN ('i','I')
 ),
-functions AS (
-  SELECT count(*)::int AS n FROM pg_proc p
-  JOIN pg_namespace n ON n.oid=p.pronamespace
-  WHERE n.nspname NOT IN ('pg_catalog','information_schema')
+app_functions AS (
+  SELECT count(*)::int AS n
+  FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
+    AND NOT (ns.nspname = 'public' AND p.proname = 'rls_auto_enable'
+             AND pg_get_function_identity_arguments(p.oid) = '')
 ),
-triggers AS (
-  SELECT count(*)::int AS n FROM pg_trigger WHERE NOT tgisinternal
+app_triggers AS (
+  SELECT count(*)::int AS n
+  FROM pg_trigger t
+  JOIN pg_class c ON c.oid = t.tgrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND NOT t.tgisinternal
 ),
-rls AS (
-  SELECT count(*)::int AS n FROM pg_class
-  WHERE relrowsecurity
+app_rls AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relrowsecurity
 ),
-policies AS (
-  SELECT count(*)::int AS n FROM pg_policy
+app_policies AS (
+  SELECT count(*)::int AS n
+  FROM pg_policy p
+  JOIN pg_class c ON c.oid = p.polrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
 ),
-grants AS (
-  SELECT count(*)::int AS n FROM pg_class WHERE relacl IS NOT NULL
+app_grants AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relacl IS NOT NULL
 ),
-migrations AS (
-  SELECT count(*)::int AS n FROM pg_class c
-  JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='supabase_migrations' AND c.relname='schema_migrations'
+migration_table AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname = 'supabase_migrations' AND c.relname = 'schema_migrations'
+    AND c.relkind IN ('r','p')
 )
 SELECT
-  (SELECT n FROM tables),
-  (SELECT n FROM constraints),
-  (SELECT n FROM indexes),
-  (SELECT n FROM functions),
-  (SELECT n FROM triggers),
-  (SELECT n FROM rls),
-  (SELECT n FROM policies),
-  (SELECT n FROM grants),
-  (SELECT n FROM migrations);
+  (SELECT n FROM app_tables),
+  (SELECT n FROM app_constraints),
+  (SELECT n FROM app_indexes),
+  (SELECT n FROM app_functions),
+  (SELECT n FROM app_triggers),
+  (SELECT n FROM app_rls),
+  (SELECT n FROM app_policies),
+  (SELECT n FROM app_grants),
+  (SELECT n FROM migration_table);
 """
 
 
 def validate_schema_counts(values: tuple) -> dict:
-    """Validate recovery counts without requiring optional object types to exist."""
+    """Validate required application objects; exact identities are checked separately."""
     labels = (
         "tables", "constraints", "indexes", "functions", "triggers",
         "rls", "policies", "grants", "migration_table",
@@ -397,14 +417,64 @@ def validate_schema_counts(values: tuple) -> dict:
     if len(values) != len(labels):
         _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     counts = dict(zip(labels, values))
-    # Triggers, RLS policies, functions, grants, and even application tables may
-    # legitimately be absent in a valid early-stage schema. The migration ledger
-    # is the required structural anchor and its latest migration is checked below.
-    if counts["migration_table"] <= 0:
-        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     if any(not isinstance(count, int) or count < 0 for count in counts.values()):
         _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+    if counts["tables"] <= 0 or counts["migration_table"] != 1:
+        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     return counts
+
+
+def validate_manifest_migration_state(migration_state_json: str) -> dict:
+    """Reject legacy/incomplete metadata and verify the inventory embedded in the manifest."""
+    try:
+        state = json.loads(migration_state_json)
+    except Exception:
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    if not isinstance(state, dict):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    inventory = state.get("schema_inventory")
+    history = state.get("migration_history")
+    if not isinstance(inventory, dict) or not isinstance(inventory.get("items"), list):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    if not isinstance(history, dict) or not history.get("present"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    items = inventory["items"]
+    if (
+        inventory.get("sha256") != sha256_json(items)
+        or inventory.get("item_count") != len(items)
+        or not isinstance(inventory.get("counts_by_kind"), dict)
+        or not isinstance(history.get("rows_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", history["rows_sha256"])
+        or history.get("row_count") != len(history.get("versions", []))
+        or state.get("latest_migration") != history.get("latest_migration")
+        or state.get("latest_migration") != (
+            history.get("versions", [])[-1] if history.get("versions") else None
+        )
+    ):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+    counts_by_kind: dict[str, int] = {}
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("kind"), str):
+            _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+        counts_by_kind[item["kind"]] = counts_by_kind.get(item["kind"], 0) + 1
+    if dict(sorted(counts_by_kind.items())) != inventory.get("counts_by_kind"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+    app_tables = [
+        item for item in items
+        if item.get("kind") == "relation"
+        and item.get("schema_name") == "public"
+        and item.get("relkind") in ("r", "p")
+    ]
+    migration_table = any(
+        item.get("kind") == "relation"
+        and item.get("schema_name") == "supabase_migrations"
+        and item.get("object_name") == "schema_migrations"
+        and item.get("relkind") in ("r", "p")
+        for item in items
+    )
+    if not app_tables or not migration_table or not history.get("present"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_INCOMPLETE")
+    return state
 
 
 def validate_recovery(
@@ -414,7 +484,8 @@ def validate_recovery(
     database: str,
     username: str,
     password: str,
-    expected_migration_state: str,
+    expected_migration_state: dict,
+    expected_publications: list[dict],
 ) -> dict:
     try:
         with psycopg.connect(
@@ -427,27 +498,48 @@ def validate_recovery(
             sslmode="verify-full",
             sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
-            options="-c statement_timeout=5000",
+            options="-c statement_timeout=10000",
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT current_database()")
                 opened = cur.fetchone()[0]
                 cur.execute(VALIDATION_SQL)
                 values = cur.fetchone()
-                cur.execute(
-                    "SELECT version, name FROM supabase_migrations.schema_migrations "
-                    "ORDER BY version DESC LIMIT 1"
-                )
-                migration = cur.fetchone()
+                actual_inventory = collect_schema_inventory(cur)
+                actual_history = collect_migration_history(cur)
+                actual_publications = collect_publication_snapshot(cur)
         if opened != database:
             _fixed("RECOVERY_DATABASE_ACCESS_FAILED")
         counts = validate_schema_counts(values)
-        if expected_migration_state:
-            expected = json.loads(expected_migration_state)
-            latest = {"version": str(migration[0]), "name": str(migration[1])} if migration else None
-            if expected.get("latest_migration") != latest:
-                _fixed("RECOVERY_MIGRATION_MISMATCH")
-        return {"database": opened, "counts": counts, "migration": migration}
+
+        expected_inventory = expected_migration_state["schema_inventory"]
+        if (
+            actual_inventory["sha256"] != expected_inventory["sha256"]
+            or actual_inventory["items"] != expected_inventory["items"]
+            or actual_inventory["counts_by_kind"] != expected_inventory["counts_by_kind"]
+        ):
+            _fixed("RECOVERY_SCHEMA_INVENTORY_MISMATCH")
+
+        expected_history = expected_migration_state["migration_history"]
+        for field in ("present", "row_count", "versions", "latest_migration", "rows_sha256"):
+            if actual_history.get(field) != expected_history.get(field):
+                _fixed("RECOVERY_MIGRATION_HISTORY_MISMATCH")
+        if expected_migration_state.get("latest_migration") != actual_history.get("latest_migration"):
+            _fixed("RECOVERY_MIGRATION_MISMATCH")
+
+        if actual_publications != expected_publications:
+            _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
+        return {
+            "database": opened,
+            "counts": counts,
+            "inventory_sha256": actual_inventory["sha256"],
+            "inventory_item_count": actual_inventory["item_count"],
+            "migration_history": {
+                "row_count": actual_history["row_count"],
+                "rows_sha256": actual_history["rows_sha256"],
+            },
+            "publication_count": len(actual_publications),
+        }
     except RecoveryFailure:
         raise
     except Exception:
