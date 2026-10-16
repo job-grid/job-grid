@@ -689,6 +689,7 @@ def recovery_runbook() -> tuple[str, ...]:
         "10. Record only fixed status codes and sanitized validation counts; never copy production data to logs.",
     )
 PLATFORM_SCHEMA_ALLOWLIST = frozenset({
+    "supabase_migrations",
     "auth",
     "extensions",
     "graphql",
