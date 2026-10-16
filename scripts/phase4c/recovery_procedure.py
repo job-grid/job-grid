@@ -23,6 +23,12 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import psycopg
 
 from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, SafetyError
+from schema_inventory import (
+    collect_migration_history,
+    collect_platform_state_snapshot,
+    collect_schema_inventory,
+    sha256_json,
+)
 
 
 PG_RESTORE = "/usr/lib/postgresql/17/bin/pg_restore"
@@ -161,6 +167,29 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     else:
         message = str(stderr).lower()
 
+    # Prefer fixed, object-type-only diagnostics. Never include object names or
+    # raw PostgreSQL text in the returned category.
+    if "already exists" in message:
+        if any(token in message for token in ('schema "', "schema already exists")):
+            return "restore_schema_already_exists"
+        if any(token in message for token in ('extension "', "extension already exists")):
+            return "restore_extension_already_exists"
+        if any(token in message for token in ('relation "', 'table "', 'sequence "', 'index "')):
+            return "restore_relation_already_exists"
+        if "constraint" in message:
+            return "restore_constraint_conflict"
+        if "function" in message or "procedure" in message:
+            return "restore_routine_conflict"
+        if "trigger" in message:
+            return "restore_trigger_conflict"
+        if "policy" in message:
+            return "restore_policy_conflict"
+        if "type" in message:
+            return "restore_type_conflict"
+        if "publication" in message:
+            return "restore_publication_conflict"
+        return "restore_object_conflict_unclassified"
+
     patterns = (
         ("authentication_failed", (
             "password authentication failed",
@@ -194,17 +223,35 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             "must be superuser",
             "insufficient privilege",
         )),
-        ("restore_dependency_missing", (
-            "does not exist",
-            "could not find function",
-            "function does not exist",
-            "relation does not exist",
+        # Keep object-conflict diagnostics specific enough to guide a safe fix,
+        # while never emitting raw PostgreSQL stderr into Actions logs.
+        ("restore_schema_already_exists", (
+            'schema "public" already exists',
+            'schema "supabase_migrations" already exists',
+        )),
+        ("restore_extension_already_exists", (
+            'extension "pgcrypto" already exists',
+            'extension "uuid-ossp" already exists',
+            'extension "pg_graphql" already exists',
+            'extension "supabase_vault" already exists',
+        )),
+        ("restore_constraint_conflict", (
+            "duplicate key value violates unique constraint",
+            "multiple primary keys",
+            "constraint already exists",
         )),
         ("restore_object_conflict", (
             "already exists",
-            "duplicate key value violates unique constraint",
-            "multiple primary keys",
             "cannot drop",
+            "duplicate object",
+            "is already a member",
+        )),
+        ("restore_dependency_missing", (
+            "does not exist",
+            "not found",
+            "could not find",
+            "has no schema",
+            "missing referenced",
         )),
         ("invalid_dump_format", (
             "unsupported version in file header",
@@ -251,16 +298,30 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
         r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public(?:\s|$)",
         re.IGNORECASE,
     )
-    # Supabase creates this helper on the recovery target. Skip only its source
-    # function and ACL entries, retaining all other functions and grants.
-    managed_helper_entry = re.compile(
-        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+(?:FUNCTION|ACL FUNCTION)\\s+public\\.rls_auto_enable\\s*\\(\\s*\\)(?:\\s|$)",
+    public_platform_function = re.compile(
+        r"^\s*\d+;\s+\d+\s+\d+\s+FUNCTION\s+public\s+rls_auto_enable\s*\(\s*\)\s+\S+",
+        re.IGNORECASE,
+    )
+    public_platform_function_acl = re.compile(
+        r"^\s*\d+;\s+\d+\s+\d+\s+ACL\s+public\s+(?:FUNCTION\s+)?rls_auto_enable\s*\(\s*\)(?:\s|$)",
+        re.IGNORECASE,
+    )
+    managed_event_trigger_names = (
+        "ensure_rls|issue_graphql_placeholder|issue_pg_cron_access|"
+        "issue_pg_graphql_access|issue_pg_net_access|pgrst_ddl_watch|pgrst_drop_watch"
+    )
+    managed_event_trigger = re.compile(
+        r"^\s*\d+;\s+\d+\s+\d+\s+EVENT TRIGGER\s+(?:-\s+)?(?:"
+        + managed_event_trigger_names
+        + r")(?:\s|$)",
         re.IGNORECASE,
     )
     filtered_lines = [
         line for line in lines
         if not public_schema_entry.search(line)
-        and not managed_helper_entry.search(line)
+        and not public_platform_function.search(line)
+        and not public_platform_function_acl.search(line)
+        and not managed_event_trigger.search(line)
     ]
     if not filtered_lines:
         _fixed("RECOVERY_TOC_LIST_FAILED")
@@ -330,55 +391,75 @@ def restore_backup(
 
 VALIDATION_SQL = """
 WITH
-tables AS (
-  SELECT count(*)::int AS n FROM pg_class c
-  JOIN pg_namespace nsp ON nsp.oid=c.relnamespace
-  WHERE c.relkind IN ('r','p') AND nsp.nspname NOT IN ('pg_catalog','information_schema')
+app_tables AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relkind IN ('r','p')
 ),
-constraints AS (
-  SELECT count(*)::int AS n FROM pg_constraint WHERE contype IN ('p','u','f','c','x')
+app_constraints AS (
+  SELECT count(*)::int AS n
+  FROM pg_constraint con
+  JOIN pg_class c ON c.oid = con.conrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
 ),
-indexes AS (
-  SELECT count(*)::int AS n FROM pg_class WHERE relkind='i'
+app_indexes AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relkind IN ('i','I')
 ),
-functions AS (
-  SELECT count(*)::int AS n FROM pg_proc p
-  JOIN pg_namespace n ON n.oid=p.pronamespace
-  WHERE n.nspname NOT IN ('pg_catalog','information_schema')
+app_functions AS (
+  SELECT count(*)::int AS n
+  FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
+    AND NOT (ns.nspname = 'public' AND p.proname = 'rls_auto_enable'
+             AND pg_get_function_identity_arguments(p.oid) = '')
 ),
-triggers AS (
-  SELECT count(*)::int AS n FROM pg_trigger WHERE NOT tgisinternal
+app_triggers AS (
+  SELECT count(*)::int AS n
+  FROM pg_trigger t
+  JOIN pg_class c ON c.oid = t.tgrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND NOT t.tgisinternal
 ),
-rls AS (
-  SELECT count(*)::int AS n FROM pg_class
-  WHERE relrowsecurity
+app_rls AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relrowsecurity
 ),
-policies AS (
-  SELECT count(*)::int AS n FROM pg_policy
+app_policies AS (
+  SELECT count(*)::int AS n
+  FROM pg_policy p
+  JOIN pg_class c ON c.oid = p.polrelid
+  JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations')
 ),
-grants AS (
-  SELECT count(*)::int AS n FROM pg_class WHERE relacl IS NOT NULL
+app_grants AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname IN ('public','supabase_migrations') AND c.relacl IS NOT NULL
 ),
-migrations AS (
-  SELECT count(*)::int AS n FROM pg_class c
-  JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='supabase_migrations' AND c.relname='schema_migrations'
+migration_table AS (
+  SELECT count(*)::int AS n
+  FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE ns.nspname = 'supabase_migrations' AND c.relname = 'schema_migrations'
+    AND c.relkind IN ('r','p')
 )
 SELECT
-  (SELECT n FROM tables),
-  (SELECT n FROM constraints),
-  (SELECT n FROM indexes),
-  (SELECT n FROM functions),
-  (SELECT n FROM triggers),
-  (SELECT n FROM rls),
-  (SELECT n FROM policies),
-  (SELECT n FROM grants),
-  (SELECT n FROM migrations);
+  (SELECT n FROM app_tables),
+  (SELECT n FROM app_constraints),
+  (SELECT n FROM app_indexes),
+  (SELECT n FROM app_functions),
+  (SELECT n FROM app_triggers),
+  (SELECT n FROM app_rls),
+  (SELECT n FROM app_policies),
+  (SELECT n FROM app_grants),
+  (SELECT n FROM migration_table);
 """
 
 
 def validate_schema_counts(values: tuple) -> dict:
-    """Validate recovery counts without requiring optional object types to exist."""
+    """Validate required application objects; exact identities are checked separately."""
     labels = (
         "tables", "constraints", "indexes", "functions", "triggers",
         "rls", "policies", "grants", "migration_table",
@@ -386,14 +467,99 @@ def validate_schema_counts(values: tuple) -> dict:
     if len(values) != len(labels):
         _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     counts = dict(zip(labels, values))
-    # Triggers, RLS policies, functions, grants, and even application tables may
-    # legitimately be absent in a valid early-stage schema. The migration ledger
-    # is the required structural anchor and its latest migration is checked below.
-    if counts["migration_table"] <= 0:
-        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     if any(not isinstance(count, int) or count < 0 for count in counts.values()):
         _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
+    if counts["tables"] <= 0 or counts["migration_table"] != 1:
+        _fixed("RECOVERY_SCHEMA_SECURITY_VALIDATION_FAILED")
     return counts
+
+
+def validate_manifest_migration_state(migration_state_json: str) -> dict:
+    """Reject legacy/incomplete metadata and verify the inventory embedded in the manifest."""
+    try:
+        state = json.loads(migration_state_json)
+    except Exception:
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    if not isinstance(state, dict):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    inventory = state.get("schema_inventory")
+    history = state.get("migration_history")
+    if not isinstance(inventory, dict) or not isinstance(inventory.get("items"), list):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    if not isinstance(history, dict) or not history.get("present"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_MISSING")
+    items = inventory["items"]
+    if (
+        inventory.get("sha256") != sha256_json(items)
+        or inventory.get("item_count") != len(items)
+        or not isinstance(inventory.get("counts_by_kind"), dict)
+        or not isinstance(history.get("rows_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", history["rows_sha256"])
+        or history.get("row_count") != len(history.get("versions", []))
+        or state.get("latest_migration") != history.get("latest_migration")
+        or state.get("latest_migration") != (
+            history.get("versions", [])[-1] if history.get("versions") else None
+        )
+    ):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+    counts_by_kind: dict[str, int] = {}
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("kind"), str):
+            _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+        counts_by_kind[item["kind"]] = counts_by_kind.get(item["kind"], 0) + 1
+    if dict(sorted(counts_by_kind.items())) != inventory.get("counts_by_kind"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_FAILED")
+    app_tables = [
+        item for item in items
+        if item.get("kind") == "relation"
+        and item.get("schema_name") == "public"
+        and item.get("relkind") in ("r", "p")
+    ]
+    migration_table = any(
+        item.get("kind") == "relation"
+        and item.get("schema_name") == "supabase_migrations"
+        and item.get("object_name") == "schema_migrations"
+        and item.get("relkind") in ("r", "p")
+        for item in items
+    )
+    if not app_tables or not migration_table or not history.get("present"):
+        _fixed("RECOVERY_MANIFEST_INVENTORY_INCOMPLETE")
+    return state
+
+
+def assert_publications_unchanged(expected: list[dict], actual: list[dict]) -> None:
+    """Fail closed if the target's existing managed publications changed."""
+    if expected != actual:
+        _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
+
+
+def assert_platform_state_unchanged(expected: dict, actual: dict) -> None:
+    """Verify platform-managed publications, event triggers and RLS helper survive unchanged."""
+    assert_publications_unchanged(expected.get("publications"), actual.get("publications"))
+    if expected.get("event_triggers") != actual.get("event_triggers"):
+        _fixed("RECOVERY_EVENT_TRIGGER_STATE_CHANGED")
+    if expected.get("public_helper") != actual.get("public_helper"):
+        _fixed("RECOVERY_PLATFORM_HELPER_CHANGED")
+
+
+def assert_schema_inventory_matches(expected: dict, actual: dict) -> None:
+    """Compare full object identities/definitions as well as their deterministic digest."""
+    if (
+        not isinstance(expected, dict)
+        or not isinstance(actual, dict)
+        or expected.get("sha256") != actual.get("sha256")
+        or expected.get("items") != actual.get("items")
+        or expected.get("counts_by_kind") != actual.get("counts_by_kind")
+        or expected.get("item_count") != actual.get("item_count")
+    ):
+        _fixed("RECOVERY_SCHEMA_INVENTORY_MISMATCH")
+
+
+def assert_migration_history_matches(expected: dict, actual: dict) -> None:
+    """Compare every migration row via its digest plus the ordered complete version/name list."""
+    for field in ("present", "row_count", "versions", "latest_migration", "rows_sha256"):
+        if not isinstance(expected, dict) or not isinstance(actual, dict) or actual.get(field) != expected.get(field):
+            _fixed("RECOVERY_MIGRATION_HISTORY_MISMATCH")
 
 
 def validate_recovery(
@@ -403,7 +569,8 @@ def validate_recovery(
     database: str,
     username: str,
     password: str,
-    expected_migration_state: str,
+    expected_migration_state: dict,
+    expected_platform_state: dict,
 ) -> dict:
     try:
         with psycopg.connect(
@@ -416,27 +583,40 @@ def validate_recovery(
             sslmode="verify-full",
             sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
-            options="-c statement_timeout=5000",
+            options="-c statement_timeout=10000 -c timezone=UTC",
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT current_database()")
                 opened = cur.fetchone()[0]
                 cur.execute(VALIDATION_SQL)
                 values = cur.fetchone()
-                cur.execute(
-                    "SELECT version, name FROM supabase_migrations.schema_migrations "
-                    "ORDER BY version DESC LIMIT 1"
-                )
-                migration = cur.fetchone()
+                actual_inventory = collect_schema_inventory(cur)
+                actual_history = collect_migration_history(cur)
+                actual_platform_state = collect_platform_state_snapshot(cur)
         if opened != database:
             _fixed("RECOVERY_DATABASE_ACCESS_FAILED")
         counts = validate_schema_counts(values)
-        if expected_migration_state:
-            expected = json.loads(expected_migration_state)
-            latest = {"version": str(migration[0]), "name": str(migration[1])} if migration else None
-            if expected.get("latest_migration") != latest:
-                _fixed("RECOVERY_MIGRATION_MISMATCH")
-        return {"database": opened, "counts": counts, "migration": migration}
+
+        expected_inventory = expected_migration_state["schema_inventory"]
+        assert_schema_inventory_matches(expected_inventory, actual_inventory)
+
+        expected_history = expected_migration_state["migration_history"]
+        assert_migration_history_matches(expected_history, actual_history)
+        if expected_migration_state.get("latest_migration") != actual_history.get("latest_migration"):
+            _fixed("RECOVERY_MIGRATION_MISMATCH")
+
+        assert_platform_state_unchanged(expected_platform_state, actual_platform_state)
+        return {
+            "database": opened,
+            "counts": counts,
+            "inventory_sha256": actual_inventory["sha256"],
+            "inventory_item_count": actual_inventory["item_count"],
+            "migration_history": {
+                "row_count": actual_history["row_count"],
+                "rows_sha256": actual_history["rows_sha256"],
+            },
+            "publication_count": len(actual_platform_state["publications"]),
+        }
     except RecoveryFailure:
         raise
     except Exception:
@@ -456,6 +636,21 @@ def recovery_runbook() -> tuple[str, ...]:
         "9. Run the schema/security/migration validator.",
         "10. Record only fixed status codes and sanitized validation counts; never copy production data to logs.",
     )
+PLATFORM_SCHEMA_ALLOWLIST = frozenset({
+    "auth",
+    "extensions",
+    "graphql",
+    "graphql_public",
+    "pgbouncer",
+    "public",
+    "realtime",
+    "storage",
+    "vault",
+    "pg_catalog",
+    "information_schema",
+})
+
+
 def assert_application_restore_target_empty(
     *,
     host: str,
@@ -463,11 +658,40 @@ def assert_application_restore_target_empty(
     database: str,
     username: str,
     password: str,
-) -> None:
-    """Fail closed unless app-owned target objects and the migration ledger are absent."""
+) -> dict:
+    """Read-only fail-closed check of app-owned target objects and platform state."""
     ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
     if not ca_file or not Path(ca_file).is_file():
         _fixed("RECOVERY_TLS_CA_FAILED")
+    platform_schemas = tuple(sorted(PLATFORM_SCHEMA_ALLOWLIST))
+    placeholders = ",".join(["%s"] * len(platform_schemas))
+    query = f"""
+        SELECT
+          EXISTS (
+            SELECT 1 FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','S','f')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_proc p
+            JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND NOT (p.proname = 'rls_auto_enable'
+                       AND pg_get_function_identity_arguments(p.oid) = '')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_type t
+            JOIN pg_namespace n ON n.oid = t.typnamespace
+            WHERE n.nspname = 'public' AND t.typtype IN ('d','e','r','m')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_namespace n
+            WHERE n.nspname NOT IN ({placeholders})
+              AND n.nspname NOT LIKE 'pg_toast%%'
+              AND n.nspname NOT LIKE 'pg_temp_%%'
+              AND n.nspname NOT LIKE 'pg_toast_temp_%%'
+          )
+    """
     try:
         with psycopg.connect(
             host=host,
@@ -481,31 +705,23 @@ def assert_application_restore_target_empty(
             autocommit=True,
         ) as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      EXISTS (
-                        SELECT 1
-                        FROM pg_class c
-                        JOIN pg_namespace n ON n.oid = c.relnamespace
-                        WHERE n.nspname = 'public'
-                          AND c.relkind IN ('r','p','v','m','S','f')
-                      ),
-                      to_regclass('supabase_migrations.schema_migrations') IS NOT NULL
-                    """
-                )
+                cur.execute(query, platform_schemas)
                 row = cur.fetchone()
+                if not row or any(bool(value) for value in row):
+                    _fixed("RECOVERY_TARGET_NOT_EMPTY")
+                platform_state = collect_platform_state_snapshot(cur)
+    except RecoveryFailure:
+        raise
     except Exception:
         _fixed("RECOVERY_TARGET_CHECK_FAILED")
-    if not row or bool(row[0]) or bool(row[1]):
-        _fixed("RECOVERY_TARGET_NOT_EMPTY")
+    return platform_state
 
 
 def run_recovery(backup_id: str) -> None:
     env = os.environ
     assert_recovery_credentials(env)
     assert_recovery_target(env["RECOVERY_PROJECT_REF"], env["RECOVERY_POSTGRES_HOST"])
-    assert_application_restore_target_empty(
+    expected_platform_state = assert_application_restore_target_empty(
         host=env["RECOVERY_POSTGRES_HOST"],
         port=env["RECOVERY_POSTGRES_PORT"],
         database=env["RECOVERY_POSTGRES_DB"],
@@ -535,12 +751,16 @@ def run_recovery(backup_id: str) -> None:
         except Exception:
             _fixed("RECOVERY_MANIFEST_FAILED")
         if (
-            manifest.get("backup_id") != backup_id
+            manifest.get("format_version") != 2
+            or manifest.get("backup_id") != backup_id
             or manifest.get("source", {}).get("supabase_project_ref") != PRODUCTION_PROJECT_REF
             or manifest.get("source", {}).get("postgres_major_version") != "17"
         ):
+            if manifest.get("format_version") != 2:
+                _fixed("RECOVERY_MANIFEST_VERSION_UNSUPPORTED")
             _fixed("RECOVERY_MANIFEST_BOUNDARY_FAILED")
-        migration_state = manifest.get("database", {}).get("migration_state", "")
+        migration_state_json = manifest.get("database", {}).get("migration_state", "")
+        expected_state = validate_manifest_migration_state(migration_state_json)
         restore_backup(
             dump_path=dump_plain,
             host=env["RECOVERY_POSTGRES_HOST"],
@@ -555,9 +775,17 @@ def run_recovery(backup_id: str) -> None:
             database=env["RECOVERY_POSTGRES_DB"],
             username=env["RECOVERY_POSTGRES_USER"],
             password=env["RECOVERY_POSTGRES_PASSWORD"],
-            expected_migration_state=migration_state,
+            expected_migration_state=expected_state,
+            expected_platform_state=expected_platform_state,
         )
-        print(json.dumps({"status": "RECOVERY_TEST_COMPLETE", "counts": result["counts"]}, sort_keys=True))
+        print(json.dumps({
+            "status": "RECOVERY_TEST_COMPLETE",
+            "counts": result["counts"],
+            "inventory_sha256": result["inventory_sha256"],
+            "inventory_item_count": result["inventory_item_count"],
+            "migration_history": result["migration_history"],
+            "publication_count": result["publication_count"],
+        }, sort_keys=True))
 
 
 if __name__ == "__main__":
