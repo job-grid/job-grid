@@ -1,4 +1,13 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
 const loginPanel = document.querySelector("#staff-login-panel");
 const loginForm = document.querySelector("#staff-login-form");
@@ -8,24 +17,45 @@ const list = document.querySelector("#staff-applications");
 const summary = document.querySelector("#staff-summary");
 const signOut = document.querySelector("#staff-sign-out");
 let session = null;
+let requestGeneration = 0;
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const statuses = ["submitted","under_review","shortlisted","matched","referred","interview","placed","rejected","withdrawn"];
 
+function showSignedOut(message = "") {
+  session = null;
+  workspace.hidden = true;
+  loginPanel.hidden = false;
+  list.replaceChildren();
+  summary.textContent = "";
+  if (message) loginStatus.textContent = message;
+}
+
 async function staffCall(method = "GET", body = null) {
+  if (!session?.access_token) throw new Error("Your session has expired. Please sign in again.");
   const response = await fetch(SUPABASE_URL + "/functions/v1/staff-applications", {
     method,
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: "Bearer " + session.access_token, ...(body ? {"Content-Type":"application/json"} : {}) },
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: "Bearer " + session.access_token,
+      ...(body ? {"Content-Type":"application/json"} : {}),
+    },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const result = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    await supabase.auth.signOut();
+    throw new Error("Your session expired. Please sign in again.");
+  }
   if (!response.ok) throw new Error(result.error || "Staff request failed.");
   return result;
 }
 
 async function loadApplications() {
+  const generation = ++requestGeneration;
   list.innerHTML = '<p class="vacancy-empty">Loading private applications…</p>';
   try {
     const data = await staffCall();
+    if (generation !== requestGeneration || !session) return;
     const apps = data.applications || [];
     summary.textContent = apps.length + " recent candidate applications. Access is logged; keep these records confidential.";
     list.innerHTML = apps.length ? apps.map(app => `<article class="vacancy-card" data-application="${esc(app.id)}">
@@ -43,8 +73,12 @@ async function loadApplications() {
       const id = card.dataset.application;
       const feedback = card.querySelector(".application-feedback");
       card.querySelector(".cv-button").addEventListener("click", async () => {
-        try { const result = await staffCall("POST", {action:"cv",id}); window.open(result.url,"_blank","noopener,noreferrer"); feedback.textContent = "Secure CV link expires in 60 seconds."; }
-        catch (e) { feedback.textContent = e.message; }
+        try {
+          const result = await staffCall("POST", {action:"cv",id});
+          const opened = window.open(result.url, "_blank", "noopener,noreferrer");
+          if (!opened) feedback.textContent = "Your browser blocked the CV tab. Allow pop-ups for this site and try again.";
+          else feedback.textContent = "Secure CV link expires in 60 seconds.";
+        } catch (e) { feedback.textContent = e.message; }
       });
       card.querySelector(".save-status").addEventListener("click", async () => {
         try { await staffCall("POST", {action:"status",id,status:card.querySelector(".application-status").value}); feedback.textContent="Status updated."; }
@@ -58,22 +92,69 @@ async function loadApplications() {
       });
     }
   } catch (e) {
+    if (generation !== requestGeneration) return;
     list.innerHTML = '<p class="vacancy-empty">'+esc(e.message)+'</p>';
     summary.textContent = "Recruitment access is unavailable.";
   }
 }
 
-loginForm.addEventListener("submit", async event => {
-  event.preventDefault(); loginStatus.textContent="Signing in…";
-  const email=document.querySelector("#staff-email").value.trim();
-  const password=document.querySelector("#staff-password").value;
+async function activateSession(nextSession) {
+  session = nextSession;
+  if (!session?.access_token) {
+    showSignedOut();
+    return;
+  }
   try {
-    const response=await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({email,password})});
-    const result=await response.json();
-    if(!response.ok || !result.access_token) throw new Error(result.msg || result.message || "Sign-in failed.");
-    session=result;
     await staffCall();
-    loginPanel.hidden=true; workspace.hidden=false; await loadApplications();
-  } catch(e) { session=null; loginStatus.textContent=e.message; }
+    loginPanel.hidden = true;
+    workspace.hidden = false;
+    loginStatus.textContent = "";
+    await loadApplications();
+  } catch (error) {
+    showSignedOut(error.message);
+  }
+}
+
+loginForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  loginStatus.textContent = "Signing in…";
+  const submit = loginForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  const email = document.querySelector("#staff-email").value.trim().toLowerCase();
+  const password = document.querySelector("#staff-password").value;
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.session) throw new Error("Sign-in failed. Check your credentials and email verification, then try again.");
+    await activateSession(data.session);
+  } catch {
+    showSignedOut("Sign-in failed. Check your credentials and email verification, then try again.");
+  } finally {
+    submit.disabled = false;
+  }
 });
-signOut.addEventListener("click",()=>{session=null;workspace.hidden=true;loginPanel.hidden=false;loginForm.reset();loginStatus.textContent="Signed out.";list.replaceChildren();});
+
+signOut.addEventListener("click", async () => {
+  signOut.disabled = true;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    requestGeneration++;
+    showSignedOut("Signed out securely.");
+    loginForm.reset();
+  } catch {
+    loginStatus.textContent = "Sign-out could not be confirmed. Check your connection and try again.";
+  } finally {
+    signOut.disabled = false;
+  }
+});
+
+supabase.auth.onAuthStateChange((_event, nextSession) => {
+  session = nextSession;
+  if (!nextSession) {
+    requestGeneration++;
+    showSignedOut();
+  }
+});
+
+const { data: sessionData } = await supabase.auth.getSession();
+if (sessionData.session) await activateSession(sessionData.session);
