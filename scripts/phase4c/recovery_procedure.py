@@ -23,6 +23,12 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import psycopg
 
 from phase4c_tooling import PRODUCTION_PROJECT_REF, RECOVERY_PROJECT_REF, SafetyError
+from schema_inventory import (
+    collect_migration_history,
+    collect_publication_snapshot,
+    collect_schema_inventory,
+    sha256_json,
+)
 
 
 PG_RESTORE = "/usr/lib/postgresql/17/bin/pg_restore"
@@ -199,7 +205,15 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             "duplicate key value violates unique constraint",
             "multiple primary keys",
             "cannot drop",
+            "duplicate object",
+            "is already a member",
+        )),
+        ("restore_dependency_missing", (
             "does not exist",
+            "not found",
+            "could not find",
+            "has no schema",
+            "missing referenced",
         )),
         ("invalid_dump_format", (
             "unsupported version in file header",
@@ -246,7 +260,20 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
         r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public(?:\s|$)",
         re.IGNORECASE,
     )
-    filtered_lines = [line for line in lines if not public_schema_entry.search(line)]
+    public_platform_function = re.compile(
+        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+FUNCTION\\s+public\\s+rls_auto_enable\\s*\\(\\s*\\)\\s+\\S+",
+        re.IGNORECASE,
+    )
+    public_platform_function_acl = re.compile(
+        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+ACL\\s+public\\s+(?:FUNCTION\\s+)?rls_auto_enable\\s*\\(\\s*\\)(?:\\s|$)",
+        re.IGNORECASE,
+    )
+    filtered_lines = [
+        line for line in lines
+        if not public_schema_entry.search(line)
+        and not public_platform_function.search(line)
+        and not public_platform_function_acl.search(line)
+    ]
     if not filtered_lines:
         _fixed("RECOVERY_TOC_LIST_FAILED")
 
