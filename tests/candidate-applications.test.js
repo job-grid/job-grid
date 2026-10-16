@@ -25,7 +25,7 @@ test("public submission validates data, file type, vacancy status, consent and l
   assert.match(submit, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(submit, /application\/pdf/);
   assert.match(submit, /5 \* 1024 \* 1024/);
-  assert.match(submit, /job is no longer accepting applications/);
+  assert.match(submit, /vacancy is no longer accepting applications/);
   assert.match(submit, /recentCount/);
   assert.match(submit, /consent_at/);
   assert.match(config, /\[functions\.submit-application\]\s+verify_jwt = false/);
