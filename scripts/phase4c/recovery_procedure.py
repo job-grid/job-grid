@@ -261,11 +261,11 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
         re.IGNORECASE,
     )
     public_platform_function = re.compile(
-        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+FUNCTION\\s+public\\s+rls_auto_enable\\s*\\(\\s*\\)\\s+\\S+",
+        r"^\s*\d+;\s+\d+\s+\d+\s+FUNCTION\s+public\s+rls_auto_enable\s*\(\s*\)\s+\S+",
         re.IGNORECASE,
     )
     public_platform_function_acl = re.compile(
-        r"^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+ACL\\s+public\\s+(?:FUNCTION\\s+)?rls_auto_enable\\s*\\(\\s*\\)(?:\\s|$)",
+        r"^\s*\d+;\s+\d+\s+\d+\s+ACL\s+public\s+(?:FUNCTION\s+)?rls_auto_enable\s*\(\s*\)(?:\s|$)",
         re.IGNORECASE,
     )
     filtered_lines = [
