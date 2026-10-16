@@ -294,8 +294,11 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
         _fixed("RECOVERY_TOC_LIST_FAILED")
 
     lines = listed.stdout.decode("utf-8", errors="replace").splitlines()
-    public_schema_entry = re.compile(
-        r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public(?:\s|$)",
+    # Supabase recovery targets pre-create public, and can also already have
+    # the migration-ledger schema. Keep schema containers intact but retain
+    # the dump's table/data entries for the ledger; never use --clean.
+    existing_schema_entry = re.compile(
+        r"^\s*\d+;\s+\d+\s+\d+\s+SCHEMA\s+-\s+(?:public|supabase_migrations)(?:\s|$)",
         re.IGNORECASE,
     )
     public_platform_function = re.compile(
@@ -318,7 +321,7 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
     )
     filtered_lines = [
         line for line in lines
-        if not public_schema_entry.search(line)
+        if not existing_schema_entry.search(line)
         and not public_platform_function.search(line)
         and not public_platform_function_acl.search(line)
         and not managed_event_trigger.search(line)
