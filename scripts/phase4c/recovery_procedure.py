@@ -321,7 +321,7 @@ def _prepare_restore_toc(dump_path: Path) -> Path:
     )
     filtered_lines = [
         line for line in lines
-        if not public_schema_entry.search(line)
+        if not existing_schema_entry.search(line)
         and not public_platform_function.search(line)
         and not public_platform_function_acl.search(line)
         and not managed_event_trigger.search(line)
