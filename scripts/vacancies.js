@@ -84,6 +84,12 @@ async function init() {
   let categoriesBySlug = new Map();
   let countriesByCode = new Map();
 
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = params.get("q") || "";
+  const initialCountry = (params.get("country") || "").toUpperCase();
+  const initialCategory = params.get("category") || "";
+  queryInput.value = initialQuery.slice(0, 120);
+
   try {
     const [jobRows, categories, countries] = await Promise.all([
       getJson(JOBS_ENDPOINT + "?select=" + encodeURIComponent(fields) + "&status=eq.published&order=is_featured.desc,published_at.desc.nullslast&limit=500"),
@@ -97,6 +103,8 @@ async function init() {
     countriesByCode = new Map(countries.map((item) => [item.code, item.name]));
     fillSelect(categorySelect, categories, "slug", "name");
     fillSelect(countrySelect, countries, "code", "name");
+    if (countriesByCode.has(initialCountry)) countrySelect.value = initialCountry;
+    if (categoriesBySlug.has(initialCategory)) categorySelect.value = initialCategory;
     const now = Date.now();
     jobs = jobRows.filter((job) =>
       job && job.status !== "draft" &&
