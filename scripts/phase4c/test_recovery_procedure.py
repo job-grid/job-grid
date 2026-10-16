@@ -15,6 +15,7 @@ from recovery_procedure import (
     assert_application_restore_target_empty,
     classify_pg_restore_failure,
     restore_backup,
+    validate_manifest_migration_state,
     validate_schema_counts,
 )
 
@@ -60,6 +61,9 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             (b'could not translate host name "private-host.example"', "dns_resolution_failed"),
             (b'ERROR: permission denied for schema auth', "permission_denied"),
             (b'pg_restore: error: unsupported version in file header', "invalid_dump_format"),
+            (b'pg_restore: error: relation "app_data" does not exist', "restore_dependency_missing"),
+            (b'pg_restore: error: schema "missing_schema" does not exist', "restore_dependency_missing"),
+            (b'pg_restore: error: schema "public" already exists', "restore_object_conflict"),
             (b'pg_restore: error: server returned an error', "generic_pg_restore_error"),
             (b'undocumented output', "unknown_pg_restore_error"),
         )
@@ -82,7 +86,20 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
                 (),
                 {
                     "returncode": 0,
-                    "stdout": b"; archive header\\n1; 2615 2200 SCHEMA - public postgres\\n2; 1259 30000 TABLE public jobs postgres\\n",
+                    "stdout": (
+                        b"; archive header\\n"
+                        b"1; 2615 2200 SCHEMA - public postgres\\n"
+                        b"2; 1259 30000 TABLE public jobs postgres\\n"
+                        b"3; 1259 30001 INDEX public jobs_pkey postgres\\n"
+                        b"4; 2606 30002 CONSTRAINT public jobs jobs_pkey postgres\\n"
+                        b"5; 1255 30003 FUNCTION public rls_auto_enable() postgres\\n"
+                        b"6; 1255 30004 FUNCTION public app_function() postgres\\n"
+                        b"7; 2620 30005 TRIGGER public jobs ensure_job_policy postgres\\n"
+                        b"8; 0 0 ACL public FUNCTION rls_auto_enable() postgres\\n"
+                        b"9; 0 0 ACL public TABLE jobs postgres\\n"
+                        b"10; 2615 4000 SCHEMA - supabase_migrations postgres\\n"
+                        b"11; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\\n"
+                    ),
                     "stderr": b"",
                 },
             )()
