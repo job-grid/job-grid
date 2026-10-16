@@ -4,7 +4,7 @@ const JOBS_ENDPOINT = SUPABASE_URL + "/rest/v1/jobs";
 const CATEGORIES_ENDPOINT = SUPABASE_URL + "/rest/v1/job_categories?select=slug,name&is_active=eq.true&order=sort_order.asc";
 const COUNTRIES_ENDPOINT = SUPABASE_URL + "/rest/v1/country_options?select=code,name&order=name.asc";
 const PAGE_SIZE = 24;
-const fields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,published_at,expires_at";
+const fields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,status,published_at,expires_at";
 
 const $ = (selector) => document.querySelector(selector);
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
