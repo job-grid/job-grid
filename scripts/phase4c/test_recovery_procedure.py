@@ -403,6 +403,8 @@ class RecoverySchemaCountTests(unittest.TestCase):
             toc_text = toc_path.read_text(encoding="utf-8")
             self.assertNotIn("SCHEMA - public", toc_text)
             self.assertNotIn("SCHEMA - supabase_migrations", toc_text)
+            for managed_schema in ("auth", "storage", "realtime", "extensions", "graphql", "graphql_public", "pgbouncer", "vault"):
+                self.assertNotIn(f"SCHEMA - {managed_schema}", toc_text)
             self.assertIn("TABLE supabase_migrations.schema_migrations", toc_text)
             self.assertNotIn("FUNCTION public rls_auto_enable()", toc_text)
             self.assertNotIn("ACL public FUNCTION rls_auto_enable()", toc_text)
