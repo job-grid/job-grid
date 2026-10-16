@@ -29,6 +29,7 @@ from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from schema_inventory import collect_migration_history, collect_schema_inventory
 from phase4c_tooling import (
     AES_GCM_NONCE_BYTES,
     PRODUCTION_PROJECT_REF,
@@ -452,6 +453,7 @@ def _new_backup_id(now: datetime | None = None) -> str:
 
 
 def _read_migration_state(source: SourcePostgresConfig) -> str:
+    """Capture complete migration history and deterministic app-schema metadata."""
     try:
         import psycopg
         with psycopg.connect(
@@ -464,34 +466,25 @@ def _read_migration_state(source: SourcePostgresConfig) -> str:
             sslmode="verify-full",
             sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
-            options="-c statement_timeout=5000",
+            options="-c statement_timeout=10000",
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT current_setting('server_version_num'), "
-                    "current_setting('server_version'), "
-                    "to_regclass('supabase_migrations.schema_migrations')"
+                    "current_setting('server_version')"
                 )
-                server_num, server_version, migration_table = cur.fetchone()
-                latest = None
-                if migration_table is not None:
-                    cur.execute(
-                        "SELECT version, name "
-                        "FROM supabase_migrations.schema_migrations "
-                        "ORDER BY version DESC LIMIT 1"
-                    )
-                    row = cur.fetchone()
-                    latest = {"version": str(row[0]), "name": str(row[1])} if row else None
-        return json.dumps(
-            {
-                "server_version_num": str(server_num),
-                "server_version": str(server_version),
-                "migration_table_present": migration_table is not None,
-                "latest_migration": latest,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        )
+                server_num, server_version = cur.fetchone()
+                migration_history = collect_migration_history(cur)
+                schema_inventory = collect_schema_inventory(cur)
+        state = {
+            "server_version_num": str(server_num),
+            "server_version": str(server_version),
+            "migration_table_present": migration_history["present"],
+            "latest_migration": migration_history["latest_migration"],
+            "migration_history": migration_history,
+            "schema_inventory": schema_inventory,
+        }
+        return json.dumps(state, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     except Exception:
         raise BackupError("DATABASE_METADATA_FAILED") from None
 
