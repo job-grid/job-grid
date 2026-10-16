@@ -413,7 +413,7 @@ class RecoverySchemaCountTests(unittest.TestCase):
             self.assertIn("SEQUENCE public jobs_id_seq", toc_text)
             self.assertIn("TYPE public job_status", toc_text)
             self.assertIn("ACL public TABLE jobs", toc_text)
-            self.assertIn("SCHEMA - supabase_migrations", toc_text)
+            self.assertNotIn("SCHEMA - supabase_migrations", toc_text)
             self.assertIn("TABLE supabase_migrations.schema_migrations", toc_text)
             self.assertEqual(env["PGSSLMODE"], "verify-full")
             self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
