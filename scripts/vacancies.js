@@ -42,9 +42,7 @@ function salaryText(job) {
 function jobCard(job, categoriesBySlug, countriesByCode) {
   const category = categoriesBySlug.get(job.category_slug) || "Other";
   const salary = salaryText(job);
-  const application = job.application_url
-    ? '<a class="button button-primary button-small" href="' + escapeHtml(job.application_url) + '" target="_blank" rel="noopener noreferrer">Apply on employer site ↗</a>'
-    : "";
+  const application = '<a class="button button-primary button-small" href="/apply.html?job=' + encodeURIComponent(job.id) + '">Apply through Job Grid ↗</a>';
   const instructions = job.application_instructions
     ? '<p class="vacancy-description"><strong>How to apply:</strong> ' + escapeHtml(job.application_instructions) + '</p>'
     : "";
