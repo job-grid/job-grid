@@ -167,6 +167,12 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     else:
         message = str(stderr).lower()
 
+    if "already exists" in message and any(
+        token in message
+        for token in ('relation "', 'table "', 'sequence "', 'index "')
+    ):
+        return "restore_relation_already_exists"
+
     patterns = (
         ("authentication_failed", (
             "password authentication failed",
@@ -211,12 +217,6 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             'extension "uuid-ossp" already exists',
             'extension "pg_graphql" already exists',
             'extension "supabase_vault" already exists',
-        )),
-        ("restore_relation_already_exists", (
-            "relation \" already exists",
-            "table \" already exists",
-            "sequence \" already exists",
-            "index \" already exists",
         )),
         ("restore_constraint_conflict", (
             "duplicate key value violates unique constraint",
