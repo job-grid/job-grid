@@ -642,7 +642,7 @@ def run_recovery(backup_id: str) -> None:
     env = os.environ
     assert_recovery_credentials(env)
     assert_recovery_target(env["RECOVERY_PROJECT_REF"], env["RECOVERY_POSTGRES_HOST"])
-    assert_application_restore_target_empty(
+    expected_publications = assert_application_restore_target_empty(
         host=env["RECOVERY_POSTGRES_HOST"],
         port=env["RECOVERY_POSTGRES_PORT"],
         database=env["RECOVERY_POSTGRES_DB"],
@@ -672,12 +672,16 @@ def run_recovery(backup_id: str) -> None:
         except Exception:
             _fixed("RECOVERY_MANIFEST_FAILED")
         if (
-            manifest.get("backup_id") != backup_id
+            manifest.get("format_version") != 2
+            or manifest.get("backup_id") != backup_id
             or manifest.get("source", {}).get("supabase_project_ref") != PRODUCTION_PROJECT_REF
             or manifest.get("source", {}).get("postgres_major_version") != "17"
         ):
+            if manifest.get("format_version") != 2:
+                _fixed("RECOVERY_MANIFEST_VERSION_UNSUPPORTED")
             _fixed("RECOVERY_MANIFEST_BOUNDARY_FAILED")
-        migration_state = manifest.get("database", {}).get("migration_state", "")
+        migration_state_json = manifest.get("database", {}).get("migration_state", "")
+        expected_state = validate_manifest_migration_state(migration_state_json)
         restore_backup(
             dump_path=dump_plain,
             host=env["RECOVERY_POSTGRES_HOST"],
@@ -692,9 +696,17 @@ def run_recovery(backup_id: str) -> None:
             database=env["RECOVERY_POSTGRES_DB"],
             username=env["RECOVERY_POSTGRES_USER"],
             password=env["RECOVERY_POSTGRES_PASSWORD"],
-            expected_migration_state=migration_state,
+            expected_migration_state=expected_state,
+            expected_publications=expected_publications,
         )
-        print(json.dumps({"status": "RECOVERY_TEST_COMPLETE", "counts": result["counts"]}, sort_keys=True))
+        print(json.dumps({
+            "status": "RECOVERY_TEST_COMPLETE",
+            "counts": result["counts"],
+            "inventory_sha256": result["inventory_sha256"],
+            "inventory_item_count": result["inventory_item_count"],
+            "migration_history": result["migration_history"],
+            "publication_count": result["publication_count"],
+        }, sort_keys=True))
 
 
 if __name__ == "__main__":
