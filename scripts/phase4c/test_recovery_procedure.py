@@ -90,18 +90,18 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
                 {
                     "returncode": 0,
                     "stdout": (
-                        b"; archive header\\n"
-                        b"1; 2615 2200 SCHEMA - public postgres\\n"
-                        b"2; 1259 30000 TABLE public jobs postgres\\n"
-                        b"3; 1259 30001 INDEX public jobs_pkey postgres\\n"
-                        b"4; 2606 30002 CONSTRAINT public jobs jobs_pkey postgres\\n"
-                        b"5; 1255 30003 FUNCTION public rls_auto_enable() postgres\\n"
-                        b"6; 1255 30004 FUNCTION public app_function() postgres\\n"
-                        b"7; 2620 30005 TRIGGER public jobs ensure_job_policy postgres\\n"
-                        b"8; 0 0 ACL public FUNCTION rls_auto_enable() postgres\\n"
-                        b"9; 0 0 ACL public TABLE jobs postgres\\n"
-                        b"10; 2615 4000 SCHEMA - supabase_migrations postgres\\n"
-                        b"11; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\\n"
+                        b"; archive header\n"
+                        b"1; 2615 2200 SCHEMA - public postgres\n"
+                        b"2; 1259 30000 TABLE public jobs postgres\n"
+                        b"3; 1259 30001 INDEX public jobs_pkey postgres\n"
+                        b"4; 2606 30002 CONSTRAINT public jobs jobs_pkey postgres\n"
+                        b"5; 1255 30003 FUNCTION public rls_auto_enable() postgres\n"
+                        b"6; 1255 30004 FUNCTION public app_function() postgres\n"
+                        b"7; 2620 30005 TRIGGER public jobs ensure_job_policy postgres\n"
+                        b"8; 0 0 ACL public FUNCTION rls_auto_enable() postgres\n"
+                        b"9; 0 0 ACL public TABLE jobs postgres\n"
+                        b"10; 2615 4000 SCHEMA - supabase_migrations postgres\n"
+                        b"11; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\n"
                     ),
                     "stderr": b"",
                 },
