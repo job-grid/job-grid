@@ -559,6 +559,21 @@ def recovery_runbook() -> tuple[str, ...]:
         "9. Run the schema/security/migration validator.",
         "10. Record only fixed status codes and sanitized validation counts; never copy production data to logs.",
     )
+PLATFORM_SCHEMA_ALLOWLIST = frozenset({
+    "auth",
+    "extensions",
+    "graphql",
+    "graphql_public",
+    "pgbouncer",
+    "public",
+    "realtime",
+    "storage",
+    "vault",
+    "pg_catalog",
+    "information_schema",
+})
+
+
 def assert_application_restore_target_empty(
     *,
     host: str,
@@ -566,11 +581,40 @@ def assert_application_restore_target_empty(
     database: str,
     username: str,
     password: str,
-) -> None:
-    """Fail closed unless app-owned target objects and the migration ledger are absent."""
+) -> list[dict]:
+    """Read-only fail-closed check of every non-platform schema plus public objects."""
     ca_file = os.environ.get("PGSSLROOTCERT", "").strip()
     if not ca_file or not Path(ca_file).is_file():
         _fixed("RECOVERY_TLS_CA_FAILED")
+    platform_schemas = tuple(sorted(PLATFORM_SCHEMA_ALLOWLIST))
+    placeholders = ",".join(["%s"] * len(platform_schemas))
+    query = f"""
+        SELECT
+          EXISTS (
+            SELECT 1 FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','S','f')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_proc p
+            JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND NOT (p.proname = 'rls_auto_enable'
+                       AND pg_get_function_identity_arguments(p.oid) = '')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_type t
+            JOIN pg_namespace n ON n.oid = t.typnamespace
+            WHERE n.nspname = 'public' AND t.typtype IN ('d','e','r','m')
+          ),
+          EXISTS (
+            SELECT 1 FROM pg_namespace n
+            WHERE n.nspname NOT IN ({placeholders})
+              AND n.nspname NOT LIKE 'pg_toast%%'
+              AND n.nspname NOT LIKE 'pg_temp_%%'
+              AND n.nspname NOT LIKE 'pg_toast_temp_%%'
+          )
+    """
     try:
         with psycopg.connect(
             host=host,
@@ -584,24 +628,14 @@ def assert_application_restore_target_empty(
             autocommit=True,
         ) as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      EXISTS (
-                        SELECT 1
-                        FROM pg_class c
-                        JOIN pg_namespace n ON n.oid = c.relnamespace
-                        WHERE n.nspname = 'public'
-                          AND c.relkind IN ('r','p','v','m','S','f')
-                      ),
-                      to_regclass('supabase_migrations.schema_migrations') IS NOT NULL
-                    """
-                )
+                cur.execute(query, platform_schemas)
                 row = cur.fetchone()
+                publications = collect_publication_snapshot(cur)
     except Exception:
         _fixed("RECOVERY_TARGET_CHECK_FAILED")
-    if not row or bool(row[0]) or bool(row[1]):
+    if not row or any(bool(value) for value in row):
         _fixed("RECOVERY_TARGET_NOT_EMPTY")
+    return publications
 
 
 def run_recovery(backup_id: str) -> None:
