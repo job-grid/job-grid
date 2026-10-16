@@ -466,7 +466,7 @@ def _read_migration_state(source: SourcePostgresConfig) -> str:
             sslmode="verify-full",
             sslrootcert=os.environ["PGSSLROOTCERT"],
             autocommit=True,
-            options="-c statement_timeout=10000",
+            options="-c statement_timeout=10000 -c timezone=UTC",
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute(
