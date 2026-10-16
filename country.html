@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#004ef5" />
+<meta name="description" content="Explore published Job Grid vacancies in your selected country." />
+<title>Jobs by Country — Job Grid</title>
+<link rel="stylesheet" href="/styles/tokens.css" />
+<link rel="stylesheet" href="/styles/global.css" />
+<link rel="stylesheet" href="/styles/vacancies.css" />
+<script type="module" src="/scripts/components.js"></script>
+<script type="module" src="/scripts/main.js"></script>
+<script type="module" src="/scripts/country.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a><div id="top"></div><job-grid-header></job-grid-header>
+<main id="main" class="section-wrap section-space">
+<p class="eyebrow">Country vacancies</p><h1 id="country-title">Jobs by country</h1>
+<p id="country-description" class="section-description">Loading country and published vacancies…</p>
+<p><a class="button button-secondary" href="/countries.html">← All countries</a> <a id="all-country-jobs" class="button button-primary" href="/vacancies.html">Search all jobs</a></p>
+<p id="country-job-status" class="vacancy-status" role="status" aria-live="polite"></p>
+<div id="country-job-results" class="vacancy-grid" aria-live="polite" aria-busy="true"></div>
+</main><job-grid-footer></job-grid-footer>
+</body></html>
