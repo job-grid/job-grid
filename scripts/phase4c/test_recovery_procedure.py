@@ -279,6 +279,28 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
             self.assertNotIn("delete", query)
             self.assertNotIn("truncate", query)
 
+    def test_public_app_function_custom_type_and_unknown_schema_are_rejected(self):
+        for row in (
+            (False, True, False, False),
+            (False, False, True, False),
+            (False, False, False, True),
+        ):
+            with self.subTest(row=row), tempfile.TemporaryDirectory() as temp:
+                ca_file = Path(temp) / "recovery-root-ca.crt"
+                ca_file.write_text("synthetic CA fixture", encoding="utf-8")
+                connection = self._connection(row)
+                with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
+                    with patch("recovery_procedure.psycopg.connect", return_value=connection):
+                        with self.assertRaises(RecoveryFailure) as ctx:
+                            assert_application_restore_target_empty(
+                                host="recovery-host.invalid",
+                                port="5432",
+                                database="postgres",
+                                username="recovery.synthetic",
+                                password="synthetic-password",
+                            )
+                self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
+
     def test_existing_migration_ledger_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             ca_file = Path(temp) / "recovery-root-ca.crt"
