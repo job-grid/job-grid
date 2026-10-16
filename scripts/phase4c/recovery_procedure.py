@@ -170,7 +170,7 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     # Prefer fixed, object-type-only diagnostics. Never include object names or
     # raw PostgreSQL text in the returned category.
     if "already exists" in message:
-        schema_match = re.search(r'schema ["\\']?([a-z_][a-z0-9_]*)["\\']? already exists', message)
+        schema_match = re.search(r"""schema ["']?([a-z_][a-z0-9_]*)["']? already exists""", message)
         if schema_match:
             # Emit only a fixed category for known schema names. This makes the
             # next failure actionable without logging raw PostgreSQL stderr.
