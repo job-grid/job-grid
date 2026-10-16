@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
   const action = typeof body.action === "string" ? body.action : "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return json(422, { error: "Invalid application ID." });
 
-  if (action === "cv") {
+  if (action === "cv") {\n    if (!roles.includes("reviewer") && !roles.includes("system_admin")) return json(403, { error: "Reviewer permission is required to access candidate CVs." });
     const { data: application, error } = await admin.from("candidate_applications").select("cv_storage_path").eq("id", id).maybeSingle();
     if (error || !application) return json(404, { error: "Application not found." });
     const { data, error: signError } = await admin.storage.from("candidate-cvs").createSignedUrl(application.cv_storage_path, 60);
