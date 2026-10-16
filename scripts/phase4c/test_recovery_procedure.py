@@ -100,10 +100,13 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
                         b"5; 1255 30003 FUNCTION public rls_auto_enable() postgres\n"
                         b"6; 1255 30004 FUNCTION public app_function() postgres\n"
                         b"7; 2620 30005 TRIGGER public jobs ensure_job_policy postgres\n"
-                        b"8; 0 0 ACL public FUNCTION rls_auto_enable() postgres\n"
-                        b"9; 0 0 ACL public TABLE jobs postgres\n"
-                        b"10; 2615 4000 SCHEMA - supabase_migrations postgres\n"
-                        b"11; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\n"
+                        b"8; 3256 30006 POLICY public jobs public_jobs_select postgres\n"
+                        b"9; 1259 30007 SEQUENCE public jobs_id_seq postgres\n"
+                        b"10; 1247 30008 TYPE public job_status postgres\n"
+                        b"11; 0 0 ACL public FUNCTION rls_auto_enable() postgres\n"
+                        b"12; 0 0 ACL public TABLE jobs postgres\n"
+                        b"13; 2615 4000 SCHEMA - supabase_migrations postgres\n"
+                        b"14; 1259 4001 TABLE supabase_migrations.schema_migrations postgres\n"
                     ),
                     "stderr": b"",
                 },
@@ -363,6 +366,9 @@ class RecoverySchemaCountTests(unittest.TestCase):
             self.assertIn("CONSTRAINT public jobs jobs_pkey", toc_text)
             self.assertIn("FUNCTION public app_function()", toc_text)
             self.assertIn("TRIGGER public jobs ensure_job_policy", toc_text)
+            self.assertIn("POLICY public jobs public_jobs_select", toc_text)
+            self.assertIn("SEQUENCE public jobs_id_seq", toc_text)
+            self.assertIn("TYPE public job_status", toc_text)
             self.assertIn("ACL public TABLE jobs", toc_text)
             self.assertIn("SCHEMA - supabase_migrations", toc_text)
             self.assertIn("TABLE supabase_migrations.schema_migrations", toc_text)
