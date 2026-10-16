@@ -1,9 +1,11 @@
+import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from schema_inventory import sha256_json
 from recovery_procedure import (
     ARTIFACTS,
     ARTIFACT_DUMP,
@@ -13,6 +15,7 @@ from recovery_procedure import (
     SUPABASE_MANAGED_SCHEMAS,
     RecoveryFailure,
     assert_application_restore_target_empty,
+    assert_publications_unchanged,
     classify_pg_restore_failure,
     restore_backup,
     validate_manifest_migration_state,
@@ -127,6 +130,70 @@ class RecoveryRestoreDiagnosticTests(unittest.TestCase):
             self.assertNotIn("synthetic-password", str(ctx.exception))
 
 
+class RecoveryManifestInventoryTests(unittest.TestCase):
+    def _state(self, items=None):
+        if items is None:
+            items = [
+                {"kind": "relation", "schema_name": "public", "object_name": "job_categories", "relkind": "r"},
+                {"kind": "relation", "schema_name": "supabase_migrations", "object_name": "schema_migrations", "relkind": "r"},
+            ]
+        versions = [{"version": "20261014120000", "name": "job_catalog_baseline"}]
+        history = {
+            "present": True,
+            "row_count": 1,
+            "versions": versions,
+            "latest_migration": versions[-1],
+            "rows_sha256": "a" * 64,
+        }
+        return {
+            "latest_migration": versions[-1],
+            "migration_history": history,
+            "schema_inventory": {
+                "items": items,
+                "item_count": len(items),
+                "counts_by_kind": {"relation": len(items)},
+                "sha256": sha256_json(items),
+            },
+        }
+
+    def test_complete_manifest_inventory_is_accepted(self):
+        state = self._state()
+        validated = validate_manifest_migration_state(json.dumps(state))
+        self.assertEqual(validated["schema_inventory"]["item_count"], 2)
+        self.assertTrue(validated["migration_history"]["present"])
+
+    def test_legacy_or_missing_inventory_is_rejected(self):
+        with self.assertRaises(RecoveryFailure) as ctx:
+            validate_manifest_migration_state(json.dumps({"latest_migration": None}))
+        self.assertEqual(str(ctx.exception), "RECOVERY_MANIFEST_INVENTORY_MISSING")
+
+    def test_tampered_inventory_digest_is_rejected(self):
+        state = self._state()
+        state["schema_inventory"]["sha256"] = "0" * 64
+        with self.assertRaises(RecoveryFailure) as ctx:
+            validate_manifest_migration_state(json.dumps(state))
+        self.assertEqual(str(ctx.exception), "RECOVERY_MANIFEST_INVENTORY_FAILED")
+
+    def test_inventory_without_application_tables_is_rejected(self):
+        state = self._state([
+            {"kind": "relation", "schema_name": "supabase_migrations", "object_name": "schema_migrations", "relkind": "r"}
+        ])
+        state["schema_inventory"]["counts_by_kind"] = {"relation": 1}
+        state["schema_inventory"]["item_count"] = 1
+        state["schema_inventory"]["sha256"] = sha256_json(state["schema_inventory"]["items"])
+        with self.assertRaises(RecoveryFailure) as ctx:
+            validate_manifest_migration_state(json.dumps(state))
+        self.assertEqual(str(ctx.exception), "RECOVERY_MANIFEST_INVENTORY_INCOMPLETE")
+
+    def test_publications_must_remain_unchanged(self):
+        original = [{"pubname": "supabase_realtime", "puballtables": False, "tables": []}]
+        assert_publications_unchanged(original, list(original))
+        changed = [{"pubname": "supabase_realtime", "puballtables": True, "tables": []}]
+        with self.assertRaises(RecoveryFailure) as ctx:
+            assert_publications_unchanged(original, changed)
+        self.assertEqual(str(ctx.exception), "RECOVERY_PUBLICATION_STATE_CHANGED")
+
+
 class RecoveryTargetEmptyGuardTests(unittest.TestCase):
     def _connection(self, row):
         connection = MagicMock()
@@ -168,8 +235,8 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
                             password="synthetic-password",
                         )
             self.assertEqual(str(ctx.exception), "RECOVERY_TARGET_NOT_EMPTY")
-            self.assertEqual(cursor.execute.call_count, 1)
-            query = cursor.execute.call_args.args[0].lower()
+            self.assertGreaterEqual(cursor.execute.call_count, 1)
+            query = cursor.execute.call_args_list[0].args[0].lower()
             self.assertIn("select", query)
             self.assertNotIn("delete", query)
             self.assertNotIn("truncate", query)
@@ -178,7 +245,7 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             ca_file = Path(temp) / "recovery-root-ca.crt"
             ca_file.write_text("synthetic CA fixture", encoding="utf-8")
-            connection = self._connection((False, True))
+            connection = self._connection((False, False, False, True))
             with patch.dict(os.environ, {"PGSSLROOTCERT": str(ca_file)}, clear=False):
                 with patch("recovery_procedure.psycopg.connect", return_value=connection):
                     with self.assertRaises(RecoveryFailure) as ctx:
@@ -193,13 +260,17 @@ class RecoveryTargetEmptyGuardTests(unittest.TestCase):
 
 
 class RecoverySchemaCountTests(unittest.TestCase):
-    def test_legitimate_empty_object_categories_are_accepted(self):
-        counts = validate_schema_counts((0, 0, 0, 0, 0, 0, 0, 0, 1))
-        self.assertEqual(counts["tables"], 0)
+    def test_optional_object_types_can_be_zero_when_required_tables_exist(self):
+        counts = validate_schema_counts((1, 0, 0, 0, 0, 0, 0, 0, 1))
+        self.assertEqual(counts["tables"], 1)
         self.assertEqual(counts["triggers"], 0)
         self.assertEqual(counts["rls"], 0)
         self.assertEqual(counts["policies"], 0)
         self.assertEqual(counts["migration_table"], 1)
+
+    def test_migration_ledger_alone_cannot_pass_without_application_tables(self):
+        with self.assertRaises(RecoveryFailure):
+            validate_schema_counts((0, 0, 0, 0, 0, 0, 0, 0, 1))
 
     def test_missing_migration_ledger_is_rejected(self):
         with self.assertRaises(RecoveryFailure):
@@ -249,15 +320,24 @@ class RecoverySchemaCountTests(unittest.TestCase):
             toc_path = Path(argv[argv.index("--use-list") + 1])
             toc_text = toc_path.read_text(encoding="utf-8")
             self.assertNotIn("SCHEMA - public", toc_text)
+            self.assertNotIn("FUNCTION public rls_auto_enable()", toc_text)
+            self.assertNotIn("ACL public FUNCTION rls_auto_enable()", toc_text)
             self.assertIn("TABLE public job_categories", toc_text)
             self.assertIn("TABLE public country_options", toc_text)
+            self.assertIn("INDEX public jobs_pkey", toc_text)
+            self.assertIn("CONSTRAINT public jobs jobs_pkey", toc_text)
+            self.assertIn("FUNCTION public app_function()", toc_text)
+            self.assertIn("TRIGGER public jobs ensure_job_policy", toc_text)
+            self.assertIn("ACL public TABLE jobs", toc_text)
             self.assertIn("SCHEMA - supabase_migrations", toc_text)
+            self.assertIn("TABLE supabase_migrations.schema_migrations", toc_text)
             self.assertEqual(env["PGSSLMODE"], "verify-full")
             self.assertEqual(env["PGSSLROOTCERT"], str(ca_file))
             self.assertNotIn("BACKUP_ENCRYPTION_KEY", env)
             self.assertNotIn("BACKUP_R2_SECRET_ACCESS_KEY", env)
             self.assertIn("--single-transaction", argv)
             self.assertIn("--exit-on-error", argv)
+            self.assertIn("--no-publications", argv)
             self.assertIn("--use-list", argv)
             self.assertNotIn("--clean", argv)
             for schema in SUPABASE_MANAGED_SCHEMAS:
