@@ -15,7 +15,9 @@ from recovery_procedure import (
     SUPABASE_MANAGED_SCHEMAS,
     RecoveryFailure,
     assert_application_restore_target_empty,
+    assert_migration_history_matches,
     assert_publications_unchanged,
+    assert_schema_inventory_matches,
     classify_pg_restore_failure,
     restore_backup,
     validate_manifest_migration_state,
@@ -184,6 +186,39 @@ class RecoveryManifestInventoryTests(unittest.TestCase):
         with self.assertRaises(RecoveryFailure) as ctx:
             validate_manifest_migration_state(json.dumps(state))
         self.assertEqual(str(ctx.exception), "RECOVERY_MANIFEST_INVENTORY_INCOMPLETE")
+
+    def test_schema_definition_or_grant_inventory_mismatch_fails(self):
+        expected = {
+            "items": [{"kind": "grant", "schema_name": "public", "grantee": "authenticated", "privilege_type": "SELECT"}],
+            "item_count": 1,
+            "counts_by_kind": {"grant": 1},
+            "sha256": sha256_json([{"kind": "grant", "schema_name": "public", "grantee": "authenticated", "privilege_type": "SELECT"}]),
+        }
+        assert_schema_inventory_matches(expected, dict(expected))
+        changed_items = [{"kind": "grant", "schema_name": "public", "grantee": "authenticated", "privilege_type": "INSERT"}]
+        changed = {
+            "items": changed_items,
+            "item_count": 1,
+            "counts_by_kind": {"grant": 1},
+            "sha256": sha256_json(changed_items),
+        }
+        with self.assertRaises(RecoveryFailure) as ctx:
+            assert_schema_inventory_matches(expected, changed)
+        self.assertEqual(str(ctx.exception), "RECOVERY_SCHEMA_INVENTORY_MISMATCH")
+
+    def test_any_migration_ledger_row_change_fails(self):
+        expected = {
+            "present": True,
+            "row_count": 2,
+            "versions": [{"version": "001", "name": "a"}, {"version": "002", "name": "b"}],
+            "latest_migration": {"version": "002", "name": "b"},
+            "rows_sha256": "a" * 64,
+        }
+        assert_migration_history_matches(expected, dict(expected))
+        changed = dict(expected, rows_sha256="b" * 64)
+        with self.assertRaises(RecoveryFailure) as ctx:
+            assert_migration_history_matches(expected, changed)
+        self.assertEqual(str(ctx.exception), "RECOVERY_MIGRATION_HISTORY_MISMATCH")
 
     def test_publications_must_remain_unchanged(self):
         original = [{"pubname": "supabase_realtime", "puballtables": False, "tables": []}]
