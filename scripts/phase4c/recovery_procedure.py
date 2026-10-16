@@ -167,11 +167,28 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     else:
         message = str(stderr).lower()
 
-    if "already exists" in message and any(
-        token in message
-        for token in ('relation "', 'table "', 'sequence "', 'index "')
-    ):
-        return "restore_relation_already_exists"
+    # Prefer fixed, object-type-only diagnostics. Never include object names or
+    # raw PostgreSQL text in the returned category.
+    if "already exists" in message:
+        if any(token in message for token in ('schema "', "schema already exists")):
+            return "restore_schema_already_exists"
+        if any(token in message for token in ('extension "', "extension already exists")):
+            return "restore_extension_already_exists"
+        if any(token in message for token in ('relation "', 'table "', 'sequence "', 'index "')):
+            return "restore_relation_already_exists"
+        if "constraint" in message:
+            return "restore_constraint_conflict"
+        if "function" in message or "procedure" in message:
+            return "restore_routine_conflict"
+        if "trigger" in message:
+            return "restore_trigger_conflict"
+        if "policy" in message:
+            return "restore_policy_conflict"
+        if "type" in message:
+            return "restore_type_conflict"
+        if "publication" in message:
+            return "restore_publication_conflict"
+        return "restore_object_conflict_unclassified"
 
     patterns = (
         ("authentication_failed", (
