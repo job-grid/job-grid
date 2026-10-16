@@ -121,6 +121,8 @@ def collect_schema_inventory(cursor) -> dict:
                     CASE WHEN p.prokind <> 'a' THEN pg_get_functiondef(p.oid) END AS definition
              FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
              WHERE n.nspname IN ({schemas})
+               AND NOT (n.nspname = 'public' AND p.proname = 'rls_auto_enable'
+                        AND pg_get_function_identity_arguments(p.oid) = '')
              ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)""",
     )
     _append_query(
@@ -177,8 +179,10 @@ def collect_schema_inventory(cursor) -> dict:
                             WHERE e.enumtypid = t.oid ORDER BY e.enumsortorder),
                       ARRAY[]::text[]
                     ) AS enum_labels,
-                    COALESCE(t.typcollation, 0) AS collation_oid
+                    coll_ns.nspname AS collation_schema, coll.collname AS collation_name
              FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+             LEFT JOIN pg_collation coll ON coll.oid = t.typcollation
+             LEFT JOIN pg_namespace coll_ns ON coll_ns.oid = coll.collnamespace
              WHERE n.nspname IN ({schemas}) AND t.typtype IN ('c','d','e','r','m')
              ORDER BY n.nspname, t.typname""",
     )
@@ -227,6 +231,8 @@ def collect_schema_inventory(cursor) -> dict:
              LEFT JOIN pg_roles grantee ON grantee.oid = acl.grantee
              WHERE n.nspname IN ({schemas}) AND p.proacl IS NOT NULL
                AND acl.grantee <> p.proowner
+               AND NOT (n.nspname = 'public' AND p.proname = 'rls_auto_enable'
+                        AND pg_get_function_identity_arguments(p.oid) = '')
              ORDER BY n.nspname, p.proname, identity_arguments, grantee, acl.privilege_type""",
     )
     _append_query(
