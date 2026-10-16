@@ -59,7 +59,9 @@ The repeatable recovery sequence is:
 8. Build a pg_restore TOC list and omit only the CREATE SCHEMA entry for public,
    since Supabase provisioned it on the recovery project already. Retain the public-schema
    table/function/data entries and the supabase_migrations ledger. Restore with
-   pg_restore --use-list --single-transaction --no-owner --no-subscriptions --exit-on-error.
+   pg_restore --use-list --single-transaction --no-owner --no-subscriptions --no-publications --exit-on-error.
+   Publications are database-level objects, not schema-bound; the recovery project already
+   owns its managed supabase_realtime publication, so do not recreate source publications.
    Exclude Supabase-managed schemas (auth, storage, realtime, extensions, graphql,
    graphql_public, pgbouncer, vault), because a newly provisioned Supabase recovery project
    already contains platform-managed objects in those schemas. Never use --clean to force

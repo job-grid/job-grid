@@ -279,6 +279,7 @@ def restore_backup(
         "--dbname", database,
         "--no-owner",
         "--no-subscriptions",
+        "--no-publications",
         "--single-transaction",
         "--exit-on-error",
         "--use-list", str(toc_path),
