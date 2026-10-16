@@ -25,3 +25,15 @@ GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO service_role;
+
+
+-- Minimal private Storage bucket catalog for migrations that configure buckets.
+-- Object storage itself is not emulated by isolated PostgreSQL tests.
+CREATE SCHEMA storage;
+CREATE TABLE storage.buckets (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  public boolean NOT NULL DEFAULT false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
