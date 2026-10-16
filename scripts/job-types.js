@@ -33,6 +33,7 @@ function makeRoles(roleData, categories) {
 function makeRoleCard(role) {
   const initials = role.title.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase();
   const query = encodeURIComponent(role.title);
+  const category = encodeURIComponent(role.categorySlug);
   return '<article class="role-card type-card">' +
     '<div class="role-card-top"><span class="company-mark mark-cobalt" aria-hidden="true">' + escapeHtml(initials) + '</span>' +
     '<span class="role-type">Job type</span></div>' +
@@ -40,7 +41,7 @@ function makeRoleCard(role) {
     '<h3>' + escapeHtml(role.title) + '</h3>' +
     '<p class="role-card-subtitle">Role type catalogue · Not a confirmed vacancy</p>' +
     '<div class="role-card-bottom"><span class="tag">' + escapeHtml(role.category) + '</span>' +
-    '<a class="arrow-round" href="/job-types.html?q=' + query + '" aria-label="Explore ' + escapeHtml(role.title) + '">↗</a></div></article>';
+    '<a class="arrow-round" href="/vacancies.html?q=' + query + '&category=' + category + '" aria-label="Find vacancies for ' + escapeHtml(role.title) + '">↗</a></div></article>';
 }
 
 async function loadCatalog() {
