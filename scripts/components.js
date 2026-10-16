@@ -17,12 +17,13 @@ class JobGridHeader extends HTMLElement {
         <div class="header-inner">
           <job-grid-brand variant="header"></job-grid-brand>
           <nav class="nav-links" id="primary-navigation" aria-label="Main navigation">
+            <a href="/vacancies.html">Find jobs</a>
             <a href="/job-types.html">Explore job types</a>
             <a href="/#how-it-works">How it works</a>
             <a href="/#footer">For employers</a>
           </nav>
           <div class="header-actions">
-            <a class="button button-primary button-small" href="/job-types.html">Browse roles <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary button-small" href="/vacancies.html">Find jobs <span aria-hidden="true">↗</span></a>
             <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation"><span aria-hidden="true">☰</span></button>
           </div>
         </div>
@@ -42,7 +43,7 @@ class JobGridFooter extends HTMLElement {
             <p>A clearer path to opportunity. We’re building a focused place for people and employers to connect around work.</p>
           </div>
           <nav class="footer-links" aria-label="Footer navigation">
-            <a href="/job-types.html">Explore job types</a><a href="/#how-it-works">How it works</a><a href="/#top">Back to top ↑</a>
+            <a href="/vacancies.html">Find jobs</a><a href="/job-types.html">Explore job types</a><a href="/#how-it-works">How it works</a><a href="/#top">Back to top ↑</a>
           </nav>
         </div>
         <div class="footer-bottom">© ${year} Job Grid. Official logo supplied by the owner. The role catalogue lists job types, not confirmed vacancies.</div>
