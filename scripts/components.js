@@ -41,7 +41,7 @@ class JobGridFooter extends HTMLElement {
         <div class="footer-inner">
           <div class="footer-brand">
             <job-grid-brand variant="footer"></job-grid-brand>
-            <p>A clearer path to opportunity. We’re building a focused place for people and employers to connect around work.</p>
+            <p>A clearer path to opportunity. Apply through Job Grid and let our recruitment team help match your profile to suitable opportunities.</p>
           </div>
           <nav class="footer-links" aria-label="Footer navigation">
             <a href="/vacancies.html">Find jobs</a><a href="/countries.html">Browse countries</a><a href="/job-types.html">Explore job types</a><a href="/for-employers.html">For employers</a><a href="/#how-it-works">How it works</a><a href="/#top">Back to top ↑</a>
