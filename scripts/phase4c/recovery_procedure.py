@@ -170,8 +170,20 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
     # Prefer fixed, object-type-only diagnostics. Never include object names or
     # raw PostgreSQL text in the returned category.
     if "already exists" in message:
-        if any(token in message for token in ('schema "', "schema already exists")):
-            return "restore_schema_already_exists"
+        schema_match = re.search(r'schema ["\\']?([a-z_][a-z0-9_]*)["\\']? already exists', message)
+        if schema_match:
+            # Emit only a fixed category for known schema names. This makes the
+            # next failure actionable without logging raw PostgreSQL stderr.
+            schema_name = schema_match.group(1)
+            allowed_schemas = {
+                "public", "supabase_migrations", "auth", "storage", "realtime",
+                "extensions", "graphql", "graphql_public", "pgbouncer", "vault",
+            }
+            if schema_name in allowed_schemas:
+                return "restore_schema_already_exists_" + schema_name
+            return "restore_schema_already_exists_other"
+        if "schema already exists" in message:
+            return "restore_schema_already_exists_other"
         if any(token in message for token in ('extension "', "extension already exists")):
             return "restore_extension_already_exists"
         if any(token in message for token in ('relation "', 'table "', 'sequence "', 'index "')):
