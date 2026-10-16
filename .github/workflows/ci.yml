@@ -166,3 +166,27 @@ jobs:
           echo "PASS: connected only to isolated GitHub Actions PostgreSQL service"
       - name: Apply real baseline migrations and certify PR #45
         run: bash scripts/database-certification.sh
+      - name: Execute recovery inventory queries against isolated PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.3'
+          PYTHONPATH=scripts/phase4c python - <<'PY'
+          import json
+          import psycopg
+          from schema_inventory import collect_migration_history, collect_schema_inventory
+
+          with psycopg.connect() as conn:
+              with conn.cursor() as cur:
+                  inventory = collect_schema_inventory(cur)
+                  migration_history = collect_migration_history(cur)
+          assert inventory["sha256"] and inventory["item_count"] >= 0
+          assert migration_history["rows_sha256"]
+          print(json.dumps({
+              "status": "SCHEMA_INVENTORY_SQL_PASS",
+              "inventory_item_count": inventory["item_count"],
+              "inventory_sha256": inventory["sha256"],
+              "migration_ledger_present": migration_history["present"],
+              "migration_row_count": migration_history["row_count"],
+          }, sort_keys=True))
+          PY
