@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#004ef5" />
+    <meta name="description" content="Search published job vacancies on Job Grid by country, category, skill level and employment type." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Find Jobs — Job Grid" />
+    <meta property="og:description" content="Search published vacancies and review employer-provided application details." />
+    <title>Find Jobs — Job Grid</title>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href="/styles/vacancies.css" />
+    <script type="module" src="/scripts/components.js"></script>
+    <script type="module" src="/scripts/main.js"></script>
+    <script type="module" src="/scripts/vacancies.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="top"></div>
+    <job-grid-header></job-grid-header>
+    <main id="main" class="vacancies-page">
+      <section class="vacancies-hero">
+        <div class="section-wrap">
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> Published opportunities</p>
+          <h1>Find your next <span class="text-accent">opportunity.</span></h1>
+          <p class="vacancies-intro">Search actual published vacancies from Job Grid's existing listings database. Check each employer's details and application instructions before applying.</p>
+          <div class="vacancy-summary"><strong id="vacancy-count">Loading vacancies…</strong><span>Published listings only</span></div>
+        </div>
+      </section>
+      <section class="section-wrap vacancies-content" aria-labelledby="vacancies-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Search jobs</p><h2 id="vacancies-title">Open vacancies</h2><p class="section-description">Filter by location, category, skill level and employment type.</p></div>
+        </div>
+        <form id="vacancy-filters" class="vacancy-filters" role="search">
+          <div class="filter-field"><label for="vacancy-query">Job title or employer</label><input id="vacancy-query" type="search" maxlength="120" placeholder="e.g. nurse, driver, company" autocomplete="off" /></div>
+          <div class="filter-field"><label for="vacancy-country">Country</label><select id="vacancy-country"><option value="">All countries</option></select></div>
+          <div class="filter-field"><label for="vacancy-category">Category</label><select id="vacancy-category"><option value="">All categories</option></select></div>
+          <div class="filter-field"><label for="vacancy-skill">Skill level</label><select id="vacancy-skill"><option value="">All skill levels</option><option value="skilled">Skilled</option><option value="semi_skilled">Semi-skilled</option><option value="unskilled">Entry-level / no specialist skill required</option></select></div>
+          <div class="filter-field"><label for="vacancy-employment">Employment type</label><select id="vacancy-employment"><option value="">All employment types</option><option value="full_time">Full-time</option><option value="part_time">Part-time</option><option value="contract">Contract</option><option value="temporary">Temporary</option><option value="casual">Casual</option><option value="seasonal">Seasonal</option><option value="internship">Internship</option><option value="apprenticeship">Apprenticeship</option></select></div>
+          <div class="filter-actions"><button class="button button-secondary" id="clear-vacancy-filters" type="button">Clear filters</button></div>
+        </form>
+        <p id="vacancy-status" class="vacancy-status" role="status" aria-live="polite">Connecting to published listings…</p>
+        <div id="vacancy-results" class="vacancy-grid" aria-live="polite" aria-busy="true"></div>
+        <div class="vacancy-more"><button class="button button-primary" id="load-more-vacancies" type="button" hidden>Load more jobs</button></div>
+        <p class="vacancy-disclaimer">Job Grid displays listings marked as published by authorized administrators. Verify employer claims and application terms independently. Job Grid does not guarantee employment, visa sponsorship or an offer.</p>
+      </section>
+    </main>
+    <job-grid-footer></job-grid-footer>
+  </body>
+</html>
