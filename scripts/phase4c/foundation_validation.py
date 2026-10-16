@@ -305,6 +305,7 @@ class FoundationTests(unittest.TestCase):
                     username="recovery",
                     password="synthetic",
                     expected_migration_state="",
+                    expected_platform_state={},
                 )
         self.assertEqual(str(ctx.exception), "RECOVERY_VALIDATION_FAILED")
         self.assertNotIn("DO_NOT_LEAK", str(ctx.exception))
