@@ -477,6 +477,12 @@ def validate_manifest_migration_state(migration_state_json: str) -> dict:
     return state
 
 
+def assert_publications_unchanged(expected: list[dict], actual: list[dict]) -> None:
+    """Fail closed if the target's existing managed publications changed."""
+    if expected != actual:
+        _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
+
+
 def validate_recovery(
     *,
     host: str,
@@ -527,8 +533,7 @@ def validate_recovery(
         if expected_migration_state.get("latest_migration") != actual_history.get("latest_migration"):
             _fixed("RECOVERY_MIGRATION_MISMATCH")
 
-        if actual_publications != expected_publications:
-            _fixed("RECOVERY_PUBLICATION_STATE_CHANGED")
+        assert_publications_unchanged(expected_publications, actual_publications)
         return {
             "database": opened,
             "counts": counts,
