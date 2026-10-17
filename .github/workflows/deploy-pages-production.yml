@@ -64,14 +64,14 @@ jobs:
           test -n "$CF_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID in the production environment."; exit 1; }
           echo "Checking Cloudflare token validity..."
           if ! response="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
-            --url "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/tokens/verify" \
             --header "Authorization: Bearer $CF_API_TOKEN")"; then
-            echo "::error::Cloudflare token verification request failed (HTTP/network error). Check token value, expiry, and revocation."
+            echo "::error::Cloudflare account-token verification request failed (HTTP/network error). Check token value, expiry, and revocation."
             exit 1
           fi
           if ! printf '%s' "$response" | jq -e '.success == true and .result.status == "active"' >/dev/null; then
             printf '%s' "$response" | jq -r '(.errors // [])[] | "Cloudflare token verification error: code=\(.code // "unknown") message=\(.message // "unknown")"' || true
-            echo "::error::Cloudflare rejected the token or did not report it active."
+            echo "::error::Cloudflare rejected the account token or did not report it active."
             unset response
             exit 1
           fi
