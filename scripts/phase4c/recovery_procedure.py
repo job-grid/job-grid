@@ -213,6 +213,21 @@ def classify_pg_restore_failure(stderr: bytes | str) -> str:
             return "restore_dependency_missing_schema_" + schema_name
         return "restore_dependency_missing_schema_other"
 
+    # Distinguish common PostgreSQL privilege failures using fixed categories.
+    # Never include the affected object, role, schema, or raw server message.
+    permission_patterns = (
+        ("permission_denied_schema", ("permission denied for schema", "insufficient privilege for schema")),
+        ("permission_denied_table", ("permission denied for table", "permission denied for relation", "permission denied for view", "permission denied for sequence")),
+        ("permission_denied_function", ("permission denied for function", "permission denied for procedure")),
+        ("permission_denied_database", ("permission denied for database",)),
+        ("permission_denied_role", ("permission denied to set role", "must be member of role", "must be able to set role")),
+        ("permission_denied_owner", ("must be owner of", "must be superuser to", "must be superuser")),
+        ("permission_denied_generic", ("permission denied", "insufficient privilege")),
+    )
+    for category, needles in permission_patterns:
+        if any(needle in message for needle in needles):
+            return category
+
     patterns = (
         ("authentication_failed", (
             "password authentication failed",
