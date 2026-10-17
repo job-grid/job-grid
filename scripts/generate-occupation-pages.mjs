@@ -86,6 +86,56 @@ const urls = [
   }))
 ];
 
+// Generate a real directory landing page as well as individual occupation pages.
+const directoryPath = path.join(outputRoot, "job-types", "index.html");
+await mkdir(path.dirname(directoryPath), { recursive: true });
+const groupedRoles = new Map([...categoryNames.keys()].map((slug) => [slug, []]));
+for (const role of roles) groupedRoles.get(role.categorySlug).push(role);
+const directoryTitle = "Browse Job Types and Occupations | Job Grid";
+const directoryDescription = "Browse Job Grid's occupation catalogue by category and search for matching vacancies.";
+const directoryCanonical = `${siteRoot}/job-types/`;
+const directorySchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: directoryTitle,
+  description: directoryDescription,
+  url: directoryCanonical,
+  isPartOf: { "@type": "WebSite", name: "Job Grid", url: siteRoot }
+};
+const directorySections = [...groupedRoles.entries()]
+  .filter(([, items]) => items.length > 0)
+  .map(([slug, items]) => `<section><h2>${escapeHtml(categoryNames.get(slug))}</h2><ul>${items
+    .map((role) => `<li><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}</a></li>`)
+    .join("")}</ul></section>`)
+  .join("\n");
+const directoryHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <title>${escapeHtml(directoryTitle)}</title>
+  <meta name="description" content="${escapeHtml(directoryDescription)}">
+  <link rel="canonical" href="${directoryCanonical}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(directoryTitle)}">
+  <meta property="og:description" content="${escapeHtml(directoryDescription)}">
+  <meta property="og:url" content="${directoryCanonical}">
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/global.css">
+  <script type="application/ld+json">${JSON.stringify(directorySchema).replace(/</g, "\\u003c")}</script>
+</head>
+<body>
+  <main class="section-wrap" style="max-width:1100px;margin:3rem auto;padding:1.5rem">
+    <p class="eyebrow">Job Grid</p>
+    <h1>Browse job types and occupations</h1>
+    <p>Explore occupations by category and open a role page to search for matching vacancies. Occupation pages describe types of work; they do not claim an employer currently has an opening.</p>
+    ${directorySections}
+  </main>
+</body>
+</html>`;
+await writeFile(directoryPath, directoryHtml, "utf8");
+
 for (const role of roles) {
   const dir = path.join(outputRoot, "job-types", role.slug);
   await mkdir(dir, { recursive: true });
