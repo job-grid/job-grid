@@ -85,7 +85,7 @@ test("Excel base-title seed imports 496 pending inactive job types and never cre
     new URL("../supabase/migrations/20261015120000_seed_base_occupation_catalogue.sql", import.meta.url),
     "utf8",
   );
-  const roleData = JSON.parse(await readFile(new URL("../public/data/job-types.json", import.meta.url), "utf8"));
+  const roleData = JSON.parse(await readFile(new URL("./fixtures/job-types-seed.json", import.meta.url), "utf8"));
   assert.equal(roleData.roles.length, 496);
   assert.equal(new Set(roleData.roles.map(([title]) => title.trim().toLocaleLowerCase())).size, 496);
   assert.equal(new Set(roleData.roles.map(([, slug]) => slug)).size, 25);
