@@ -62,17 +62,33 @@ jobs:
           set -euo pipefail
           test -n "$CF_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN in the production environment."; exit 1; }
           test -n "$CF_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID in the production environment."; exit 1; }
-          response="$(curl --fail-with-body --silent --show-error \
+          echo "Checking Cloudflare token validity..."
+          if ! response="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
             --url "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            --header "Authorization: Bearer $CF_API_TOKEN")"
-          test "$(printf '%s' "$response" | jq -r '.success // false')" = "true"
-          test "$(printf '%s' "$response" | jq -r '.result.status // empty')" = "active"
+            --header "Authorization: Bearer $CF_API_TOKEN")"; then
+            echo "::error::Cloudflare token verification request failed (HTTP/network error). Check token value, expiry, and revocation."
+            exit 1
+          fi
+          if ! printf '%s' "$response" | jq -e '.success == true and .result.status == "active"' >/dev/null; then
+            printf '%s' "$response" | jq -r '(.errors // [])[] | "Cloudflare token verification error: code=\(.code // "unknown") message=\(.message // "unknown")"' || true
+            echo "::error::Cloudflare rejected the token or did not report it active."
+            unset response
+            exit 1
+          fi
           unset response
-          response="$(curl --fail-with-body --silent --show-error \
+          echo "Token verification passed. Checking access to Pages project job-grid-dpe..."
+          if ! response="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
             --url "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/job-grid-dpe" \
-            --header "Authorization: Bearer $CF_API_TOKEN")"
-          test "$(printf '%s' "$response" | jq -r '.success // false')" = "true"
-          test "$(printf '%s' "$response" | jq -r '.result.name // empty')" = "job-grid-dpe"
+            --header "Authorization: Bearer $CF_API_TOKEN")"; then
+            echo "::error::Cloudflare Pages project request failed (HTTP/network error). Check the account ID and Pages:Edit scope."
+            exit 1
+          fi
+          if ! printf '%s' "$response" | jq -e '.success == true and .result.name == "job-grid-dpe"' >/dev/null; then
+            printf '%s' "$response" | jq -r '(.errors // [])[] | "Cloudflare Pages access error: code=\(.code // "unknown") message=\(.message // "unknown")"' || true
+            echo "::error::Token verified, but Cloudflare did not authorize access to job-grid-dpe. Confirm CF_ACCOUNT_ID matches the token's account and Pages:Edit applies to that account."
+            unset response
+            exit 1
+          fi
           echo "Cloudflare token is active and the target project is job-grid-dpe in the configured account."
           unset response
 
