@@ -70,11 +70,19 @@ for (const row of data.roles) {
 }
 if (roles.length === 0) throw new Error("Refusing to generate an empty occupation catalogue.");
 
+const today = new Date().toISOString().slice(0, 10);
+const corePaths = [
+  "/",
+  "/job-types/",
+  "/vacancies.html",
+  "/countries.html",
+  "/for-employers.html"
+];
 const urls = [
-  { loc: `${siteRoot}/job-types/`, lastmod: new Date().toISOString().slice(0, 10) },
+  ...corePaths.map((route) => ({ loc: `${siteRoot}${route}`, lastmod: today })),
   ...roles.map((role) => ({
     loc: `${siteRoot}/job-types/${role.slug}/`,
-    lastmod: new Date().toISOString().slice(0, 10)
+    lastmod: today
   }))
 ];
 
