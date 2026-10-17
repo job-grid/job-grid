@@ -10,13 +10,14 @@ const build = await readFile(new URL("../scripts/build.mjs", import.meta.url), "
 const components = await readFile(new URL("../scripts/components.js", import.meta.url), "utf8");
 
 test("starter role titles are distinct and reference category slugs, not a copied category catalogue", () => {
-  assert.equal(catalog.roles.length, 496);
-  assert.equal(new Set(catalog.roles.map(([title]) => title.trim().toLocaleLowerCase())).size, 496);
+  assert.equal(catalog.roles.length, 9044);
+  assert.equal(new Set(catalog.roles.map(([title]) => title.trim().toLocaleLowerCase())).size, 9044);
   assert.equal(Object.hasOwn(catalog, "categories"), false, "static data must not duplicate production categories");
   for (const row of catalog.roles) {
-    assert.equal(row.length, 2);
+    assert.equal(row.length, 3);
     assert.ok(typeof row[0] === "string" && row[0].trim().length >= 2);
     assert.ok(typeof row[1] === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(row[1]));
+    assert.ok(typeof row[2] === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(row[2]));
   }
 });
 
@@ -24,7 +25,7 @@ test("website obtains active categories from the existing Supabase category tabl
   assert.match(script, /from "\.\/supabase-config\.js"/);
   assert.match(script, /rest\/v1\/job_categories\?select=slug,name,sort_order&is_active=eq\.true&order=sort_order\.asc/);
   assert.match(script, /apikey:\s*SUPABASE_PUBLISHABLE_KEY/);
-  assert.match(home, /496 distinct base role titles/);
+  assert.match(home, /9,044 distinct occupation titles/);
   assert.match(home, /not confirmed vacancies/i);
   assert.match(directory, /Important: job types are not vacancies/);
   assert.doesNotMatch(script, /const categories = \[/);
