@@ -1,0 +1,123 @@
+name: Job Grid production deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: job-grid-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  build-test-deploy:
+    name: Build, test, deploy and smoke-test production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    steps:
+      - name: Verify production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          echo "Production source is main at $GITHUB_SHA"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck JavaScript syntax
+        run: npm run typecheck
+
+      - name: Automated tests
+        run: npm test
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Validate Cloudflare credentials and target project
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CF_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN in the production environment."; exit 1; }
+          test -n "$CF_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID in the production environment."; exit 1; }
+          response="$(curl --fail-with-body --silent --show-error \
+            --url "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            --header "Authorization: Bearer $CF_API_TOKEN")"
+          test "$(printf '%s' "$response" | jq -r '.success // false')" = "true"
+          test "$(printf '%s' "$response" | jq -r '.result.status // empty')" = "active"
+          unset response
+          response="$(curl --fail-with-body --silent --show-error \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/job-grid-dpe" \
+            --header "Authorization: Bearer $CF_API_TOKEN")"
+          test "$(printf '%s' "$response" | jq -r '.success // false')" = "true"
+          test "$(printf '%s' "$response" | jq -r '.result.name // empty')" = "job-grid-dpe"
+          echo "Cloudflare token is active and the target project is job-grid-dpe in the configured account."
+          unset response
+
+      - name: Deploy to Job Grid production Pages project
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=job-grid-dpe --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify live production routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /job-types.html /vacancies.html /countries.html /country.html /for-employers.html /apply.html /staff.html; do
+            status="$(curl --location --silent --show-error --output /tmp/job-grid-response.html --write-out '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://jobs-grid.co.ke$path")"
+            if [ "$status" != "200" ]; then
+              echo "Live smoke test failed: $path returned HTTP $status"
+              exit 1
+            fi
+            echo "PASS $path HTTP $status"
+          done
+
+      - name: Verify public Supabase catalog connectivity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' > "$RUNNER_TEMP/job-grid-public-supabase.env"
+          import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './scripts/supabase-config.js';
+          console.log('SUPABASE_URL=' + SUPABASE_URL);
+          console.log('SUPABASE_PUBLISHABLE_KEY=' + SUPABASE_PUBLISHABLE_KEY);
+          NODE
+          set -a
+          source "$RUNNER_TEMP/job-grid-public-supabase.env"
+          set +a
+          for table in job_categories country_options; do
+            status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --url "$SUPABASE_URL/rest/v1/$table?select=*&limit=1" \
+              --header "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+              --header "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY")"
+            if [ "$status" != "200" ]; then
+              echo "Supabase public catalog check failed for $table: HTTP $status"
+              exit 1
+            fi
+            echo "PASS Supabase public catalog $table HTTP $status"
+          done
+          rm -f "$RUNNER_TEMP/job-grid-public-supabase.env"
