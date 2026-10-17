@@ -76,20 +76,20 @@ jobs:
             exit 1
           fi
           unset response
-          echo "Token verification passed. Checking access to Pages project job-grid-dpe..."
+          echo "Token verification passed. Checking access to Pages project job-grid..."
           if ! response="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
-            --url "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/job-grid-dpe" \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/job-grid" \
             --header "Authorization: Bearer $CF_API_TOKEN")"; then
             echo "::error::Cloudflare Pages project request failed (HTTP/network error). Check the account ID and Pages:Edit scope."
             exit 1
           fi
-          if ! printf '%s' "$response" | jq -e '.success == true and .result.name == "job-grid-dpe"' >/dev/null; then
+          if ! printf '%s' "$response" | jq -e '.success == true and .result.name == "job-grid"' >/dev/null; then
             printf '%s' "$response" | jq -r '(.errors // [])[] | "Cloudflare Pages access error: code=\(.code // "unknown") message=\(.message // "unknown")"' || true
-            echo "::error::Token verified, but Cloudflare did not authorize access to job-grid-dpe. Confirm CF_ACCOUNT_ID matches the token's account and Pages:Edit applies to that account."
+            echo "::error::Token verified, but Cloudflare did not authorize access to job-grid. Confirm CF_ACCOUNT_ID matches the token's account and Pages:Edit applies to that account."
             unset response
             exit 1
           fi
-          echo "Cloudflare token is active and the target project is job-grid-dpe in the configured account."
+          echo "Cloudflare token is active and the target project is job-grid in the configured account."
           unset response
 
       - name: Deploy to Job Grid production Pages project
@@ -97,7 +97,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=job-grid-dpe --branch=main
+          command: pages deploy dist --project-name=job-grid --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify live production routes
