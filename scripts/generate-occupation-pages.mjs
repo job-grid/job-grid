@@ -205,7 +205,7 @@ if (directoryCanonicalTags.length !== 1 || directoryCanonicalTags[0] !== `<link 
 }
 
 // Validate sitemap coverage and uniqueness, including all core pages and occupation URLs.
-const sitemapLocations = [...sitemap.matchAll(/<loc>([^<]+)<\\/loc>/g)].map((match) => match[1]);
+const sitemapLocations = [...sitemap.matchAll(new RegExp("<loc>([^<]+)</loc>", "g"))].map((match) => match[1]);
 const expectedLocations = urls.map((item) => item.loc);
 if (sitemapLocations.length !== expectedLocations.length) {
   throw new Error(`Sitemap URL count mismatch: expected ${expectedLocations.length}, found ${sitemapLocations.length}.`);
