@@ -1,0 +1,1988 @@
+{
+  "roles": [
+    [
+      "Farm Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Crop Grower",
+      "agriculture-farming"
+    ],
+    [
+      "Livestock Handler",
+      "agriculture-farming"
+    ],
+    [
+      "Irrigation Technician",
+      "agriculture-farming"
+    ],
+    [
+      "Agricultural Equipment Operator",
+      "agriculture-farming"
+    ],
+    [
+      "Harvest Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Greenhouse Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Farm Supervisor",
+      "agriculture-farming"
+    ],
+    [
+      "Agronomist",
+      "agriculture-farming"
+    ],
+    [
+      "Poultry Keeper",
+      "agriculture-farming"
+    ],
+    [
+      "Dairy Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Horticulturist",
+      "agriculture-farming"
+    ],
+    [
+      "Farm Mechanic",
+      "agriculture-farming"
+    ],
+    [
+      "Seed Technician",
+      "agriculture-farming"
+    ],
+    [
+      "Aquaculture Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Forestry Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Agricultural Inspector",
+      "agriculture-farming"
+    ],
+    [
+      "Soil Technician",
+      "agriculture-farming"
+    ],
+    [
+      "Plant Nursery Worker",
+      "agriculture-farming"
+    ],
+    [
+      "Farm Manager",
+      "agriculture-farming"
+    ],
+    [
+      "Construction Labourer",
+      "construction-building"
+    ],
+    [
+      "Bricklayer",
+      "construction-building"
+    ],
+    [
+      "Concrete Finisher",
+      "construction-building"
+    ],
+    [
+      "Carpenter",
+      "construction-building"
+    ],
+    [
+      "Scaffolder",
+      "construction-building"
+    ],
+    [
+      "Site Supervisor",
+      "construction-building"
+    ],
+    [
+      "Construction Estimator",
+      "construction-building"
+    ],
+    [
+      "Quantity Surveyor",
+      "construction-building"
+    ],
+    [
+      "Steel Fixer",
+      "construction-building"
+    ],
+    [
+      "Roofer",
+      "construction-building"
+    ],
+    [
+      "Drywall Installer",
+      "construction-building"
+    ],
+    [
+      "Tiler",
+      "construction-building"
+    ],
+    [
+      "Plasterer",
+      "construction-building"
+    ],
+    [
+      "Construction Surveyor",
+      "construction-building"
+    ],
+    [
+      "Excavator Operator",
+      "construction-building"
+    ],
+    [
+      "Crane Operator",
+      "construction-building"
+    ],
+    [
+      "Site Safety Officer",
+      "construction-building"
+    ],
+    [
+      "Building Inspector",
+      "construction-building"
+    ],
+    [
+      "Construction Project Manager",
+      "construction-building"
+    ],
+    [
+      "Formwork Carpenter",
+      "construction-building"
+    ],
+    [
+      "Electrician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Plumber",
+      "skilled-trades-repair"
+    ],
+    [
+      "Welder",
+      "skilled-trades-repair"
+    ],
+    [
+      "HVAC Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Automotive Mechanic",
+      "skilled-trades-repair"
+    ],
+    [
+      "Diesel Mechanic",
+      "skilled-trades-repair"
+    ],
+    [
+      "Appliance Repair Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Locksmith",
+      "skilled-trades-repair"
+    ],
+    [
+      "Machinist",
+      "skilled-trades-repair"
+    ],
+    [
+      "Elevator Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Electronics Repair Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Motorcycle Mechanic",
+      "skilled-trades-repair"
+    ],
+    [
+      "Pipefitter",
+      "skilled-trades-repair"
+    ],
+    [
+      "Metal Fabricator",
+      "skilled-trades-repair"
+    ],
+    [
+      "Toolmaker",
+      "skilled-trades-repair"
+    ],
+    [
+      "Refrigeration Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Solar Installer",
+      "skilled-trades-repair"
+    ],
+    [
+      "Generator Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Equipment Repair Technician",
+      "skilled-trades-repair"
+    ],
+    [
+      "Maintenance Mechanic",
+      "skilled-trades-repair"
+    ],
+    [
+      "Truck Driver",
+      "driving-transport"
+    ],
+    [
+      "Bus Driver",
+      "driving-transport"
+    ],
+    [
+      "Taxi Driver",
+      "driving-transport"
+    ],
+    [
+      "Delivery Driver",
+      "driving-transport"
+    ],
+    [
+      "Courier",
+      "driving-transport"
+    ],
+    [
+      "Chauffeur",
+      "driving-transport"
+    ],
+    [
+      "Ambulance Driver",
+      "driving-transport"
+    ],
+    [
+      "Motorcycle Rider",
+      "driving-transport"
+    ],
+    [
+      "Forklift Driver",
+      "driving-transport"
+    ],
+    [
+      "Train Driver",
+      "driving-transport"
+    ],
+    [
+      "Transport Dispatcher",
+      "driving-transport"
+    ],
+    [
+      "Fleet Coordinator",
+      "driving-transport"
+    ],
+    [
+      "Driving Instructor",
+      "driving-transport"
+    ],
+    [
+      "Vehicle Recovery Operator",
+      "driving-transport"
+    ],
+    [
+      "Shuttle Driver",
+      "driving-transport"
+    ],
+    [
+      "Heavy Haul Driver",
+      "driving-transport"
+    ],
+    [
+      "Tanker Driver",
+      "driving-transport"
+    ],
+    [
+      "Transport Planner",
+      "driving-transport"
+    ],
+    [
+      "Route Supervisor",
+      "driving-transport"
+    ],
+    [
+      "Fleet Manager",
+      "driving-transport"
+    ],
+    [
+      "Warehouse Associate",
+      "warehouse-logistics"
+    ],
+    [
+      "Picker",
+      "warehouse-logistics"
+    ],
+    [
+      "Packer",
+      "warehouse-logistics"
+    ],
+    [
+      "Forklift Operator",
+      "warehouse-logistics"
+    ],
+    [
+      "Inventory Clerk",
+      "warehouse-logistics"
+    ],
+    [
+      "Receiving Clerk",
+      "warehouse-logistics"
+    ],
+    [
+      "Shipping Clerk",
+      "warehouse-logistics"
+    ],
+    [
+      "Warehouse Supervisor",
+      "warehouse-logistics"
+    ],
+    [
+      "Logistics Coordinator",
+      "warehouse-logistics"
+    ],
+    [
+      "Dispatch Officer",
+      "warehouse-logistics"
+    ],
+    [
+      "Stock Controller",
+      "warehouse-logistics"
+    ],
+    [
+      "Freight Handler",
+      "warehouse-logistics"
+    ],
+    [
+      "Supply Chain Analyst",
+      "warehouse-logistics"
+    ],
+    [
+      "Distribution Manager",
+      "warehouse-logistics"
+    ],
+    [
+      "Cargo Handler",
+      "warehouse-logistics"
+    ],
+    [
+      "Materials Planner",
+      "warehouse-logistics"
+    ],
+    [
+      "Order Fulfillment Associate",
+      "warehouse-logistics"
+    ],
+    [
+      "Warehouse Safety Officer",
+      "warehouse-logistics"
+    ],
+    [
+      "Import Coordinator",
+      "warehouse-logistics"
+    ],
+    [
+      "Export Coordinator",
+      "warehouse-logistics"
+    ],
+    [
+      "Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Housekeeper",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Room Attendant",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Laundry Attendant",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Janitor",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Sanitation Worker",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Carpet Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Window Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Floor Technician",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Cleaning Supervisor",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Dry Cleaning Operator",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Linen Attendant",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Waste Collector",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Industrial Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Hospital Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Office Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "School Cleaner",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Deep Cleaning Technician",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Housekeeping Manager",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Pest Control Technician",
+      "cleaning-housekeeping"
+    ],
+    [
+      "Security Guard",
+      "security-safety"
+    ],
+    [
+      "Security Supervisor",
+      "security-safety"
+    ],
+    [
+      "CCTV Operator",
+      "security-safety"
+    ],
+    [
+      "Access Control Officer",
+      "security-safety"
+    ],
+    [
+      "Loss Prevention Officer",
+      "security-safety"
+    ],
+    [
+      "Safety Officer",
+      "security-safety"
+    ],
+    [
+      "Fire Safety Officer",
+      "security-safety"
+    ],
+    [
+      "Emergency Response Officer",
+      "security-safety"
+    ],
+    [
+      "Security Dispatcher",
+      "security-safety"
+    ],
+    [
+      "Security Systems Technician",
+      "security-safety"
+    ],
+    [
+      "Event Security Officer",
+      "security-safety"
+    ],
+    [
+      "Patrol Officer",
+      "security-safety"
+    ],
+    [
+      "Risk Assessor",
+      "security-safety"
+    ],
+    [
+      "Security Manager",
+      "security-safety"
+    ],
+    [
+      "Firefighter",
+      "security-safety"
+    ],
+    [
+      "Lifeguard",
+      "security-safety"
+    ],
+    [
+      "Occupational Safety Technician",
+      "security-safety"
+    ],
+    [
+      "Incident Investigator",
+      "security-safety"
+    ],
+    [
+      "Security Trainer",
+      "security-safety"
+    ],
+    [
+      "Safety Inspector",
+      "security-safety"
+    ],
+    [
+      "Hotel Receptionist",
+      "hospitality-tourism"
+    ],
+    [
+      "Front Desk Agent",
+      "hospitality-tourism"
+    ],
+    [
+      "Concierge",
+      "hospitality-tourism"
+    ],
+    [
+      "Guest Relations Officer",
+      "hospitality-tourism"
+    ],
+    [
+      "Hotel Manager",
+      "hospitality-tourism"
+    ],
+    [
+      "Tour Guide",
+      "hospitality-tourism"
+    ],
+    [
+      "Travel Consultant",
+      "hospitality-tourism"
+    ],
+    [
+      "Reservations Agent",
+      "hospitality-tourism"
+    ],
+    [
+      "Housekeeping Supervisor",
+      "hospitality-tourism"
+    ],
+    [
+      "Bell Attendant",
+      "hospitality-tourism"
+    ],
+    [
+      "Porter",
+      "hospitality-tourism"
+    ],
+    [
+      "Tour Operator",
+      "hospitality-tourism"
+    ],
+    [
+      "Travel Coordinator",
+      "hospitality-tourism"
+    ],
+    [
+      "Resort Manager",
+      "hospitality-tourism"
+    ],
+    [
+      "Hotel Revenue Analyst",
+      "hospitality-tourism"
+    ],
+    [
+      "Events Coordinator",
+      "hospitality-tourism"
+    ],
+    [
+      "Guest Services Manager",
+      "hospitality-tourism"
+    ],
+    [
+      "Cruise Attendant",
+      "hospitality-tourism"
+    ],
+    [
+      "Tourism Marketing Officer",
+      "hospitality-tourism"
+    ],
+    [
+      "Accommodation Manager",
+      "hospitality-tourism"
+    ],
+    [
+      "Chef",
+      "food-service-catering"
+    ],
+    [
+      "Cook",
+      "food-service-catering"
+    ],
+    [
+      "Kitchen Assistant",
+      "food-service-catering"
+    ],
+    [
+      "Waiter",
+      "food-service-catering"
+    ],
+    [
+      "Waitress",
+      "food-service-catering"
+    ],
+    [
+      "Bartender",
+      "food-service-catering"
+    ],
+    [
+      "Barista",
+      "food-service-catering"
+    ],
+    [
+      "Baker",
+      "food-service-catering"
+    ],
+    [
+      "Pastry Chef",
+      "food-service-catering"
+    ],
+    [
+      "Catering Assistant",
+      "food-service-catering"
+    ],
+    [
+      "Catering Manager",
+      "food-service-catering"
+    ],
+    [
+      "Restaurant Manager",
+      "food-service-catering"
+    ],
+    [
+      "Food Runner",
+      "food-service-catering"
+    ],
+    [
+      "Dishwasher",
+      "food-service-catering"
+    ],
+    [
+      "Food Safety Officer",
+      "food-service-catering"
+    ],
+    [
+      "Banquet Server",
+      "food-service-catering"
+    ],
+    [
+      "Kitchen Supervisor",
+      "food-service-catering"
+    ],
+    [
+      "Butcher",
+      "food-service-catering"
+    ],
+    [
+      "Food Preparation Worker",
+      "food-service-catering"
+    ],
+    [
+      "Restaurant Host",
+      "food-service-catering"
+    ],
+    [
+      "Sales Associate",
+      "retail-sales"
+    ],
+    [
+      "Cashier",
+      "retail-sales"
+    ],
+    [
+      "Store Manager",
+      "retail-sales"
+    ],
+    [
+      "Retail Supervisor",
+      "retail-sales"
+    ],
+    [
+      "Merchandiser",
+      "retail-sales"
+    ],
+    [
+      "Sales Representative",
+      "retail-sales"
+    ],
+    [
+      "Account Executive",
+      "retail-sales"
+    ],
+    [
+      "Storekeeper",
+      "retail-sales"
+    ],
+    [
+      "Visual Merchandiser",
+      "retail-sales"
+    ],
+    [
+      "Retail Buyer",
+      "retail-sales"
+    ],
+    [
+      "Sales Manager",
+      "retail-sales"
+    ],
+    [
+      "Promoter",
+      "retail-sales"
+    ],
+    [
+      "Shop Assistant",
+      "retail-sales"
+    ],
+    [
+      "Wholesale Sales Agent",
+      "retail-sales"
+    ],
+    [
+      "Ecommerce Sales Associate",
+      "retail-sales"
+    ],
+    [
+      "Retail Inventory Clerk",
+      "retail-sales"
+    ],
+    [
+      "Sales Coordinator",
+      "retail-sales"
+    ],
+    [
+      "Showroom Consultant",
+      "retail-sales"
+    ],
+    [
+      "Territory Sales Representative",
+      "retail-sales"
+    ],
+    [
+      "Sales Trainer",
+      "retail-sales"
+    ],
+    [
+      "Customer Support Agent",
+      "customer-service"
+    ],
+    [
+      "Call Centre Agent",
+      "customer-service"
+    ],
+    [
+      "Help Desk Representative",
+      "customer-service"
+    ],
+    [
+      "Customer Success Manager",
+      "customer-service"
+    ],
+    [
+      "Customer Service Supervisor",
+      "customer-service"
+    ],
+    [
+      "Client Relations Officer",
+      "customer-service"
+    ],
+    [
+      "Complaints Officer",
+      "customer-service"
+    ],
+    [
+      "Contact Centre Manager",
+      "customer-service"
+    ],
+    [
+      "Customer Experience Analyst",
+      "customer-service"
+    ],
+    [
+      "Chat Support Agent",
+      "customer-service"
+    ],
+    [
+      "Email Support Agent",
+      "customer-service"
+    ],
+    [
+      "Technical Support Agent",
+      "customer-service"
+    ],
+    [
+      "Service Desk Agent",
+      "customer-service"
+    ],
+    [
+      "Customer Onboarding Specialist",
+      "customer-service"
+    ],
+    [
+      "Customer Retention Agent",
+      "customer-service"
+    ],
+    [
+      "Support Quality Analyst",
+      "customer-service"
+    ],
+    [
+      "Customer Care Officer",
+      "customer-service"
+    ],
+    [
+      "Service Coordinator",
+      "customer-service"
+    ],
+    [
+      "Client Support Specialist",
+      "customer-service"
+    ],
+    [
+      "Customer Service Trainer",
+      "customer-service"
+    ],
+    [
+      "General Labourer",
+      "general-labour"
+    ],
+    [
+      "Handyman",
+      "general-labour"
+    ],
+    [
+      "Loading Worker",
+      "general-labour"
+    ],
+    [
+      "Unloading Worker",
+      "general-labour"
+    ],
+    [
+      "Grounds Worker",
+      "general-labour"
+    ],
+    [
+      "Site Helper",
+      "general-labour"
+    ],
+    [
+      "Utility Worker",
+      "general-labour"
+    ],
+    [
+      "Material Handler",
+      "general-labour"
+    ],
+    [
+      "Moving Assistant",
+      "general-labour"
+    ],
+    [
+      "Road Crew Worker",
+      "general-labour"
+    ],
+    [
+      "Demolition Helper",
+      "general-labour"
+    ],
+    [
+      "Packing Helper",
+      "general-labour"
+    ],
+    [
+      "Assembly Helper",
+      "general-labour"
+    ],
+    [
+      "Landscape Labourer",
+      "general-labour"
+    ],
+    [
+      "Event Setup Worker",
+      "general-labour"
+    ],
+    [
+      "Waste Sorting Worker",
+      "general-labour"
+    ],
+    [
+      "Public Works Labourer",
+      "general-labour"
+    ],
+    [
+      "Port Labourer",
+      "general-labour"
+    ],
+    [
+      "Maintenance Helper",
+      "general-labour"
+    ],
+    [
+      "General Worker Supervisor",
+      "general-labour"
+    ],
+    [
+      "Production Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Assembly Line Worker",
+      "manufacturing-factory"
+    ],
+    [
+      "Machine Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Factory Supervisor",
+      "manufacturing-factory"
+    ],
+    [
+      "Quality Inspector",
+      "manufacturing-factory"
+    ],
+    [
+      "Production Planner",
+      "manufacturing-factory"
+    ],
+    [
+      "Packaging Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "CNC Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Process Technician",
+      "manufacturing-factory"
+    ],
+    [
+      "Manufacturing Engineer",
+      "manufacturing-factory"
+    ],
+    [
+      "Factory Maintenance Technician",
+      "manufacturing-factory"
+    ],
+    [
+      "Production Manager",
+      "manufacturing-factory"
+    ],
+    [
+      "Industrial Sewing Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Injection Molding Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Printing Press Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Food Processing Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Textile Machine Operator",
+      "manufacturing-factory"
+    ],
+    [
+      "Assembly Technician",
+      "manufacturing-factory"
+    ],
+    [
+      "Quality Assurance Technician",
+      "manufacturing-factory"
+    ],
+    [
+      "Production Scheduler",
+      "manufacturing-factory"
+    ],
+    [
+      "Domestic Worker",
+      "domestic-household-work"
+    ],
+    [
+      "Nanny",
+      "domestic-household-work"
+    ],
+    [
+      "Babysitter",
+      "domestic-household-work"
+    ],
+    [
+      "Home Cook",
+      "domestic-household-work"
+    ],
+    [
+      "Household Driver",
+      "domestic-household-work"
+    ],
+    [
+      "Household Manager",
+      "domestic-household-work"
+    ],
+    [
+      "Gardener",
+      "domestic-household-work"
+    ],
+    [
+      "Elder Companion",
+      "domestic-household-work"
+    ],
+    [
+      "Laundry Worker",
+      "domestic-household-work"
+    ],
+    [
+      "Domestic Cleaner",
+      "domestic-household-work"
+    ],
+    [
+      "Home Tutor",
+      "domestic-household-work"
+    ],
+    [
+      "Pet Caregiver",
+      "domestic-household-work"
+    ],
+    [
+      "Home Maintenance Worker",
+      "domestic-household-work"
+    ],
+    [
+      "Household Caretaker",
+      "domestic-household-work"
+    ],
+    [
+      "Household Security Guard",
+      "domestic-household-work"
+    ],
+    [
+      "Family Assistant",
+      "domestic-household-work"
+    ],
+    [
+      "Home Organizer",
+      "domestic-household-work"
+    ],
+    [
+      "Domestic Services Supervisor",
+      "domestic-household-work"
+    ],
+    [
+      "Registered Nurse",
+      "health-care-caregiving"
+    ],
+    [
+      "Nursing Assistant",
+      "health-care-caregiving"
+    ],
+    [
+      "Caregiver",
+      "health-care-caregiving"
+    ],
+    [
+      "Home Health Aide",
+      "health-care-caregiving"
+    ],
+    [
+      "Physician",
+      "health-care-caregiving"
+    ],
+    [
+      "Medical Assistant",
+      "health-care-caregiving"
+    ],
+    [
+      "Pharmacist",
+      "health-care-caregiving"
+    ],
+    [
+      "Physiotherapist",
+      "health-care-caregiving"
+    ],
+    [
+      "Occupational Therapist",
+      "health-care-caregiving"
+    ],
+    [
+      "Medical Laboratory Technician",
+      "health-care-caregiving"
+    ],
+    [
+      "Radiographer",
+      "health-care-caregiving"
+    ],
+    [
+      "Dentist",
+      "health-care-caregiving"
+    ],
+    [
+      "Dental Assistant",
+      "health-care-caregiving"
+    ],
+    [
+      "Midwife",
+      "health-care-caregiving"
+    ],
+    [
+      "Paramedic",
+      "health-care-caregiving"
+    ],
+    [
+      "Healthcare Administrator",
+      "health-care-caregiving"
+    ],
+    [
+      "Patient Care Technician",
+      "health-care-caregiving"
+    ],
+    [
+      "Dietitian",
+      "health-care-caregiving"
+    ],
+    [
+      "Mental Health Counselor",
+      "health-care-caregiving"
+    ],
+    [
+      "Community Health Worker",
+      "health-care-caregiving"
+    ],
+    [
+      "Teacher",
+      "education-training"
+    ],
+    [
+      "Teaching Assistant",
+      "education-training"
+    ],
+    [
+      "Tutor",
+      "education-training"
+    ],
+    [
+      "Lecturer",
+      "education-training"
+    ],
+    [
+      "School Administrator",
+      "education-training"
+    ],
+    [
+      "Curriculum Developer",
+      "education-training"
+    ],
+    [
+      "Education Coordinator",
+      "education-training"
+    ],
+    [
+      "Special Education Teacher",
+      "education-training"
+    ],
+    [
+      "Language Instructor",
+      "education-training"
+    ],
+    [
+      "Vocational Trainer",
+      "education-training"
+    ],
+    [
+      "Early Childhood Educator",
+      "education-training"
+    ],
+    [
+      "Academic Advisor",
+      "education-training"
+    ],
+    [
+      "Instructional Designer",
+      "education-training"
+    ],
+    [
+      "Education Researcher",
+      "education-training"
+    ],
+    [
+      "School Counselor",
+      "education-training"
+    ],
+    [
+      "Librarian",
+      "education-training"
+    ],
+    [
+      "Training Manager",
+      "education-training"
+    ],
+    [
+      "Learning Support Assistant",
+      "education-training"
+    ],
+    [
+      "Examination Officer",
+      "education-training"
+    ],
+    [
+      "Education Program Manager",
+      "education-training"
+    ],
+    [
+      "Administrative Assistant",
+      "office-administration"
+    ],
+    [
+      "Office Manager",
+      "office-administration"
+    ],
+    [
+      "Receptionist",
+      "office-administration"
+    ],
+    [
+      "Executive Assistant",
+      "office-administration"
+    ],
+    [
+      "Data Entry Clerk",
+      "office-administration"
+    ],
+    [
+      "Records Officer",
+      "office-administration"
+    ],
+    [
+      "Office Clerk",
+      "office-administration"
+    ],
+    [
+      "Secretary",
+      "office-administration"
+    ],
+    [
+      "Document Controller",
+      "office-administration"
+    ],
+    [
+      "Administrative Coordinator",
+      "office-administration"
+    ],
+    [
+      "Personal Assistant",
+      "office-administration"
+    ],
+    [
+      "Office Supervisor",
+      "office-administration"
+    ],
+    [
+      "Scheduling Coordinator",
+      "office-administration"
+    ],
+    [
+      "Operations Administrator",
+      "office-administration"
+    ],
+    [
+      "Facilities Administrator",
+      "office-administration"
+    ],
+    [
+      "Compliance Administrator",
+      "office-administration"
+    ],
+    [
+      "Mailroom Clerk",
+      "office-administration"
+    ],
+    [
+      "Front Office Officer",
+      "office-administration"
+    ],
+    [
+      "Office Services Manager",
+      "office-administration"
+    ],
+    [
+      "Business Support Officer",
+      "office-administration"
+    ],
+    [
+      "Software Developer",
+      "it-technology"
+    ],
+    [
+      "Frontend Developer",
+      "it-technology"
+    ],
+    [
+      "Backend Developer",
+      "it-technology"
+    ],
+    [
+      "Full Stack Developer",
+      "it-technology"
+    ],
+    [
+      "IT Support Technician",
+      "it-technology"
+    ],
+    [
+      "Systems Administrator",
+      "it-technology"
+    ],
+    [
+      "Network Engineer",
+      "it-technology"
+    ],
+    [
+      "Cybersecurity Analyst",
+      "it-technology"
+    ],
+    [
+      "Data Analyst",
+      "it-technology"
+    ],
+    [
+      "Data Engineer",
+      "it-technology"
+    ],
+    [
+      "Database Administrator",
+      "it-technology"
+    ],
+    [
+      "Cloud Engineer",
+      "it-technology"
+    ],
+    [
+      "DevOps Engineer",
+      "it-technology"
+    ],
+    [
+      "QA Tester",
+      "it-technology"
+    ],
+    [
+      "UX Designer",
+      "it-technology"
+    ],
+    [
+      "Product Manager",
+      "it-technology"
+    ],
+    [
+      "IT Project Manager",
+      "it-technology"
+    ],
+    [
+      "AI Engineer",
+      "it-technology"
+    ],
+    [
+      "Mobile App Developer",
+      "it-technology"
+    ],
+    [
+      "Solutions Architect",
+      "it-technology"
+    ],
+    [
+      "Accountant",
+      "finance-accounting"
+    ],
+    [
+      "Bookkeeper",
+      "finance-accounting"
+    ],
+    [
+      "Auditor",
+      "finance-accounting"
+    ],
+    [
+      "Financial Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Payroll Officer",
+      "finance-accounting"
+    ],
+    [
+      "Tax Consultant",
+      "finance-accounting"
+    ],
+    [
+      "Accounts Payable Clerk",
+      "finance-accounting"
+    ],
+    [
+      "Accounts Receivable Clerk",
+      "finance-accounting"
+    ],
+    [
+      "Finance Manager",
+      "finance-accounting"
+    ],
+    [
+      "Treasury Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Credit Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Budget Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Cost Accountant",
+      "finance-accounting"
+    ],
+    [
+      "Financial Controller",
+      "finance-accounting"
+    ],
+    [
+      "Investment Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Risk Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Bank Teller",
+      "finance-accounting"
+    ],
+    [
+      "Loan Officer",
+      "finance-accounting"
+    ],
+    [
+      "Compliance Analyst",
+      "finance-accounting"
+    ],
+    [
+      "Financial Planning Advisor",
+      "finance-accounting"
+    ],
+    [
+      "Civil Engineer",
+      "engineering"
+    ],
+    [
+      "Mechanical Engineer",
+      "engineering"
+    ],
+    [
+      "Electrical Engineer",
+      "engineering"
+    ],
+    [
+      "Structural Engineer",
+      "engineering"
+    ],
+    [
+      "Chemical Engineer",
+      "engineering"
+    ],
+    [
+      "Industrial Engineer",
+      "engineering"
+    ],
+    [
+      "Environmental Engineer",
+      "engineering"
+    ],
+    [
+      "Biomedical Engineer",
+      "engineering"
+    ],
+    [
+      "Petroleum Engineer",
+      "engineering"
+    ],
+    [
+      "Mining Engineer",
+      "engineering"
+    ],
+    [
+      "Geotechnical Engineer",
+      "engineering"
+    ],
+    [
+      "Aerospace Engineer",
+      "engineering"
+    ],
+    [
+      "Marine Engineer",
+      "engineering"
+    ],
+    [
+      "Automotive Engineer",
+      "engineering"
+    ],
+    [
+      "Systems Engineer",
+      "engineering"
+    ],
+    [
+      "Controls Engineer",
+      "engineering"
+    ],
+    [
+      "Materials Engineer",
+      "engineering"
+    ],
+    [
+      "Process Engineer",
+      "engineering"
+    ],
+    [
+      "Energy Engineer",
+      "engineering"
+    ],
+    [
+      "Engineering Technician",
+      "engineering"
+    ],
+    [
+      "Hairdresser",
+      "beauty-personal-care"
+    ],
+    [
+      "Barber",
+      "beauty-personal-care"
+    ],
+    [
+      "Nail Technician",
+      "beauty-personal-care"
+    ],
+    [
+      "Makeup Artist",
+      "beauty-personal-care"
+    ],
+    [
+      "Esthetician",
+      "beauty-personal-care"
+    ],
+    [
+      "Massage Therapist",
+      "beauty-personal-care"
+    ],
+    [
+      "Spa Therapist",
+      "beauty-personal-care"
+    ],
+    [
+      "Beauty Consultant",
+      "beauty-personal-care"
+    ],
+    [
+      "Salon Manager",
+      "beauty-personal-care"
+    ],
+    [
+      "Cosmetologist",
+      "beauty-personal-care"
+    ],
+    [
+      "Skin Care Specialist",
+      "beauty-personal-care"
+    ],
+    [
+      "Lash Technician",
+      "beauty-personal-care"
+    ],
+    [
+      "Brow Technician",
+      "beauty-personal-care"
+    ],
+    [
+      "Waxing Specialist",
+      "beauty-personal-care"
+    ],
+    [
+      "Beauty Trainer",
+      "beauty-personal-care"
+    ],
+    [
+      "Spa Receptionist",
+      "beauty-personal-care"
+    ],
+    [
+      "Hair Colorist",
+      "beauty-personal-care"
+    ],
+    [
+      "Bridal Stylist",
+      "beauty-personal-care"
+    ],
+    [
+      "Personal Grooming Consultant",
+      "beauty-personal-care"
+    ],
+    [
+      "Salon Assistant",
+      "beauty-personal-care"
+    ],
+    [
+      "Facilities Manager",
+      "maintenance-facilities"
+    ],
+    [
+      "Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Building Maintenance Worker",
+      "maintenance-facilities"
+    ],
+    [
+      "HVAC Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Electrical Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Plumbing Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Groundskeeper",
+      "maintenance-facilities"
+    ],
+    [
+      "Facilities Coordinator",
+      "maintenance-facilities"
+    ],
+    [
+      "Property Maintenance Supervisor",
+      "maintenance-facilities"
+    ],
+    [
+      "Building Systems Operator",
+      "maintenance-facilities"
+    ],
+    [
+      "Boiler Operator",
+      "maintenance-facilities"
+    ],
+    [
+      "Fire Systems Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Elevator Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Pool Maintenance Technician",
+      "maintenance-facilities"
+    ],
+    [
+      "Water Treatment Operator",
+      "maintenance-facilities"
+    ],
+    [
+      "Waste Management Coordinator",
+      "maintenance-facilities"
+    ],
+    [
+      "Maintenance Planner",
+      "maintenance-facilities"
+    ],
+    [
+      "Facilities Inspector",
+      "maintenance-facilities"
+    ],
+    [
+      "Maintenance Manager",
+      "maintenance-facilities"
+    ],
+    [
+      "Marketing Manager",
+      "marketing-communications"
+    ],
+    [
+      "Digital Marketer",
+      "marketing-communications"
+    ],
+    [
+      "SEO Specialist",
+      "marketing-communications"
+    ],
+    [
+      "Content Writer",
+      "marketing-communications"
+    ],
+    [
+      "Copywriter",
+      "marketing-communications"
+    ],
+    [
+      "Social Media Manager",
+      "marketing-communications"
+    ],
+    [
+      "Public Relations Officer",
+      "marketing-communications"
+    ],
+    [
+      "Communications Specialist",
+      "marketing-communications"
+    ],
+    [
+      "Brand Manager",
+      "marketing-communications"
+    ],
+    [
+      "Market Research Analyst",
+      "marketing-communications"
+    ],
+    [
+      "Email Marketing Specialist",
+      "marketing-communications"
+    ],
+    [
+      "Advertising Executive",
+      "marketing-communications"
+    ],
+    [
+      "Media Planner",
+      "marketing-communications"
+    ],
+    [
+      "Graphic Designer",
+      "marketing-communications"
+    ],
+    [
+      "Campaign Manager",
+      "marketing-communications"
+    ],
+    [
+      "Community Manager",
+      "marketing-communications"
+    ],
+    [
+      "Events Marketer",
+      "marketing-communications"
+    ],
+    [
+      "Product Marketing Manager",
+      "marketing-communications"
+    ],
+    [
+      "Communications Coordinator",
+      "marketing-communications"
+    ],
+    [
+      "Marketing Analyst",
+      "marketing-communications"
+    ],
+    [
+      "Lawyer",
+      "professional-services"
+    ],
+    [
+      "Legal Assistant",
+      "professional-services"
+    ],
+    [
+      "Paralegal",
+      "professional-services"
+    ],
+    [
+      "Management Consultant",
+      "professional-services"
+    ],
+    [
+      "Business Analyst",
+      "professional-services"
+    ],
+    [
+      "Recruitment Consultant",
+      "professional-services"
+    ],
+    [
+      "HR Consultant",
+      "professional-services"
+    ],
+    [
+      "Architect",
+      "professional-services"
+    ],
+    [
+      "Urban Planner",
+      "professional-services"
+    ],
+    [
+      "Research Consultant",
+      "professional-services"
+    ],
+    [
+      "Policy Analyst",
+      "professional-services"
+    ],
+    [
+      "Translator",
+      "professional-services"
+    ],
+    [
+      "Interpreter",
+      "professional-services"
+    ],
+    [
+      "Project Consultant",
+      "professional-services"
+    ],
+    [
+      "Compliance Consultant",
+      "professional-services"
+    ],
+    [
+      "Procurement Consultant",
+      "professional-services"
+    ],
+    [
+      "Business Development Consultant",
+      "professional-services"
+    ],
+    [
+      "Insurance Broker",
+      "professional-services"
+    ],
+    [
+      "Real Estate Agent",
+      "professional-services"
+    ],
+    [
+      "Professional Trainer",
+      "professional-services"
+    ],
+    [
+      "Photographer",
+      "other"
+    ],
+    [
+      "Videographer",
+      "other"
+    ],
+    [
+      "Artist",
+      "other"
+    ],
+    [
+      "Musician",
+      "other"
+    ],
+    [
+      "Writer",
+      "other"
+    ],
+    [
+      "Editor",
+      "other"
+    ],
+    [
+      "Animator",
+      "other"
+    ],
+    [
+      "Sound Technician",
+      "other"
+    ],
+    [
+      "Event Planner",
+      "other"
+    ],
+    [
+      "Sports Coach",
+      "other"
+    ],
+    [
+      "Fitness Instructor",
+      "other"
+    ],
+    [
+      "Research Assistant",
+      "other"
+    ],
+    [
+      "Community Organizer",
+      "other"
+    ],
+    [
+      "Nonprofit Coordinator",
+      "other"
+    ],
+    [
+      "Animal Care Worker",
+      "other"
+    ],
+    [
+      "Pet Groomer",
+      "other"
+    ],
+    [
+      "Florist",
+      "other"
+    ],
+    [
+      "Tailor",
+      "other"
+    ],
+    [
+      "Craftsperson",
+      "other"
+    ]
+  ]
+}
