@@ -56,12 +56,14 @@ if (!Array.isArray(data.roles)) throw new Error("job-types.json must contain a r
 const seen = new Set();
 const roles = [];
 for (const row of data.roles) {
-  if (!Array.isArray(row) || row.length !== 2) throw new Error("Invalid job type row: expected [title, categorySlug].");
+  if (!Array.isArray(row) || (row.length !== 2 && row.length !== 3)) {
+    throw new Error("Invalid job type row: expected [title, categorySlug] or [title, categorySlug, canonicalSlug].");
+  }
   const title = typeof row[0] === "string" ? row[0].trim() : "";
   const categorySlug = typeof row[1] === "string" ? row[1].trim() : "";
   if (!title || !categoryNames.has(categorySlug)) throw new Error(`Invalid occupation title or category: ${JSON.stringify(row)}`);
-  const slug = slugify(title);
-  if (!slug) throw new Error(`Could not create a URL slug for: ${title}`);
+  const slug = typeof row[2] === "string" && row[2].trim() ? row[2].trim() : slugify(title);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error(`Invalid canonical URL slug "${slug}" for: ${title}`);
   if (seen.has(slug)) throw new Error(`Duplicate occupation URL slug "${slug}". Resolve the title/slug collision before publishing.`);
   seen.add(slug);
   roles.push({ title, categorySlug, categoryName: categoryNames.get(categorySlug), slug });
