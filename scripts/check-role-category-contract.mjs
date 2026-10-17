@@ -18,14 +18,14 @@ assert.deepEqual(
   [...categories.map((category) => category.sortOrder)].sort((a, b) => a - b),
   "category query must preserve the website's sort order",
 );
-assert.equal(roleData.roles.length, 496, "static starter role list row count changed unexpectedly");
+assert.equal(roleData.roles.length, 9044, "public occupation catalogue row count changed unexpectedly");
 assert.equal(
   new Set(roleData.roles.map(([title]) => title.normalize("NFKC").trim().toLocaleLowerCase())).size,
   roleData.roles.length,
-  "starter role titles must remain distinct",
+  "public occupation titles must remain distinct",
 );
 const categorySlugs = new Set(categories.map((category) => category.slug));
-const unmapped = roleData.roles.filter((row) => !Array.isArray(row) || row.length !== 2 || !categorySlugs.has(row[1]));
+const unmapped = roleData.roles.filter((row) => !Array.isArray(row) || row.length !== 3 || !categorySlugs.has(row[1]) || typeof row[2] !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row[2]));
 assert.deepEqual(unmapped, [], "all visible starter titles must map to an existing database category slug");
 assert.equal(Object.hasOwn(roleData, "categories"), false, "static file must not duplicate database categories");
-console.log("PASS: website category contract — 25 live database categories, 496 unique starter titles, 0 unmapped slugs");
+console.log("PASS: website category contract — 25 live database categories, 9,044 unique public occupation titles, 0 unmapped slugs");
