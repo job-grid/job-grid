@@ -179,6 +179,13 @@ for (const role of roles) {
   </main>
 </body>
 </html>`;
+  const canonicalTags = html.match(/<link rel="canonical" href="[^"]+">/g) ?? [];
+  if (canonicalTags.length !== 1 || canonicalTags[0] !== `<link rel="canonical" href="${canonical}">`) {
+    throw new Error(`Expected exactly one correct canonical URL for ${role.title}.`);
+  }
+  if (!html.includes(`<a href="/job-types/">Job type directory</a>`)) {
+    throw new Error(`Occupation page is missing its directory link: ${role.slug}`);
+  }
   await writeFile(path.join(dir, "index.html"), html, "utf8");
 }
 
@@ -186,4 +193,31 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 await writeFile(path.join(outputRoot, "sitemap.xml"), sitemap, "utf8");
 await writeFile(path.join(outputRoot, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${siteRoot}/sitemap.xml\n`, "utf8");
 
-console.log(`Generated ${roles.length} indexable occupation pages and sitemap URLs.`);
+// Fail the build unless the directory links to every occupation exactly once.
+for (const role of roles) {
+  const link = `<li><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}</a></li>`;
+  const linkCount = directoryHtml.split(link).length - 1;
+  if (linkCount !== 1) throw new Error(`Directory must link to ${role.slug} exactly once; found ${linkCount}.`);
+}
+const directoryCanonicalTags = directoryHtml.match(/<link rel="canonical" href="[^"]+">/g) ?? [];
+if (directoryCanonicalTags.length !== 1 || directoryCanonicalTags[0] !== `<link rel="canonical" href="${directoryCanonical}">`) {
+  throw new Error("Occupation directory must have exactly one correct canonical URL.");
+}
+
+// Validate sitemap coverage and uniqueness, including all core pages and occupation URLs.
+const sitemapLocations = [...sitemap.matchAll(/<loc>([^<]+)<\\/loc>/g)].map((match) => match[1]);
+const expectedLocations = urls.map((item) => item.loc);
+if (sitemapLocations.length !== expectedLocations.length) {
+  throw new Error(`Sitemap URL count mismatch: expected ${expectedLocations.length}, found ${sitemapLocations.length}.`);
+}
+if (new Set(sitemapLocations).size !== sitemapLocations.length) {
+  throw new Error("Sitemap contains duplicate canonical URLs.");
+}
+for (const expectedUrl of expectedLocations) {
+  if (!sitemapLocations.includes(expectedUrl)) throw new Error(`Sitemap is missing required URL: ${expectedUrl}`);
+}
+if (!corePaths.every((route) => sitemapLocations.includes(`${siteRoot}${route}`))) {
+  throw new Error("Sitemap is missing one or more required core pages.");
+}
+
+console.log(`Validated ${roles.length} occupation pages, directory links, unique canonical URLs, and ${sitemapLocations.length} sitemap URLs.`);
