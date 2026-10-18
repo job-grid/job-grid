@@ -69,7 +69,8 @@ begin
     raise exception 'Source verification evidence for a published vacancy is immutable; close the vacancy before changing it'
       using errcode = '23514';
   end if;
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
 end;
 $$;
 drop trigger if exists staff_source_evidence_immutable_when_published on public.staff_job_source_verifications;
