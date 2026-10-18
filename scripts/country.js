@@ -44,8 +44,8 @@ async function init() {
     title.textContent = "Jobs in " + country.name;
     document.title = "Jobs in " + country.name + " — Job Grid";
     description.textContent = "Explore currently published Job Grid vacancies in " + country.name + ". Listings below are filtered to this country.";
-    status.textContent = published.length + " published vacancy" + (published.length === 1 ? "" : " vacancies") + " in " + country.name + ".";
-    results.innerHTML = published.length ? published.map((job) => card(job, country.name)).join("") : '<p class="vacancy-empty">There are no published vacancies in ' + escapeHtml(country.name) + ' yet. This country page is connected and ready to show genuine listings when authorized administrators publish them. You can <a href="/vacancies.html?country=' + encodeURIComponent(code) + '">check the country filter</a> or <a href="/countries.html">choose another country</a>.</p>';
+    status.textContent = published.length + " published " + (published.length === 1 ? "vacancy" : "vacancies") + " in " + country.name + ".";
+    results.innerHTML = published.length ? published.map((job) => card(job, country.name)).join("") : '<section class="vacancy-empty"><h2>No published vacancies in ' + escapeHtml(country.name) + ' yet</h2><p>We only display genuine vacancies approved for publication. You can still explore occupations and search for opportunities in this destination.</p><p><a class="button button-primary button-small" href="/vacancies.html?country=' + encodeURIComponent(code) + '">Search jobs in ' + escapeHtml(country.name) + '</a> <a class="button button-secondary button-small" href="/job-types/">Explore all job types</a> <a class="button button-secondary button-small" href="/countries.html">Choose another country</a></p></section>';
     results.setAttribute("aria-busy", "false");
   } catch (error) {
     title.textContent = "Jobs by country";
