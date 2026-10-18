@@ -88,22 +88,17 @@ Deno.serve(async (req) => {
       is_featured: body.is_featured === true, status: "draft", published_at: null, expires_at: null,
     };
     if (payload.application_url && !payload.application_url.startsWith("https://")) return json(422, { error: "Application URL must use HTTPS." });
-    let saved;
-    if (id && /^[0-9a-f-]{36}$/i.test(id)) {
-      const { data, error } = await admin.from("jobs").update(payload).eq("id", id).eq("status", "draft").select("id,slug,status").maybeSingle();
-      if (error) return json(422, { error: "Could not save draft. Check the slug is unique and the selected category and country are valid." });
-      if (!data) return json(404, { error: "Draft not found. Only drafts can be edited." });
-      saved = data;
-    } else {
-      const { data, error } = await admin.from("jobs").insert(payload).select("id,slug,status").single();
-      if (error || !data) return json(422, { error: "Could not create draft. Check the slug is unique and the selected category and country are valid." });
-      saved = data;
+    const { data: saved, error: saveError } = await admin.rpc("staff_vacancy_save_draft", {
+      p_actor_id: userId,
+      p_job_id: id && /^[0-9a-f-]{36}$/i.test(id) ? id : null,
+      p_payload: payload,
+      p_source_reference: source,
+    });
+    if (saveError) {
+      const status = saveError.code === "23514" ? 409 : saveError.code === "22023" ? 422 : 503;
+      return json(status, { error: saveError.message || "Draft, source evidence and audit record could not be saved atomically." });
     }
-    const { error: evidenceError } = await admin.from("staff_job_source_verifications").upsert({ job_id: saved.id, source_reference: source, verification_status: "unverified", checked_at: null, checked_by: null, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
-    if (evidenceError) return json(503, { error: "Draft was saved, but private source evidence could not be reset. Do not verify or publish until an administrator resolves this." });
-    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_draft_saved", entity_type: "job", entity_id: saved.id, details: { slug: saved.slug } });
-    if (auditError) return json(503, { error: "Draft was saved, but the audit record failed. Stop further actions and report this to the system administrator." });
-    return json(200, { job: saved, message: "Draft saved. It is not visible to candidates." });
+    return json(200, { job: saved, message: "Draft and private source evidence saved atomically; vacancy remains unpublished." });
   }
 
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(422, { error: "Choose a valid vacancy first." });
