@@ -107,7 +107,7 @@ const directorySections = [...groupedRoles.entries()]
   .map(([slug, items]) => `<section class="occupation-category" data-category="${escapeHtml(slug)}"><div class="occupation-category-heading"><h2>${escapeHtml(categoryNames.get(slug))}</h2><span>${items.length} occupations</span></div><ul class="occupation-grid">${items
     .map((role) => `<li data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}<span aria-hidden="true">↗</span></a></li>`)
     .join("")}</ul></section>`)
-  .join("\\n");
+  .join("\n");
 const directoryHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -145,7 +145,7 @@ const directoryHtml = `<!doctype html>
     .occupation-directory-intro{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:1.25rem}
     .occupation-directory-intro h2{font-size:1.7rem;margin:0}
     .occupation-directory-intro p{max-width:560px;margin:0;font-size:.92rem}
-    .occupation-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem;align-items:start}
+    .occupation-categories{display:grid;grid-template-columns:minmax(0,1fr);gap:1.25rem;align-items:start}
     .occupation-category{min-width:0;padding:1.4rem;border:1px solid var(--occupation-border);border-radius:18px;background:#fff;box-shadow:0 6px 22px rgba(18,40,91,.035)}
     .occupation-category[hidden],.occupation-grid li[hidden]{display:none!important}
     .occupation-category-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding-bottom:.9rem;border-bottom:1px solid #edf0f6;margin-bottom:.85rem}
@@ -157,7 +157,7 @@ const directoryHtml = `<!doctype html>
     .occupation-grid a span{flex-shrink:0;color:#8a9ab7;font-size:.8rem;opacity:0}
     .occupation-grid a:hover{background:#f3f7ff;color:var(--color-primary)}
     .occupation-grid a:hover span{opacity:1}
-    @media(max-width:900px){.occupation-categories{grid-template-columns:1fr}.occupation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.occupation-directory-intro{display:block}.occupation-directory-intro p{margin-top:.45rem}}
+    @media(max-width:900px){.occupation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.occupation-directory-intro{display:block}.occupation-directory-intro p{margin-top:.45rem}}
     @media(max-width:520px){.occupation-directory{padding:2rem 1rem 3rem}.occupation-hero{margin-bottom:2.5rem}.occupation-grid{grid-template-columns:1fr}.occupation-category{padding:1rem}.occupation-category-heading h2{font-size:1.08rem}}
   </style>
   <script type="module" src="/scripts/components.js"></script>
