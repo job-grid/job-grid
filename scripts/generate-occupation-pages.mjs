@@ -34,6 +34,38 @@ const categoryNames = new Map([
   ["other", "Other"]
 ]);
 
+const categoryIcons = new Map([
+  ["agriculture-farming", "🌾"],
+  ["construction-building", "🏗️"],
+  ["skilled-trades-repair", "🛠️"],
+  ["driving-transport", "🚚"],
+  ["warehouse-logistics", "📦"],
+  ["cleaning-housekeeping", "🧹"],
+  ["security-safety", "🛡️"],
+  ["hospitality-tourism", "🧳"],
+  ["food-service-catering", "🍽️"],
+  ["retail-sales", "🛍️"],
+  ["customer-service", "💬"],
+  ["general-labour", "🧰"],
+  ["manufacturing-factory", "⚙️"],
+  ["domestic-household-work", "🏠"],
+  ["health-care-caregiving", "🩺"],
+  ["education-training", "📚"],
+  ["office-administration", "🗂️"],
+  ["it-technology", "💻"],
+  ["finance-accounting", "💰"],
+  ["engineering", "⚙️"],
+  ["beauty-personal-care", "✂️"],
+  ["maintenance-facilities", "🔧"],
+  ["marketing-communications", "📣"],
+  ["professional-services", "💼"],
+  ["other", "✦"]
+]);
+
+function categoryIcon(categorySlug) {
+  return categoryIcons.get(categorySlug) ?? "✦";
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -105,7 +137,7 @@ const directorySchema = {
 const directorySections = [...groupedRoles.entries()]
   .filter(([, items]) => items.length > 0)
   .map(([slug, items]) => `<section class="occupation-category" data-category="${escapeHtml(slug)}"><div class="occupation-category-heading"><h2>${escapeHtml(categoryNames.get(slug))}</h2><span>${items.length} occupations</span></div><ul class="occupation-grid">${items
-    .map((role) => `<li class="occupation-card" data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/"><span class="occupation-card-icon" aria-hidden="true">${escapeHtml(role.title.trim().charAt(0).toUpperCase())}</span><span class="occupation-card-copy"><strong>${escapeHtml(role.title)}</strong><small>Explore role and matching opportunities</small></span><span class="occupation-card-arrow" aria-hidden="true">↗</span></a></li>`)
+    .map((role) => `<li class="occupation-card" data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/"><span class="occupation-card-icon" aria-hidden="true">${escapeHtml(categoryIcon(role.categorySlug))}</span><span class="occupation-card-copy"><strong>${escapeHtml(role.title)}</strong><small>Explore role and matching opportunities</small></span><span class="occupation-card-arrow" aria-hidden="true">↗</span></a></li>`)
     .join("")}</ul></section>`)
   .join("\n");
 const directoryHtml = `<!doctype html>
@@ -382,7 +414,7 @@ for (const role of roles) {
           <a class="occupation-button occupation-button-secondary" href="/job-types/">Browse occupations</a>
         </div>
       </div>
-      <div class="occupation-hero-mark" aria-hidden="true">${escapeHtml(role.title.trim().charAt(0).toUpperCase())}</div>
+      <div class="occupation-hero-mark" aria-hidden="true">${escapeHtml(categoryIcon(role.categorySlug))}</div>
     </section>
     <section class="occupation-detail-grid" aria-label="Occupation information">
       <article class="occupation-info-card">
