@@ -334,3 +334,13 @@ psqlx -q -c "UPDATE public.staff_job_source_verifications SET verification_statu
 psqlx -q -c "SELECT public.staff_vacancy_transition('publish', '22222222-2222-4222-8222-222222222222', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, now()+interval '7 days');"
 psqlx -q -c "SELECT public.staff_vacancy_transition('close', '22222222-2222-4222-8222-222222222222', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, NULL);"
 echo "PASS: publish and close transitions use the transactional audit RPC"
+
+# Prove draft, private evidence and audit roll back together if the audit insert fails.
+psqlx -q -c "CREATE OR REPLACE FUNCTION public.test_fail_staff_draft_audit() RETURNS trigger LANGUAGE plpgsql AS \\$test\\$ BEGIN IF NEW.action='vacancy_draft_saved' AND NEW.details->>'slug'='staff-draft-rollback-test' THEN RAISE EXCEPTION 'forced audit failure for rollback test'; END IF; RETURN NEW; END; \\$test\\$;"
+psqlx -q -c "CREATE TRIGGER test_fail_staff_draft_audit BEFORE INSERT ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION public.test_fail_staff_draft_audit();"
+expect_failure "atomic draft save rolls back when audit insert fails" "forced audit failure for rollback test" \\\
+  "SELECT public.staff_vacancy_save_draft('22222222-2222-4222-8222-222222222222', NULL, '{\\"title\\":\\"Rollback Synthetic Listing\\",\\"slug\\":\\"staff-draft-rollback-test\\",\\"employer_name\\":\\"Synthetic Employer\\",\\"description\\":\\"Rollback test only.\\",\\"category_slug\\":\\"health-care-caregiving\\",\\"skill_level\\":\\"skilled\\",\\"employment_type\\":\\"full_time\\",\\"country_code\\":\\"CA\\"}'::jsonb, 'https://employer.synthetic.example/jobs/rollback');"
+psqlx -q -c "DROP TRIGGER test_fail_staff_draft_audit ON public.audit_logs; DROP FUNCTION public.test_fail_staff_draft_audit();"
+psqlx -q -c "DO \\$test\\$ BEGIN IF EXISTS (SELECT 1 FROM public.jobs WHERE slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'draft row survived failed audit transaction'; END IF; IF EXISTS (SELECT 1 FROM public.staff_job_source_verifications v JOIN public.jobs j ON j.id=v.job_id WHERE j.slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'private evidence survived failed audit transaction'; END IF; END; \\$test\\$;"
+echo "PASS: draft and private evidence roll back when the audit write fails"
+
