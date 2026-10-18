@@ -324,5 +324,5 @@ psqlx -q -c "UPDATE public.jobs SET source_verification_status='verified', sourc
 psqlx -q -c "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
 expect_failure "published source evidence cannot be removed" "Vacancy cannot be published without recorded HTTPS source verification" \
   "UPDATE public.jobs SET source_verification_status='unverified', source_checked_at=NULL, source_checked_by=NULL WHERE slug='staff-guard-synthetic-listing';"
-psqlx -q -c "UPDATE public.jobs SET description=description || ' ordinary edit' WHERE slug='staff-guard-synthetic-listing';"
-echo "PASS: staff source guard blocks unverified publication, protects verification evidence, and allows ordinary published-job edits"
+psqlx -q -c "UPDATE public.jobs SET source_reference='https://employer.synthetic.example/jobs/updated', source_checked_at=now() WHERE slug='staff-guard-synthetic-listing';"
+echo "PASS: staff source guard blocks unverified publication, protects verification evidence, and permits a verified source refresh"
