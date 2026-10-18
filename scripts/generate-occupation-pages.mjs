@@ -123,15 +123,19 @@ const directoryHtml = `<!doctype html>
   <meta property="og:url" content="${directoryCanonical}">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/global.css">
+  <script type="module" src="/scripts/components.js"></script>
+  <script type="module" src="/scripts/main.js"></script>
   <script type="application/ld+json">${JSON.stringify(directorySchema).replace(/</g, "\\u003c")}</script>
 </head>
 <body>
+  <job-grid-header></job-grid-header>
   <main class="section-wrap" style="max-width:1100px;margin:3rem auto;padding:1.5rem">
     <p class="eyebrow">Job Grid</p>
     <h1>Browse job types and occupations</h1>
     <p>Explore occupations by category and open a role page to search for matching vacancies. Occupation pages describe types of work; they do not claim an employer currently has an opening.</p>
     ${directorySections}
   </main>
+  <job-grid-footer></job-grid-footer>
 </body>
 </html>`;
 await writeFile(directoryPath, directoryHtml, "utf8");
@@ -166,9 +170,12 @@ for (const role of roles) {
   <meta property="og:url" content="${canonical}">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/global.css">
+  <script type="module" src="/scripts/components.js"></script>
+  <script type="module" src="/scripts/main.js"></script>
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>
 </head>
 <body>
+  <job-grid-header></job-grid-header>
   <main class="section-wrap" style="max-width:900px;margin:4rem auto;padding:1.5rem">
     <p class="eyebrow"><a href="/job-types/">Job type directory</a> / ${escapeHtml(role.categoryName)}</p>
     <h1>${escapeHtml(role.title)}</h1>
@@ -177,6 +184,7 @@ for (const role of roles) {
     <p><a href="/vacancies.html?q=${encodeURIComponent(role.title)}&category=${encodeURIComponent(role.categorySlug)}">Search ${escapeHtml(role.title)} vacancies</a></p>
     <p><a href="/job-types/">Browse all job types</a></p>
   </main>
+  <job-grid-footer></job-grid-footer>
 </body>
 </html>`;
   const canonicalTags = html.match(/<link rel="canonical" href="[^"]+">/g) ?? [];
