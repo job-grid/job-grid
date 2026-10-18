@@ -17,13 +17,7 @@ alter table public.staff_job_source_verifications enable row level security;
 revoke all on table public.staff_job_source_verifications from public, anon, authenticated;
 grant all on table public.staff_job_source_verifications to service_role;
 
--- Remove the earlier version's sensitive fields from the public jobs table.
-alter table public.jobs
-  drop constraint if exists jobs_source_verification_status_valid,
-  drop column if exists source_reference,
-  drop column if exists source_verification_status,
-  drop column if exists source_checked_at,
-  drop column if exists source_checked_by;
+-- Staff source evidence is stored only in the private table created above.
 
 create or replace function public.enforce_verified_job_publication()
 returns trigger
