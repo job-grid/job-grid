@@ -112,44 +112,26 @@ Deno.serve(async (req) => {
     let sourceUrl: URL | null = null;
     try { sourceUrl = new URL(source); } catch { /* validated below */ }
     if (!sourceUrl || sourceUrl.protocol !== "https:" || !sourceUrl.hostname || sourceUrl.username !== "" || sourceUrl.password !== "") return json(422, { error: "Record the official HTTPS source you checked." });
-    const { data: job, error: jobError } = await admin.from("jobs").select("id,slug,status").eq("id", id).eq("status", "draft").maybeSingle();
-    if (jobError) return json(503, { error: "Could not load the draft for source verification." });
-    if (!job) return json(409, { error: "Only draft vacancies can be verified. Save the draft first." });
-    const { error: evidenceError } = await admin.from("staff_job_source_verifications").upsert({ job_id: id, source_reference: source, verification_status: "verified", checked_at: new Date().toISOString(), checked_by: userId, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
-    if (evidenceError) return json(503, { error: "Could not securely record source verification." });
-    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_source_verified", entity_type: "job", entity_id: id, details: { source_reference: source } });
-    if (auditError) return json(503, { error: "Verification was recorded, but its audit record failed. Stop further actions and report this to the system administrator." });
-    return json(200, { job, message: "Source review recorded privately. A different publisher must still publish the vacancy." });
+    const { data: job, error } = await admin.rpc("staff_vacancy_transition", { p_action: "verify_source", p_actor_id: userId, p_job_id: id, p_source_reference: source, p_expires_at: null });
+    if (error) return json(error.code === "23514" ? 409 : 503, { error: error.message || "Could not atomically record source verification and its audit entry." });
+    return json(200, { job, message: "Source review and audit entry recorded atomically. A different publisher must still publish the vacancy." });
   }
 
   if (action === "publish") {
     if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can publish vacancies." });
-    const { data: job, error: readError } = await admin.from("jobs").select(jobFields).eq("id", id).maybeSingle();
-    if (readError || !job) return json(404, { error: "Vacancy not found." });
-    const { data: evidence, error: evidenceError } = await admin.from("staff_job_source_verifications").select("source_reference,verification_status,checked_at,checked_by").eq("job_id", id).maybeSingle();
-    if (evidenceError) return json(503, { error: "Could not load private source verification evidence." });
-    if (job.status !== "draft" || evidence?.verification_status !== "verified" || !evidence.source_reference || !evidence.checked_at || !evidence.checked_by) return json(409, { error: "Only a draft with recorded official-source verification can be published." });
-    if (evidence.checked_by === userId) return json(409, { error: "A different authorized staff member must publish after the source review." });
     const expiresAt = text(body.expires_at, 40);
     const parsedExpiry = Date.parse(expiresAt);
     if (!Number.isFinite(parsedExpiry) || parsedExpiry <= Date.now()) return json(422, { error: "Choose a future expiry date." });
-    const publishedAt = new Date().toISOString();
-    const { data: published, error } = await admin.from("jobs").update({ status: "published", published_at: publishedAt, expires_at: new Date(parsedExpiry).toISOString() }).eq("id", id).eq("status", "draft").select("id,slug,status,published_at,expires_at").maybeSingle();
-    if (error) return json(422, { error: "Publication failed. Confirm the source verification and all required vacancy details." });
-    if (!published) return json(409, { error: "This vacancy is no longer a draft. Reload the workspace." });
-    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_published", entity_type: "job", entity_id: id, details: { expires_at: published.expires_at } });
-    if (auditError) return json(503, { error: "Publication succeeded, but its audit record failed. Stop further actions and report this immediately." });
-    return json(200, { job: published, message: "Vacancy published after recorded source review." });
+    const { data: published, error } = await admin.rpc("staff_vacancy_transition", { p_action: "publish", p_actor_id: userId, p_job_id: id, p_source_reference: null, p_expires_at: new Date(parsedExpiry).toISOString() });
+    if (error) return json(error.code === "23514" ? 409 : error.code === "22023" ? 422 : 503, { error: error.message || "Publication and audit transaction failed." });
+    return json(200, { job: published, message: "Vacancy published and audit entry committed atomically." });
   }
 
   if (action === "close") {
     if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can close vacancies." });
-    const { data: closed, error } = await admin.from("jobs").update({ status: "closed" }).eq("id", id).eq("status", "published").select("id,slug,status").maybeSingle();
-    if (error) return json(422, { error: "Could not close this vacancy." });
-    if (!closed) return json(409, { error: "Only currently published vacancies can be closed." });
-    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_closed", entity_type: "job", entity_id: id, details: {} });
-    if (auditError) return json(503, { error: "Vacancy was closed, but its audit record failed. Stop further actions and report this immediately." });
-    return json(200, { job: closed, message: "Vacancy closed and removed from public search." });
+    const { data: closed, error } = await admin.rpc("staff_vacancy_transition", { p_action: "close", p_actor_id: userId, p_job_id: id, p_source_reference: null, p_expires_at: null });
+    if (error) return json(error.code === "23514" ? 409 : 503, { error: error.message || "Closure and audit transaction failed." });
+    return json(200, { job: closed, message: "Vacancy closed and audit entry committed atomically." });
   }
   return json(422, { error: "Unsupported action." });
 });
