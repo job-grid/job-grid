@@ -7,6 +7,7 @@ const migration = await readFile(
   "utf8",
 );
 const docs = await readFile(new URL("../docs/international-job-workflow.md", import.meta.url), "utf8");
+const certificationScript = await readFile(new URL("../scripts/database-certification.sh", import.meta.url), "utf8");
 
 test("migration extends existing categories and jobs without recreating the foundation", () => {
   assert.match(migration, /Required existing table public\.job_categories was not found/);
@@ -102,3 +103,17 @@ test("Excel base-title seed imports 496 pending inactive job types and never cre
   }
 });
 
+test("isolated database certification executes, verifies, and safely re-runs the Excel occupation seed", () => {
+  const seedPath = "supabase/migrations/20261015120000_seed_base_occupation_catalogue.sql";
+  assert.equal(
+    certificationScript.split(seedPath).length - 1,
+    2,
+    "certification must apply the seed twice to test both initial execution and idempotency",
+  );
+  assert.match(certificationScript, /count\(DISTINCT normalized_title\)/);
+  assert.match(certificationScript, /verification_status = 'pending' AND is_active = false/);
+  assert.match(certificationScript, /496\|496\|496\|25\|0\|0/);
+  assert.match(certificationScript, /seed_state_after[\s\S]*seed_state/);
+  assert.match(certificationScript, /\(SELECT count\(\*\) FROM public\.jobs\)/);
+  assert.match(certificationScript, /seed migration is idempotent/);
+});
