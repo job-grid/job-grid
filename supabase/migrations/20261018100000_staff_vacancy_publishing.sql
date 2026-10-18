@@ -161,3 +161,81 @@ $$;
 
 revoke all on function public.staff_vacancy_transition(text, uuid, uuid, text, timestamptz) from public, anon, authenticated;
 grant execute on function public.staff_vacancy_transition(text, uuid, uuid, text, timestamptz) to service_role;
+
+
+-- Draft, private evidence and audit are one atomic operation as well.
+create or replace function public.staff_vacancy_save_draft(
+  p_actor_id uuid,
+  p_job_id uuid,
+  p_payload jsonb,
+  p_source_reference text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_job public.jobs%rowtype;
+  v_saved public.jobs%rowtype;
+begin
+  if p_actor_id is null or p_payload is null
+     or p_source_reference is null
+     or p_source_reference !~ '^https://[^[:space:]]+$' then
+    raise exception 'Actor, draft payload and HTTPS source reference are required' using errcode = '22023';
+  end if;
+
+  v_job := jsonb_populate_record(null::public.jobs, p_payload);
+  if v_job.title is null or length(btrim(v_job.title)) < 3
+     or v_job.slug is null or v_job.slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$'
+     or v_job.employer_name is null or v_job.description is null
+     or v_job.category_slug is null or v_job.country_code is null then
+    raise exception 'Required draft fields are missing or invalid' using errcode = '22023';
+  end if;
+
+  if p_job_id is not null then
+    select * into v_saved from public.jobs where id = p_job_id for update;
+    if not found or v_saved.status <> 'draft' then
+      raise exception 'Only existing drafts can be edited' using errcode = '23514';
+    end if;
+    update public.jobs set
+      title=v_job.title, slug=v_job.slug, employer_name=v_job.employer_name,
+      description=v_job.description, requirements=v_job.requirements,
+      category_slug=v_job.category_slug, skill_level=v_job.skill_level,
+      employment_type=v_job.employment_type, workplace_type=v_job.workplace_type,
+      country_code=v_job.country_code, region=v_job.region, city=v_job.city,
+      salary_min=v_job.salary_min, salary_max=v_job.salary_max,
+      salary_currency=v_job.salary_currency, salary_period=v_job.salary_period,
+      sponsorship_status=v_job.sponsorship_status, application_url=v_job.application_url,
+      application_instructions=v_job.application_instructions, is_featured=v_job.is_featured
+    where id=p_job_id returning * into v_saved;
+  else
+    insert into public.jobs (
+      title,slug,employer_name,description,requirements,category_slug,skill_level,
+      employment_type,workplace_type,country_code,region,city,salary_min,salary_max,
+      salary_currency,salary_period,sponsorship_status,application_url,
+      application_instructions,is_featured,status,published_at,expires_at
+    ) values (
+      v_job.title,v_job.slug,v_job.employer_name,v_job.description,v_job.requirements,
+      v_job.category_slug,v_job.skill_level,v_job.employment_type,v_job.workplace_type,
+      v_job.country_code,v_job.region,v_job.city,v_job.salary_min,v_job.salary_max,
+      v_job.salary_currency,v_job.salary_period,v_job.sponsorship_status,v_job.application_url,
+      v_job.application_instructions,coalesce(v_job.is_featured,false),'draft',null,null
+    ) returning * into v_saved;
+  end if;
+
+  insert into public.staff_job_source_verifications
+    (job_id,source_reference,verification_status,checked_at,checked_by,updated_at)
+  values (v_saved.id,p_source_reference,'unverified',null,null,now())
+  on conflict (job_id) do update set
+    source_reference=excluded.source_reference,
+    verification_status='unverified', checked_at=null, checked_by=null, updated_at=now();
+
+  insert into public.audit_logs(actor_id,action,entity_type,entity_id,details)
+  values (p_actor_id,'vacancy_draft_saved','job',v_saved.id,jsonb_build_object('slug',v_saved.slug));
+
+  return jsonb_build_object('id',v_saved.id,'slug',v_saved.slug,'status',v_saved.status);
+end;
+$$;
+revoke all on function public.staff_vacancy_save_draft(uuid, uuid, jsonb, text) from public, anon, authenticated;
+grant execute on function public.staff_vacancy_save_draft(uuid, uuid, jsonb, text) to service_role;
