@@ -317,7 +317,7 @@ psqlx -q -f supabase/migrations/20261018100000_staff_vacancy_publishing.sql
 echo "== Test private staff source-verification publication guard =="
 psqlx -q -c "INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code,status) VALUES ('Staff guard synthetic listing','staff-guard-synthetic-listing','Synthetic Employer','Isolated publication guard test.','health-care-caregiving','skilled','full_time','CA','draft');"
 
-expect_failure "staff migration blocks publication without private source verification" "Vacancy cannot be published without recorded HTTPS source verification" \\
+expect_failure "staff migration blocks publication without private source verification" "Vacancy cannot be published without recorded HTTPS source verification" \
   "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
 
 psqlx -q -c "INSERT INTO auth.users (id) VALUES ('11111111-1111-4111-8111-111111111111') ON CONFLICT (id) DO NOTHING;"
