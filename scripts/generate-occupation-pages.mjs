@@ -268,10 +268,11 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 await writeFile(path.join(outputRoot, "sitemap.xml"), sitemap, "utf8");
 await writeFile(path.join(outputRoot, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${siteRoot}/sitemap.xml\n`, "utf8");
 
-// Fail the build unless the directory links to every occupation exactly once.
+// Fail the build unless every occupation URL appears exactly once in the directory,
+ // independent of the visual markup used for the responsive card layout.
 for (const role of roles) {
-  const link = `<li><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}</a></li>`;
-  const linkCount = directoryHtml.split(link).length - 1;
+  const href = `href="/job-types/${role.slug}/"`;
+  const linkCount = directoryHtml.split(href).length - 1;
   if (linkCount !== 1) throw new Error(`Directory must link to ${role.slug} exactly once; found ${linkCount}.`);
 }
 const directoryCanonicalTags = directoryHtml.match(/<link rel="canonical" href="[^"]+">/g) ?? [];
