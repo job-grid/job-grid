@@ -8,7 +8,7 @@ alter table public.jobs
   add column if not exists source_checked_by uuid references auth.users(id) on delete set null;
 
 alter table public.jobs
-  add constraint jobs_source_source_source_verification_status_valid
+  add constraint jobs_source_verification_status_valid
   check (source_verification_status in ('unverified', 'verified', 'rejected')) not valid;
 
 alter table public.jobs
