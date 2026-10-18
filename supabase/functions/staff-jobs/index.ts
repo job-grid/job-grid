@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
     if (job.status !== "draft" || job.verification_status !== "verified" || !job.source_reference?.startsWith("https://") || !job.source_checked_at || !job.source_checked_by) {
       return json(409, { error: "Only a draft with recorded official-source verification can be published." });
     }
+    if (job.source_checked_by === userId) return json(409, { error: "A different authorized staff member must publish after the source review." });
     const expiresAt = text(body.expires_at, 40);
     const parsedExpiry = Date.parse(expiresAt);
     if (!Number.isFinite(parsedExpiry) || parsedExpiry <= Date.now()) return json(422, { error: "Choose a future expiry date." });
