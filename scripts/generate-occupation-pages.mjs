@@ -137,6 +137,11 @@ const directoryHtml = `<!doctype html>
     .occupation-search-wrap input:focus-visible{outline:0}
     .occupation-search-wrap button{border:0;border-radius:10px;padding:.55rem .8rem;background:#edf3ff;color:var(--color-secondary);font-weight:700;cursor:pointer}
     .occupation-search-status{font-size:.9rem;margin:.65rem auto 0!important}
+    .occupation-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.5rem;margin:1.75rem auto 0;padding:1rem;border:1px solid #e4eaf4;border-radius:14px;background:#fff}
+    .occupation-pagination button{min-width:2.6rem;border:1px solid #d7dfed;border-radius:9px;padding:.6rem .8rem;background:#fff;color:var(--color-secondary);font-weight:700;cursor:pointer}
+    .occupation-pagination button[aria-current="page"]{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+    .occupation-pagination button:disabled{opacity:.4;cursor:not-allowed}
+    .occupation-pagination-summary{width:100%;text-align:center;color:#5b6b89;font-size:.88rem}
     .occupation-directory-intro{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:1.25rem}
     .occupation-directory-intro h2{font-size:1.7rem;margin:0}
     .occupation-directory-intro p{max-width:560px;margin:0;font-size:.92rem}
@@ -176,6 +181,7 @@ const directoryHtml = `<!doctype html>
     </section>
     <div class="occupation-directory-intro"><h2>Explore by category</h2><p>Choose an occupation to view its page and search for matching vacancies. A listed occupation is not a guarantee of a current opening.</p></div>
     <div class="occupation-categories">${directorySections}</div>
+    <nav class="occupation-pagination" id="occupation-pagination" aria-label="Occupation directory pages"></nav>
   </main>
   <script>
     (() => {
@@ -184,22 +190,55 @@ const directoryHtml = `<!doctype html>
       const status = document.getElementById("occupation-search-status");
       const items = [...document.querySelectorAll("[data-occupation-title]")];
       const sections = [...document.querySelectorAll(".occupation-category")];
+      const pageSize = 30;
+      const pagination = document.getElementById("occupation-pagination");
+      let currentPage = 1;
       const update = () => {
         const query = input.value.trim().toLocaleLowerCase();
-        let visible = 0;
-        for (const item of items) {
-          const match = !query || item.dataset.occupationTitle.includes(query);
-          item.hidden = !match;
-          if (match) visible++;
-        }
+        const matches = items.filter((item) => !query || item.dataset.occupationTitle.includes(query));
+        const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+        currentPage = Math.min(currentPage, pageCount);
+        const start = (currentPage - 1) * pageSize;
+        const visibleItems = new Set(matches.slice(start, start + pageSize));
+        for (const item of items) item.hidden = !visibleItems.has(item);
         for (const section of sections) {
           section.hidden = !section.querySelector("[data-occupation-title]:not([hidden])");
         }
         clear.hidden = !query;
-        status.textContent = query ? "Showing " + visible.toLocaleString() + " matching occupations" : "Showing " + items.length.toLocaleString() + " occupations";
+        status.textContent = query
+          ? "Showing " + matches.length.toLocaleString() + " matching occupations · page " + currentPage + " of " + pageCount
+          : "Showing " + items.length.toLocaleString() + " occupations · page " + currentPage + " of " + pageCount;
+        pagination.replaceChildren();
+        const summary = document.createElement("span");
+        summary.className = "occupation-pagination-summary";
+        summary.textContent = matches.length
+          ? "Showing " + (start + 1).toLocaleString() + "–" + Math.min(start + pageSize, matches.length).toLocaleString() + " of " + matches.length.toLocaleString() + " occupations"
+          : "No occupations match your search.";
+        pagination.append(summary);
+        if (pageCount > 1) {
+          const addButton = (label, page, options = {}) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = label;
+            if (options.current) button.setAttribute("aria-current", "page");
+            button.disabled = Boolean(options.disabled);
+            button.addEventListener("click", () => {
+              currentPage = page;
+              update();
+              pagination.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            });
+            pagination.append(button);
+          };
+          addButton("Previous", Math.max(1, currentPage - 1), { disabled: currentPage === 1 });
+          const first = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+          const last = Math.min(pageCount, first + 4);
+          for (let page = first; page <= last; page++) addButton(String(page), page, { current: page === currentPage });
+          addButton("Next", Math.min(pageCount, currentPage + 1), { disabled: currentPage === pageCount });
+        }
       };
-      input.addEventListener("input", update);
-      clear.addEventListener("click", () => { input.value = ""; update(); input.focus(); });
+      input.addEventListener("input", () => { currentPage = 1; update(); });
+      clear.addEventListener("click", () => { input.value = ""; currentPage = 1; update(); input.focus(); });
+      update();
     })();
   </script>
   <job-grid-footer></job-grid-footer>
