@@ -60,7 +60,7 @@ test("navigation components expose labels and accessible mobile menu state", () 
 
 test("homepage presents role types without inventing employer vacancies", () => {
   assert.match(html, /Browse all role types/);
-  assert.match(html, /496 distinct base role titles/);
+  assert.match(html, /9,044 distinct occupation titles/);
   assert.match(html, /not confirmed vacancies/i);
   assert.match(html, /id="home-job-types"/);
   assert.doesNotMatch(html, /Sample employer/);
