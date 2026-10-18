@@ -309,3 +309,20 @@ END;
 "
 echo "PASS: final catalog preservation, four isolated synthetic jobs, provenance, audit and publication history"
 echo "DATABASE CERTIFICATION RESULT: PASS for isolated PostgreSQL 17 migration and synthetic permission/publication tests"
+
+
+echo "== Apply staff vacancy source-verification migration in isolation =="
+psqlx -q -f supabase/migrations/20261018100000_staff_vacancy_publishing.sql
+
+echo "== Test staff source-verification publication guard =="
+psqlx -q -c "INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code,status,source_reference,source_verification_status) VALUES ('Staff guard synthetic listing','staff-guard-synthetic-listing','Synthetic Employer','Isolated publication guard test.','health-care-caregiving','skilled','full_time','CA','draft','https://employer.synthetic.example/jobs/1','unverified');"
+
+expect_failure "staff migration blocks publication without source verification" "Vacancy cannot be published without recorded HTTPS source verification" \
+  "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
+
+psqlx -q -c "UPDATE public.jobs SET source_verification_status='verified', source_checked_at=now(), source_checked_by='11111111-1111-4111-8111-111111111111' WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
+expect_failure "published source evidence cannot be removed" "Vacancy cannot be published without recorded HTTPS source verification" \
+  "UPDATE public.jobs SET source_verification_status='unverified', source_checked_at=NULL, source_checked_by=NULL WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "UPDATE public.jobs SET description=description || ' ordinary edit' WHERE slug='staff-guard-synthetic-listing';"
+echo "PASS: staff source guard blocks unverified publication, protects verification evidence, and allows ordinary published-job edits"
