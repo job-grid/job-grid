@@ -336,6 +336,34 @@ for (const role of roles) {
   <meta property="og:url" content="${canonical}">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/global.css">
+  <style>
+    .occupation-detail{width:min(calc(100% - 3rem),1040px);margin:0 auto;padding:2rem 0 4.5rem}
+    .occupation-breadcrumb{margin:0 0 1.25rem;color:#53617d;font-size:.9rem}
+    .occupation-breadcrumb a{color:#064fe8;font-weight:700;text-decoration:none}
+    .occupation-breadcrumb a:hover{text-decoration:underline}
+    .occupation-hero-card{display:grid;grid-template-columns:minmax(0,1fr) 112px;align-items:center;gap:2rem;padding:clamp(1.5rem,4vw,3rem);border:1px solid #dce5f5;border-radius:24px;background:linear-gradient(135deg,#f5f8ff 0%,#fff 72%);box-shadow:0 12px 36px rgba(16,38,92,.07)}
+    .occupation-kicker{display:inline-flex;margin-bottom:.9rem;padding:.4rem .7rem;border:1px solid #d6e2ff;border-radius:999px;background:#eaf1ff;color:#1645b8;font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+    .occupation-hero-card h1{max-width:760px;margin:0 0 1rem;color:#10265c;font-size:clamp(2.3rem,5.5vw,4.2rem);line-height:1.08;overflow-wrap:anywhere}
+    .occupation-lead{max-width:760px;margin:0 0 1.5rem;color:#465574;font-size:1.05rem;line-height:1.8}
+    .occupation-actions{display:flex;flex-wrap:wrap;gap:.75rem}
+    .occupation-button{display:inline-flex;min-height:48px;align-items:center;justify-content:center;gap:.5rem;padding:.8rem 1.1rem;border:1px solid #004ef5;border-radius:12px;background:#004ef5;color:#fff;font-size:.9rem;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(0,78,245,.16);transition:transform .16s ease,background .16s ease}
+    .occupation-button:hover{transform:translateY(-2px);background:#003bc7}
+    .occupation-button-secondary{border-color:#cbd7ee;background:#fff;color:#10265c;box-shadow:none}
+    .occupation-button-secondary:hover{border-color:#9eb5e8;background:#f5f8ff;color:#10265c}
+    .occupation-hero-mark{display:grid;place-items:center;width:104px;height:104px;border-radius:26px;background:linear-gradient(145deg,#0755f5,#163779);color:#fff;font-size:3rem;font-weight:800;box-shadow:0 12px 28px rgba(7,85,245,.22)}
+    .occupation-detail-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:1.25rem;margin-top:1.5rem}
+    .occupation-info-card,.occupation-side-card{min-width:0;padding:clamp(1.25rem,3vw,2rem);border:1px solid #e0e7f5;border-radius:20px;background:#fff;box-shadow:0 6px 22px rgba(16,38,92,.045)}
+    .occupation-info-card h2,.occupation-side-card h2{margin:0 0 .9rem;color:#10265c;font-size:clamp(1.35rem,2.8vw,1.9rem);line-height:1.25}
+    .occupation-info-card p,.occupation-side-card p{margin:0;color:#4b5a76;line-height:1.8}
+    .occupation-side-card ul{display:grid;gap:.65rem;margin:1rem 0 0;padding-left:1.2rem;color:#34435f;line-height:1.65}
+    .occupation-trust-note{margin:1.25rem 0 0;padding:1rem 1.2rem;border:1px solid #cfe0ff;border-left:4px solid #0755f5;border-radius:12px;background:#f2f7ff;color:#34435f;line-height:1.75}
+    .occupation-trust-note strong{color:#10265c}
+    .occupation-related-links{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;margin-top:1.25rem}
+    .occupation-related-links a{color:#064fe8;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+    .occupation-detail a:focus-visible{outline:3px solid #e59b25;outline-offset:3px}
+    @media(max-width:700px){.occupation-detail{width:min(calc(100% - 2rem),1040px);padding-top:1.25rem}.occupation-hero-card{grid-template-columns:minmax(0,1fr);gap:1.25rem}.occupation-hero-mark{grid-row:1;width:64px;height:64px;border-radius:18px;font-size:1.8rem}.occupation-detail-grid{grid-template-columns:1fr}.occupation-actions{align-items:stretch;flex-direction:column}.occupation-button{width:100%}}
+    @media(prefers-reduced-motion:reduce){.occupation-button{transition:none}}
+  </style>
   <script type="module" src="/scripts/components.js"></script>
   <script type="module" src="/scripts/main.js"></script>
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>
