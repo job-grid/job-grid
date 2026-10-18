@@ -196,7 +196,7 @@ const directoryHtml = `<!doctype html>
           section.hidden = !section.querySelector("[data-occupation-title]:not([hidden])");
         }
         clear.hidden = !query;
-        status.textContent = query ? `Showing ${visible.toLocaleString()} matching occupations` : `Showing ${items.length.toLocaleString()} occupations`;
+        status.textContent = query ? "Showing " + visible.toLocaleString() + " matching occupations" : "Showing " + items.length.toLocaleString() + " occupations";
       };
       input.addEventListener("input", update);
       clear.addEventListener("click", () => { input.value = ""; update(); input.focus(); });
