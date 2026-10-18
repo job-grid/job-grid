@@ -7,3 +7,7 @@ verify_jwt = false
 # Staff review requires a valid Supabase Auth JWT; the function additionally checks staff_roles.
 [functions.staff-applications]
 verify_jwt = true
+
+# Vacancy management requires a valid Supabase Auth JWT and an explicit staff role.
+[functions.staff-jobs]
+verify_jwt = true
