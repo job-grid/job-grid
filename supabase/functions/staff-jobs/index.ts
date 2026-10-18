@@ -12,7 +12,7 @@ const json = (status: number, body: Record<string, unknown>) =>
 const text = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const allowedRoles = ["reviewer", "publisher", "system_admin"];
 const publishRoles = ["publisher", "system_admin"];
-const jobFields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,status,published_at,expires_at,source_reference,verification_status,source_checked_at,source_checked_by,created_at";
+const jobFields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,status,published_at,expires_at,source_reference,source_verification_status,source_checked_at,source_checked_by,created_at";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       sponsorship_status: ["available", "not_available", "not_stated", "requires_verification"].includes(text(body.sponsorship_status, 30)) ? text(body.sponsorship_status, 30) : "not_stated",
       application_url: text(body.application_url, 2000) || null, application_instructions: text(body.application_instructions, 4000) || null,
       is_featured: body.is_featured === true, status: "draft", published_at: null, expires_at: null,
-      source_reference: source, verification_status: "unverified", source_checked_at: null, source_checked_by: null,
+      source_reference: source, source_verification_status: "unverified", source_checked_at: null, source_checked_by: null,
     };
     if (payload.application_url && !payload.application_url.startsWith("https://")) return json(422, { error: "Application URL must use HTTPS." });
     let saved;
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
   if (action === "verify_source") {
     const source = text(body.source_reference, 2000);
     if (!source.startsWith("https://")) return json(422, { error: "Record the official HTTPS source you checked." });
-    const { data: job, error } = await admin.from("jobs").update({ source_reference: source, verification_status: "verified", source_checked_at: new Date().toISOString(), source_checked_by: userId }).eq("id", id).eq("status", "draft").select("id,slug,status").maybeSingle();
+    const { data: job, error } = await admin.from("jobs").update({ source_reference: source, source_verification_status: "verified", source_checked_at: new Date().toISOString(), source_checked_by: userId }).eq("id", id).eq("status", "draft").select("id,slug,status").maybeSingle();
     if (error) return json(422, { error: "Could not record source verification." });
     if (!job) return json(409, { error: "Only draft vacancies can be verified. Save the draft first." });
     await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_source_verified", entity_type: "job", entity_id: id, details: { source_reference: source } });
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can publish vacancies." });
     const { data: job, error: readError } = await admin.from("jobs").select(jobFields).eq("id", id).maybeSingle();
     if (readError || !job) return json(404, { error: "Vacancy not found." });
-    if (job.status !== "draft" || job.verification_status !== "verified" || !job.source_reference?.startsWith("https://") || !job.source_checked_at || !job.source_checked_by) {
+    if (job.status !== "draft" || job.source_verification_status !== "verified" || !job.source_reference?.startsWith("https://") || !job.source_checked_at || !job.source_checked_by) {
       return json(409, { error: "Only a draft with recorded official-source verification can be published." });
     }
     if (job.source_checked_by === userId) return json(409, { error: "A different authorized staff member must publish after the source review." });
