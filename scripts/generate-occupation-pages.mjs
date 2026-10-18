@@ -105,7 +105,7 @@ const directorySchema = {
 const directorySections = [...groupedRoles.entries()]
   .filter(([, items]) => items.length > 0)
   .map(([slug, items]) => `<section class="occupation-category" data-category="${escapeHtml(slug)}"><div class="occupation-category-heading"><h2>${escapeHtml(categoryNames.get(slug))}</h2><span>${items.length} occupations</span></div><ul class="occupation-grid">${items
-    .map((role) => `<li data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}<span aria-hidden="true">↗</span></a></li>`)
+    .map((role) => `<li class="occupation-card" data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/"><span class="occupation-card-icon" aria-hidden="true">${escapeHtml(role.title.trim().charAt(0).toUpperCase())}</span><span class="occupation-card-copy"><strong>${escapeHtml(role.title)}</strong><small>Explore role and matching opportunities</small></span><span class="occupation-card-arrow" aria-hidden="true">↗</span></a></li>`)
     .join("")}</ul></section>`)
   .join("\n");
 const directoryHtml = `<!doctype html>
@@ -151,14 +151,18 @@ const directoryHtml = `<!doctype html>
     .occupation-category-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding-bottom:.9rem;border-bottom:1px solid #edf0f6;margin-bottom:.85rem}
     .occupation-category-heading h2{font-size:1.22rem;letter-spacing:-.025em;margin:0}
     .occupation-category-heading>span{flex-shrink:0;font-size:.75rem;font-weight:700;color:#5b6b89;background:#f1f5fb;border-radius:999px;padding:.3rem .55rem}
-    .occupation-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.15rem .75rem}
+    .occupation-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem}
     .occupation-grid li{min-width:0}
-    .occupation-grid a{display:flex;align-items:baseline;justify-content:space-between;gap:.35rem;height:100%;padding:.48rem .35rem;border-radius:7px;color:var(--color-text);font-size:.9rem;line-height:1.4;overflow-wrap:anywhere}
-    .occupation-grid a span{flex-shrink:0;color:#8a9ab7;font-size:.8rem;opacity:0}
-    .occupation-grid a:hover{background:#f3f7ff;color:var(--color-primary)}
-    .occupation-grid a:hover span{opacity:1}
-    @media(max-width:900px){.occupation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.occupation-directory-intro{display:block}.occupation-directory-intro p{margin-top:.45rem}}
-    @media(max-width:520px){.occupation-directory{padding:2rem 1rem 3rem}.occupation-hero{margin-bottom:2.5rem}.occupation-grid{grid-template-columns:1fr}.occupation-category{padding:1rem}.occupation-category-heading h2{font-size:1.08rem}}
+    .occupation-grid a{display:flex;align-items:center;gap:.75rem;min-height:94px;height:100%;padding:.85rem;border:1px solid #e4eaf4;border-radius:13px;background:linear-gradient(145deg,#fff,#f8faff);color:var(--color-text);font-size:.9rem;line-height:1.35;overflow-wrap:anywhere;box-shadow:0 4px 14px rgba(18,40,91,.035);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+    .occupation-card-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#0755f5,#163779);color:#fff;font-size:1rem;font-weight:800;box-shadow:0 5px 12px rgba(7,85,245,.18)}
+    .occupation-card-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:.3rem}
+    .occupation-card-copy strong{font-size:.9rem;font-weight:750;line-height:1.35}
+    .occupation-card-copy small{color:#6b7892;font-size:.73rem;line-height:1.35}
+    .occupation-card-arrow{flex-shrink:0;color:var(--color-primary);font-size:.9rem;opacity:.75}
+    .occupation-grid a:hover{border-color:#9dbbff;background:#f3f7ff;color:var(--color-primary);box-shadow:0 9px 22px rgba(18,40,91,.09);transform:translateY(-2px)}
+    .occupation-grid a:focus-visible{outline:3px solid #9dbbff;outline-offset:2px}
+    @media(max-width:1000px){.occupation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.occupation-directory-intro{display:block}.occupation-directory-intro p{margin-top:.45rem}}
+    @media(max-width:600px){.occupation-directory{padding:2rem 1rem 3rem}.occupation-hero{margin-bottom:2.5rem}.occupation-grid{grid-template-columns:1fr}.occupation-category{padding:1rem}.occupation-category-heading h2{font-size:1.08rem}.occupation-grid a{min-height:78px}}
   </style>
   <script type="module" src="/scripts/components.js"></script>
   <script type="module" src="/scripts/main.js"></script>
