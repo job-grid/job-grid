@@ -104,10 +104,10 @@ const directorySchema = {
 };
 const directorySections = [...groupedRoles.entries()]
   .filter(([, items]) => items.length > 0)
-  .map(([slug, items]) => `<section><h2>${escapeHtml(categoryNames.get(slug))}</h2><ul>${items
-    .map((role) => `<li><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}</a></li>`)
+  .map(([slug, items]) => `<section class="occupation-category" data-category="${escapeHtml(slug)}"><div class="occupation-category-heading"><h2>${escapeHtml(categoryNames.get(slug))}</h2><span>${items.length} occupations</span></div><ul class="occupation-grid">${items
+    .map((role) => `<li data-occupation-title="${escapeHtml(role.title.toLowerCase())}"><a href="/job-types/${role.slug}/">${escapeHtml(role.title)}<span aria-hidden="true">↗</span></a></li>`)
     .join("")}</ul></section>`)
-  .join("\n");
+  .join("\\n");
 const directoryHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -123,18 +123,85 @@ const directoryHtml = `<!doctype html>
   <meta property="og:url" content="${directoryCanonical}">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/global.css">
+
+  <style>
+    .occupation-directory{--occupation-border:#e4eaf4;max-width:1240px;margin:0 auto;padding:3.5rem 1.5rem 5rem}
+    .occupation-hero{max-width:820px;margin:0 auto 3.5rem;text-align:center}
+    .occupation-hero .eyebrow{color:var(--color-primary);font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;margin-bottom:.8rem}
+    .occupation-hero h1{max-width:800px;margin:0 auto 1rem;font-size:clamp(2.4rem,5vw,4.2rem);line-height:1.08}
+    .occupation-hero>p:not(.eyebrow){max-width:680px;margin:0 auto 1.5rem;font-size:1.08rem}
+    .occupation-search-label{display:block;text-align:left;max-width:680px;margin:1.5rem auto .5rem;font-weight:700;color:var(--color-secondary)}
+    .occupation-search-wrap{display:flex;align-items:center;gap:.75rem;max-width:680px;margin:0 auto;padding:.45rem .65rem .45rem 1rem;border:1px solid #d7dfed;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(18,40,91,.08)}
+    .occupation-search-wrap>span{font-size:1.6rem;color:var(--color-primary)}
+    .occupation-search-wrap input{flex:1;min-width:0;border:0;outline:none;padding:.8rem 0;background:transparent;color:var(--color-text)}
+    .occupation-search-wrap input:focus-visible{outline:0}
+    .occupation-search-wrap button{border:0;border-radius:10px;padding:.55rem .8rem;background:#edf3ff;color:var(--color-secondary);font-weight:700;cursor:pointer}
+    .occupation-search-status{font-size:.9rem;margin:.65rem auto 0!important}
+    .occupation-directory-intro{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:1.25rem}
+    .occupation-directory-intro h2{font-size:1.7rem;margin:0}
+    .occupation-directory-intro p{max-width:560px;margin:0;font-size:.92rem}
+    .occupation-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem;align-items:start}
+    .occupation-category{min-width:0;padding:1.4rem;border:1px solid var(--occupation-border);border-radius:18px;background:#fff;box-shadow:0 6px 22px rgba(18,40,91,.035)}
+    .occupation-category[hidden],.occupation-grid li[hidden]{display:none!important}
+    .occupation-category-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding-bottom:.9rem;border-bottom:1px solid #edf0f6;margin-bottom:.85rem}
+    .occupation-category-heading h2{font-size:1.22rem;letter-spacing:-.025em;margin:0}
+    .occupation-category-heading>span{flex-shrink:0;font-size:.75rem;font-weight:700;color:#5b6b89;background:#f1f5fb;border-radius:999px;padding:.3rem .55rem}
+    .occupation-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.15rem .75rem}
+    .occupation-grid li{min-width:0}
+    .occupation-grid a{display:flex;align-items:baseline;justify-content:space-between;gap:.35rem;height:100%;padding:.48rem .35rem;border-radius:7px;color:var(--color-text);font-size:.9rem;line-height:1.4;overflow-wrap:anywhere}
+    .occupation-grid a span{flex-shrink:0;color:#8a9ab7;font-size:.8rem;opacity:0}
+    .occupation-grid a:hover{background:#f3f7ff;color:var(--color-primary)}
+    .occupation-grid a:hover span{opacity:1}
+    @media(max-width:900px){.occupation-categories{grid-template-columns:1fr}.occupation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.occupation-directory-intro{display:block}.occupation-directory-intro p{margin-top:.45rem}}
+    @media(max-width:520px){.occupation-directory{padding:2rem 1rem 3rem}.occupation-hero{margin-bottom:2.5rem}.occupation-grid{grid-template-columns:1fr}.occupation-category{padding:1rem}.occupation-category-heading h2{font-size:1.08rem}}
+  </style>
   <script type="module" src="/scripts/components.js"></script>
   <script type="module" src="/scripts/main.js"></script>
   <script type="application/ld+json">${JSON.stringify(directorySchema).replace(/</g, "\\u003c")}</script>
 </head>
 <body>
   <job-grid-header></job-grid-header>
-  <main class="section-wrap" style="max-width:1100px;margin:3rem auto;padding:1.5rem">
-    <p class="eyebrow">Job Grid</p>
-    <h1>Browse job types and occupations</h1>
-    <p>Explore occupations by category and open a role page to search for matching vacancies. Occupation pages describe types of work; they do not claim an employer currently has an opening.</p>
-    ${directorySections}
+  <main class="occupation-directory section-wrap">
+    <section class="occupation-hero">
+      <p class="eyebrow">Explore your next move</p>
+      <h1>Find your place in the world of work</h1>
+      <p>Explore 9,044 occupations across industries. Search by job title or browse a category to discover career paths and matching vacancies.</p>
+      <label class="occupation-search-label" for="occupation-search">Search occupations</label>
+      <div class="occupation-search-wrap">
+        <span aria-hidden="true">⌕</span>
+        <input id="occupation-search" type="search" placeholder="Try “driver”, “nurse” or “accountant”" autocomplete="off">
+        <button id="occupation-search-clear" type="button" hidden>Clear</button>
+      </div>
+      <p class="occupation-search-status" id="occupation-search-status" aria-live="polite">Showing all 9,044 occupations</p>
+    </section>
+    <div class="occupation-directory-intro"><h2>Explore by category</h2><p>Choose an occupation to view its page and search for matching vacancies. A listed occupation is not a guarantee of a current opening.</p></div>
+    <div class="occupation-categories">${directorySections}</div>
   </main>
+  <script>
+    (() => {
+      const input = document.getElementById("occupation-search");
+      const clear = document.getElementById("occupation-search-clear");
+      const status = document.getElementById("occupation-search-status");
+      const items = [...document.querySelectorAll("[data-occupation-title]")];
+      const sections = [...document.querySelectorAll(".occupation-category")];
+      const update = () => {
+        const query = input.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        for (const item of items) {
+          const match = !query || item.dataset.occupationTitle.includes(query);
+          item.hidden = !match;
+          if (match) visible++;
+        }
+        for (const section of sections) {
+          section.hidden = !section.querySelector("[data-occupation-title]:not([hidden])");
+        }
+        clear.hidden = !query;
+        status.textContent = query ? `Showing ${visible.toLocaleString()} matching occupations` : `Showing ${items.length.toLocaleString()} occupations`;
+      };
+      input.addEventListener("input", update);
+      clear.addEventListener("click", () => { input.value = ""; update(); input.focus(); });
+    })();
+  </script>
   <job-grid-footer></job-grid-footer>
 </body>
 </html>`;
