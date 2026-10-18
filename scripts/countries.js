@@ -6,11 +6,16 @@ const results = document.querySelector("#country-results");
 const count = document.querySelector("#country-count");
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-function countryFlag(code) {
-  const normalized = String(code ?? "").toUpperCase();
-  if (!/^[A-Z]{2}$/.test(normalized)) return "🌐";
-  // Regional-indicator symbols use ISO alpha-2 codes, including many territories.
-  return String.fromCodePoint(...Array.from(normalized, (letter) => 127397 + letter.charCodeAt(0)));
+function countryFlag(code, name) {
+  const normalized = String(code ?? "").toLowerCase();
+  if (!/^[a-z]{2}$/.test(normalized)) {
+    return '<span class="country-flag-fallback" role="img" aria-label="' + escapeHtml(name) + ' destination">🌐</span>';
+  }
+  // Use actual flag images so the result does not depend on emoji font support.
+  // If a flag asset is unavailable, show a neutral globe instead of broken-image text.
+  const safeName = escapeHtml(name);
+  return '<img class="country-flag-image" src="https://flagcdn.com/w80/' + normalized + '.png" alt="' + safeName + ' flag" width="54" height="36" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false">' +
+    '<span class="country-flag-fallback" role="img" aria-label="' + safeName + ' destination" hidden>🌐</span>';
 }
 
 let countries = [];
@@ -22,10 +27,10 @@ function render() {
   results.innerHTML = filtered.length ? filtered.map((c) => {
     const name = escapeHtml(c.name);
     const code = escapeHtml(c.code);
-    const flag = countryFlag(c.code);
+    const flag = countryFlag(c.code, c.name);
     const destinationDescription = "Explore published vacancies and career opportunities in " + name + ". Browse any occupation and filter results for this destination.";
     return '<article class="role-card type-card country-card">' +
-      '<div class="role-card-top"><span class="country-flag" role="img" aria-label="' + name + ' flag">' + flag + '</span><span class="role-type">Destination</span></div>' +
+      '<div class="role-card-top"><span class="country-flag">' + flag + '</span><span class="role-type">Destination</span></div>' +
       '<p class="country-code">' + code + '</p><h2>' + name + '</h2>' +
       '<p class="role-card-subtitle country-description">' + destinationDescription + '</p>' +
       '<div class="country-card-actions"><a class="button button-primary button-small" href="/country.html?code=' + encodeURIComponent(c.code) + '">Browse jobs <span aria-hidden="true">↗</span></a>' +
