@@ -5,15 +5,32 @@ const search = document.querySelector("#country-search");
 const results = document.querySelector("#country-results");
 const count = document.querySelector("#country-count");
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function countryFlag(code) {
+  const normalized = String(code ?? "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return "🌐";
+  // Regional-indicator symbols use ISO alpha-2 codes, including many territories.
+  return String.fromCodePoint(...Array.from(normalized, (letter) => 127397 + letter.charCodeAt(0)));
+}
+
 let countries = [];
 
 function render() {
   const q = String(search.value ?? "").trim().toLocaleLowerCase();
   const filtered = countries.filter((c) => !q || c.name.toLocaleLowerCase().includes(q) || c.code.toLocaleLowerCase() === q);
   count.textContent = "Showing " + filtered.length + " of " + countries.length + " countries and territories.";
-  results.innerHTML = filtered.length ? filtered.map((c) =>
-    '<article class="role-card type-card"><div class="role-card-top"><span class="company-mark mark-cobalt" aria-hidden="true">' + escapeHtml(c.code) + '</span><span class="role-type">Destination</span></div><h2>' + escapeHtml(c.name) + '</h2><p class="role-card-subtitle">Browse published vacancies in this destination.</p><div class="role-card-bottom"><span class="tag">' + escapeHtml(c.code) + '</span><a class="arrow-round" href="/country.html?code=' + encodeURIComponent(c.code) + '" aria-label="Browse jobs in ' + escapeHtml(c.name) + '">↗</a></div></article>'
-  ).join("") : '<p class="empty-results">No countries match that search. Try a different name or country code.</p>';
+  results.innerHTML = filtered.length ? filtered.map((c) => {
+    const name = escapeHtml(c.name);
+    const code = escapeHtml(c.code);
+    const flag = countryFlag(c.code);
+    const destinationDescription = "Explore published vacancies and career opportunities in " + name + ". Browse any occupation and filter results for this destination.";
+    return '<article class="role-card type-card country-card">' +
+      '<div class="role-card-top"><span class="country-flag" role="img" aria-label="' + name + ' flag">' + flag + '</span><span class="role-type">Destination</span></div>' +
+      '<p class="country-code">' + code + '</p><h2>' + name + '</h2>' +
+      '<p class="role-card-subtitle country-description">' + destinationDescription + '</p>' +
+      '<div class="country-card-actions"><a class="button button-primary button-small" href="/country.html?code=' + encodeURIComponent(c.code) + '">Browse jobs <span aria-hidden="true">↗</span></a>' +
+      '<span class="tag" aria-label="Country code">' + code + '</span></div></article>';
+  }).join("") : '<p class="empty-results">No countries match that search. Try a different name or country code.</p>';
   results.setAttribute("aria-busy", "false");
 }
 search.addEventListener("input", render);
