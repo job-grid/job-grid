@@ -250,11 +250,67 @@ const directoryHtml = `<!doctype html>
 </html>`;
 await writeFile(directoryPath, directoryHtml, "utf8");
 
+function occupationCopy(role) {
+  const title = role.title;
+  const normalized = title.toLowerCase();
+  const work = normalized.includes("manager") || normalized.includes("director") || normalized.includes("supervisor")
+    ? "coordinating work, planning resources, supporting colleagues, monitoring progress, and helping a team meet its objectives"
+    : normalized.includes("technician") || normalized.includes("mechanic") || normalized.includes("engineer") || normalized.includes("repair") || normalized.includes("installer")
+      ? "checking, installing, operating, maintaining, troubleshooting, or repairing relevant equipment and systems"
+      : normalized.includes("assistant") || normalized.includes("clerk") || normalized.includes("administrator") || normalized.includes("coordinator")
+        ? "organising information, maintaining records, supporting daily operations, and helping colleagues or customers"
+        : normalized.includes("officer") || normalized.includes("specialist") || normalized.includes("analyst") || normalized.includes("consultant")
+          ? "applying role-specific knowledge, reviewing information, solving problems, and supporting reliable decisions or services"
+          : normalized.includes("driver") || normalized.includes("operator") || normalized.includes("pilot")
+            ? "operating vehicles or equipment safely, following procedures, checking conditions, and keeping accurate records"
+            : normalized.includes("teacher") || normalized.includes("trainer") || normalized.includes("instructor") || normalized.includes("tutor")
+              ? "preparing learning activities, explaining skills, supporting learners, and reviewing progress"
+              : normalized.includes("nurse") || normalized.includes("care") || normalized.includes("therapist") || normalized.includes("medical")
+                ? "supporting health, care, wellbeing, or treatment needs within the role's scope and applicable standards"
+                : normalized.includes("sales") || normalized.includes("marketing") || normalized.includes("account")
+                  ? "understanding customer needs, communicating options, maintaining relationships, and supporting service goals"
+                  : "carrying out the practical and specialist tasks associated with the occupation, following workplace procedures and quality standards";
+  const categoryFocus = {
+    "Agriculture & Farming": "work may take place on farms, in agricultural businesses, supply chains, laboratories, or rural projects",
+    "Construction & Building": "work may involve building sites, materials, inspections, maintenance, or project coordination",
+    "Skilled Trades & Repair": "work often relies on practical technical skills, safe tool use, fault-finding, and quality checks",
+    "Driving & Transport": "safe movement of people or goods, route awareness, checks, and punctuality may be important",
+    "Warehouse & Logistics": "work may involve stock control, receiving and dispatch, order fulfilment, inventory, or transport coordination",
+    "Cleaning & Housekeeping": "work focuses on hygiene, orderly spaces, safe product handling, and consistent service standards",
+    "Security & Safety": "work may involve risk awareness, incident reporting, access procedures, and safety protocols",
+    "Hospitality & Tourism": "work may involve guest service, bookings, travel support, accommodation, or visitor experiences",
+    "Food Service & Catering": "work may involve food preparation or service, cleanliness, safe food handling, and teamwork",
+    "Retail & Sales": "work may involve customer assistance, product knowledge, transactions, merchandising, or sales",
+    "Customer Service": "work centres on communication, responding to enquiries, resolving issues, and customer records",
+    "General Labour": "hands-on tasks, reliability, teamwork, instructions, and safe working practices may be central",
+    "Manufacturing & Factory": "work may involve production processes, equipment, product checks, packaging, and safety standards",
+    "Domestic & Household Work": "work supports household routines, personal service, cleanliness, organisation, or care",
+    "Healthcare & Caregiving": "work requires respectful service, confidentiality, safety, and appropriate professional boundaries",
+    "Education & Training": "work may involve teaching, learning support, training, assessment, or education administration",
+    "Office & Administration": "work may involve scheduling, documentation, communication, data entry, and organised records",
+    "IT & Technology": "work may involve digital systems, software, data, technical support, testing, security, or technology operations",
+    "Finance & Accounting": "work may involve financial records, reporting, reconciliations, controls, budgets, or analysis",
+    "Engineering": "work may involve technical design, analysis, testing, maintenance, project delivery, or standards",
+    "Beauty & Personal Care": "work may involve client consultation, personal services, hygiene, safe product use, and customer care",
+    "Maintenance & Facilities": "work may involve inspections, fault response, planned maintenance, and service continuity",
+    "Marketing & Communications": "work may involve audience research, content, campaigns, brand communication, and engagement",
+    "Professional Services": "work may involve specialist advice, analysis, client delivery, documentation, or compliance",
+    "Other": "duties depend on the employer, sector, and exact position"
+  }[role.categoryName] || "duties depend on the employer, sector, and exact position";
+  return {
+    overview: title + " work generally involves " + work + ". The exact scope depends on the employer, industry, seniority, and workplace, so read each vacancy's own description to understand the responsibilities of that specific position.",
+    dayToDay: "Depending on the position, common work may include " + work + ". In " + role.categoryName.toLowerCase() + ", " + categoryFocus + ". Employers should explain actual tasks, reporting arrangements, location, and working conditions in each vacancy.",
+    skills: "Useful transferable strengths may include clear communication, reliability, teamwork, problem-solving, attention to detail, and safe working habits. Role-specific technical skills, licences, certificates, education, and experience vary by employer and country. Check the requirements stated in each vacancy rather than assuming one universal qualification.",
+    meta: "Learn what " + title + " work can involve, explore relevant skills and career considerations, and search Job Grid for matching vacancies in " + role.categoryName + ". Actual requirements depend on each employer."
+  };
+}
+
 for (const role of roles) {
   const dir = path.join(outputRoot, "job-types", role.slug);
   await mkdir(dir, { recursive: true });
   const title = `${role.title} Jobs and Career Opportunities | Job Grid`;
-  const description = `Explore ${role.title} opportunities in ${role.categoryName}. Search Job Grid for relevant vacancies and submit an application when a suitable opening is available.`;
+  const copy = occupationCopy(role);
+  const description = copy.meta;
   const canonical = `${siteRoot}/job-types/${role.slug}/`;
   const schema = {
     "@context": "https://schema.org",
@@ -286,13 +342,40 @@ for (const role of roles) {
 </head>
 <body>
   <job-grid-header></job-grid-header>
-  <main class="section-wrap" style="max-width:900px;margin:4rem auto;padding:1.5rem">
-    <p class="eyebrow"><a href="/job-types/">Job type directory</a> / ${escapeHtml(role.categoryName)}</p>
-    <h1>${escapeHtml(role.title)}</h1>
-    <p>This occupation is listed in Job Grid's public work catalogue under <strong>${escapeHtml(role.categoryName)}</strong>. The listing describes a type of work; it is not itself a promise that an employer currently has an opening.</p>
-    <p>Use Job Grid to search for relevant vacancies. Only actual vacancies with employer-supplied details are presented as job openings. Application checks are handled by the Job Grid team before a candidate can proceed to the next stage.</p>
-    <p><a href="/vacancies.html?q=${encodeURIComponent(role.title)}&category=${encodeURIComponent(role.categorySlug)}">Search ${escapeHtml(role.title)} vacancies</a></p>
-    <p><a href="/job-types/">Browse all job types</a></p>
+  <main class="occupation-detail">
+    <p class="occupation-breadcrumb"><a href="/job-types/">Occupation directory</a> / ${escapeHtml(role.categoryName)}</p>
+    <section class="occupation-hero-card">
+      <div>
+        <span class="occupation-kicker">Job Grid occupation guide</span>
+        <h1>${escapeHtml(role.title)}</h1>
+        <p class="occupation-lead">${escapeHtml(copy.overview)}</p>
+        <div class="occupation-actions">
+          <a class="occupation-button" href="/vacancies.html?q=${encodeURIComponent(role.title)}&category=${encodeURIComponent(role.categorySlug)}">Search matching vacancies ↗</a>
+          <a class="occupation-button occupation-button-secondary" href="/job-types/">Browse occupations</a>
+        </div>
+      </div>
+      <div class="occupation-hero-mark" aria-hidden="true">${escapeHtml(role.title.trim().charAt(0).toUpperCase())}</div>
+    </section>
+    <section class="occupation-detail-grid" aria-label="Occupation information">
+      <article class="occupation-info-card">
+        <h2>What does this role involve?</h2>
+        <p>${escapeHtml(copy.dayToDay)}</p>
+      </article>
+      <aside class="occupation-side-card">
+        <h2>Skills and requirements</h2>
+        <p>${escapeHtml(copy.skills)}</p>
+        <ul>
+          <li>Read the employer's listed requirements carefully.</li>
+          <li>Confirm location, schedule, pay, and contract details in the vacancy.</li>
+          <li>Use a trusted application process to share documents.</li>
+        </ul>
+      </aside>
+    </section>
+    <p class="occupation-trust-note"><strong>Important:</strong> This page describes an occupation, not a confirmed job opening. Job Grid displays actual vacancies separately, and our team checks applications before a candidate can proceed to the next stage. Never assume a role is available until its vacancy details confirm it.</p>
+    <nav class="occupation-related-links" aria-label="Related links">
+      <a href="/vacancies.html?q=${encodeURIComponent(role.title)}&category=${encodeURIComponent(role.categorySlug)}">Find ${escapeHtml(role.title)} vacancies</a>
+      <a href="/job-types/">Browse all job types</a>
+    </nav>
   </main>
   <job-grid-footer></job-grid-footer>
 </body>
@@ -301,9 +384,10 @@ for (const role of roles) {
   if (canonicalTags.length !== 1 || canonicalTags[0] !== `<link rel="canonical" href="${canonical}">`) {
     throw new Error(`Expected exactly one correct canonical URL for ${role.title}.`);
   }
-  if (!html.includes(`<a href="/job-types/">Job type directory</a>`)) {
+  if (!html.includes(`<a href="/job-types/">Occupation directory</a>`)) {
     throw new Error(`Occupation page is missing its directory link: ${role.slug}`);
   }
+  if (copy.overview.length < 100 || copy.dayToDay.length < 100 || copy.skills.length < 100) throw new Error(`Occupation copy is too thin for ${role.title}.`);
   await writeFile(path.join(dir, "index.html"), html, "utf8");
 }
 
