@@ -326,3 +326,10 @@ psqlx -q -c "UPDATE public.jobs SET status='published', published_at=now(), expi
 expect_failure "published source evidence is immutable" "Source verification evidence for a published vacancy is immutable" \\
   "UPDATE public.staff_job_source_verifications SET verification_status='unverified', checked_at=NULL, checked_by=NULL WHERE job_id=(SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing');"
 echo "PASS: private source evidence is required for publication and cannot be changed while published"
+
+# Exercise atomic state transition + audit RPC on isolated synthetic data.
+psqlx -q -c "UPDATE public.jobs SET status='closed' WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "UPDATE public.staff_job_source_verifications SET verification_status='verified', checked_at=now(), checked_by='11111111-1111-4111-8111-111111111111' WHERE job_id=(SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing');"
+psqlx -q -c "SELECT public.staff_vacancy_transition('publish', '22222222-2222-4222-8222-222222222222', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, now()+interval '7 days');"
+psqlx -q -c "SELECT public.staff_vacancy_transition('close', '22222222-2222-4222-8222-222222222222', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, NULL);"
+echo "PASS: publish and close transitions use the transactional audit RPC"
