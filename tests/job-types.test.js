@@ -31,6 +31,12 @@ test("website obtains active categories from the existing Supabase category tabl
   assert.doesNotMatch(script, /const categories = \[/);
 });
 
+test("role directory exposes the full public catalogue and canonical directory URL", () => {
+  assert.match(directory, /Browse 9,044 occupation titles across 25 categories/);
+  assert.match(directory, /<strong>9,044<\/strong> occupation titles/);
+  assert.match(directory, /<link rel="canonical" href="https:\/\/jobs-grid\\.co\\.ke\/job-types\/" \/>/);
+});
+
 test("role directory supports title search, category filters, and incremental results", () => {
   assert.match(directory, /id="job-type-search"/);
   assert.match(directory, /id="job-type-category"/);
