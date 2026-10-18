@@ -55,3 +55,24 @@ before insert or update of status on public.jobs
 for each row execute function public.enforce_verified_job_publication();
 comment on table public.staff_job_source_verifications is 'Private staff-only source verification evidence for vacancies; never expose through public vacancy APIs.';
 comment on function public.enforce_verified_job_publication() is 'Blocks publication without a verified private HTTPS source record.';
+
+create or replace function public.prevent_published_source_evidence_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare current_status text;
+begin
+  select status into current_status from public.jobs where id = coalesce(new.job_id, old.job_id);
+  if current_status = 'published' then
+    raise exception 'Source verification evidence for a published vacancy is immutable; close the vacancy before changing it'
+      using errcode = '23514';
+  end if;
+  return coalesce(new, old);
+end;
+$$;
+drop trigger if exists staff_source_evidence_immutable_when_published on public.staff_job_source_verifications;
+create trigger staff_source_evidence_immutable_when_published
+before update or delete on public.staff_job_source_verifications
+for each row execute function public.prevent_published_source_evidence_mutation();
