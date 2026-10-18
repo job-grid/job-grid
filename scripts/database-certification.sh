@@ -314,15 +314,15 @@ echo "DATABASE CERTIFICATION RESULT: PASS for isolated PostgreSQL 17 migration a
 echo "== Apply staff vacancy source-verification migration in isolation =="
 psqlx -q -f supabase/migrations/20261018100000_staff_vacancy_publishing.sql
 
-echo "== Test staff source-verification publication guard =="
-psqlx -q -c "INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code,status,source_reference,source_verification_status) VALUES ('Staff guard synthetic listing','staff-guard-synthetic-listing','Synthetic Employer','Isolated publication guard test.','health-care-caregiving','skilled','full_time','CA','draft','https://employer.synthetic.example/jobs/1','unverified');"
+echo "== Test private staff source-verification publication guard =="
+psqlx -q -c "INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code,status) VALUES ('Staff guard synthetic listing','staff-guard-synthetic-listing','Synthetic Employer','Isolated publication guard test.','health-care-caregiving','skilled','full_time','CA','draft');"
 
-expect_failure "staff migration blocks publication without source verification" "Vacancy cannot be published without recorded HTTPS source verification" \
+expect_failure "staff migration blocks publication without private source verification" "Vacancy cannot be published without recorded HTTPS source verification" \\
   "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
 
-psqlx -q -c "UPDATE public.jobs SET source_verification_status='verified', source_checked_at=now(), source_checked_by='11111111-1111-4111-8111-111111111111' WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "INSERT INTO auth.users (id) VALUES ('11111111-1111-4111-8111-111111111111') ON CONFLICT (id) DO NOTHING;"
+psqlx -q -c "INSERT INTO public.staff_job_source_verifications (job_id,source_reference,verification_status,checked_at,checked_by) SELECT id,'https://employer.synthetic.example/jobs/1','verified',now(),'11111111-1111-4111-8111-111111111111' FROM public.jobs WHERE slug='staff-guard-synthetic-listing';"
 psqlx -q -c "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
-expect_failure "published source evidence cannot be removed" "Vacancy cannot be published without recorded HTTPS source verification" \
-  "UPDATE public.jobs SET source_verification_status='unverified', source_checked_at=NULL, source_checked_by=NULL WHERE slug='staff-guard-synthetic-listing';"
-psqlx -q -c "UPDATE public.jobs SET source_reference='https://employer.synthetic.example/jobs/updated', source_checked_at=now() WHERE slug='staff-guard-synthetic-listing';"
-echo "PASS: staff source guard blocks unverified publication, protects verification evidence, and permits a verified source refresh"
+expect_failure "published source evidence is immutable" "Source verification evidence for a published vacancy is immutable" \\
+  "UPDATE public.staff_job_source_verifications SET verification_status='unverified', checked_at=NULL, checked_by=NULL WHERE job_id=(SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing');"
+echo "PASS: private source evidence is required for publication and cannot be changed while published"
