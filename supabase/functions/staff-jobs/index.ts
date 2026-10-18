@@ -12,7 +12,7 @@ const json = (status: number, body: Record<string, unknown>) =>
 const text = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const allowedRoles = ["reviewer", "publisher", "system_admin"];
 const publishRoles = ["publisher", "system_admin"];
-const jobFields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,status,published_at,expires_at,source_reference,source_verification_status,source_checked_at,source_checked_by,created_at";
+const jobFields = "id,title,slug,employer_name,description,requirements,category_slug,skill_level,employment_type,workplace_type,country_code,region,city,salary_min,salary_max,salary_currency,salary_period,sponsorship_status,application_url,application_instructions,is_featured,status,published_at,expires_at,created_at";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -58,8 +58,10 @@ Deno.serve(async (req) => {
     const employment = text(body.employment_type, 30);
     const workplace = text(body.workplace_type, 30) || "on_site";
     const source = text(body.source_reference, 2000);
+    let sourceUrl: URL | null = null;
+    try { sourceUrl = new URL(source); } catch { /* validated below */ }
     const slug = text(body.slug, 220) || title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    if (title.length < 3 || !employer || !description || !category || !country || !source.startsWith("https://") ||
+    if (title.length < 3 || !employer || !description || !category || !country || !sourceUrl || sourceUrl.protocol !== "https:" || !sourceUrl.hostname || sourceUrl.username !== "" || sourceUrl.password !== "" ||
         !["skilled", "semi_skilled", "unskilled"].includes(skill) ||
         !["full_time", "part_time", "contract", "temporary", "casual", "seasonal", "internship", "apprenticeship"].includes(employment) ||
         !["on_site", "hybrid", "remote"].includes(workplace) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
@@ -84,7 +86,6 @@ Deno.serve(async (req) => {
       sponsorship_status: ["available", "not_available", "not_stated", "requires_verification"].includes(text(body.sponsorship_status, 30)) ? text(body.sponsorship_status, 30) : "not_stated",
       application_url: text(body.application_url, 2000) || null, application_instructions: text(body.application_instructions, 4000) || null,
       is_featured: body.is_featured === true, status: "draft", published_at: null, expires_at: null,
-      source_reference: source, source_verification_status: "unverified", source_checked_at: null, source_checked_by: null,
     };
     if (payload.application_url && !payload.application_url.startsWith("https://")) return json(422, { error: "Application URL must use HTTPS." });
     let saved;
@@ -98,29 +99,37 @@ Deno.serve(async (req) => {
       if (error || !data) return json(422, { error: "Could not create draft. Check the slug is unique and the selected category and country are valid." });
       saved = data;
     }
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_draft_saved", entity_type: "job", entity_id: saved.id, details: { slug: saved.slug } });
+    const { error: evidenceError } = await admin.from("staff_job_source_verifications").upsert({ job_id: saved.id, source_reference: source, verification_status: "unverified", checked_at: null, checked_by: null, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
+    if (evidenceError) return json(503, { error: "Draft was saved, but private source evidence could not be reset. Do not verify or publish until an administrator resolves this." });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_draft_saved", entity_type: "job", entity_id: saved.id, details: { slug: saved.slug } });
+    if (auditError) return json(503, { error: "Draft was saved, but the audit record failed. Stop further actions and report this to the system administrator." });
     return json(200, { job: saved, message: "Draft saved. It is not visible to candidates." });
   }
 
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(422, { error: "Choose a valid vacancy first." });
   if (action === "verify_source") {
     const source = text(body.source_reference, 2000);
-    if (!source.startsWith("https://")) return json(422, { error: "Record the official HTTPS source you checked." });
-    const { data: job, error } = await admin.from("jobs").update({ source_reference: source, source_verification_status: "verified", source_checked_at: new Date().toISOString(), source_checked_by: userId }).eq("id", id).eq("status", "draft").select("id,slug,status").maybeSingle();
-    if (error) return json(422, { error: "Could not record source verification." });
+    let sourceUrl: URL | null = null;
+    try { sourceUrl = new URL(source); } catch { /* validated below */ }
+    if (!sourceUrl || sourceUrl.protocol !== "https:" || !sourceUrl.hostname || sourceUrl.username !== "" || sourceUrl.password !== "") return json(422, { error: "Record the official HTTPS source you checked." });
+    const { data: job, error: jobError } = await admin.from("jobs").select("id,slug,status").eq("id", id).eq("status", "draft").maybeSingle();
+    if (jobError) return json(503, { error: "Could not load the draft for source verification." });
     if (!job) return json(409, { error: "Only draft vacancies can be verified. Save the draft first." });
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_source_verified", entity_type: "job", entity_id: id, details: { source_reference: source } });
-    return json(200, { job, message: "Source review recorded. A publisher must still publish the vacancy." });
+    const { error: evidenceError } = await admin.from("staff_job_source_verifications").upsert({ job_id: id, source_reference: source, verification_status: "verified", checked_at: new Date().toISOString(), checked_by: userId, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
+    if (evidenceError) return json(503, { error: "Could not securely record source verification." });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_source_verified", entity_type: "job", entity_id: id, details: { source_reference: source } });
+    if (auditError) return json(503, { error: "Verification was recorded, but its audit record failed. Stop further actions and report this to the system administrator." });
+    return json(200, { job, message: "Source review recorded privately. A different publisher must still publish the vacancy." });
   }
 
   if (action === "publish") {
     if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can publish vacancies." });
     const { data: job, error: readError } = await admin.from("jobs").select(jobFields).eq("id", id).maybeSingle();
     if (readError || !job) return json(404, { error: "Vacancy not found." });
-    if (job.status !== "draft" || job.source_verification_status !== "verified" || !job.source_reference?.startsWith("https://") || !job.source_checked_at || !job.source_checked_by) {
-      return json(409, { error: "Only a draft with recorded official-source verification can be published." });
-    }
-    if (job.source_checked_by === userId) return json(409, { error: "A different authorized staff member must publish after the source review." });
+    const { data: evidence, error: evidenceError } = await admin.from("staff_job_source_verifications").select("source_reference,verification_status,checked_at,checked_by").eq("job_id", id).maybeSingle();
+    if (evidenceError) return json(503, { error: "Could not load private source verification evidence." });
+    if (job.status !== "draft" || evidence?.verification_status !== "verified" || !evidence.source_reference || !evidence.checked_at || !evidence.checked_by) return json(409, { error: "Only a draft with recorded official-source verification can be published." });
+    if (evidence.checked_by === userId) return json(409, { error: "A different authorized staff member must publish after the source review." });
     const expiresAt = text(body.expires_at, 40);
     const parsedExpiry = Date.parse(expiresAt);
     if (!Number.isFinite(parsedExpiry) || parsedExpiry <= Date.now()) return json(422, { error: "Choose a future expiry date." });
@@ -128,7 +137,8 @@ Deno.serve(async (req) => {
     const { data: published, error } = await admin.from("jobs").update({ status: "published", published_at: publishedAt, expires_at: new Date(parsedExpiry).toISOString() }).eq("id", id).eq("status", "draft").select("id,slug,status,published_at,expires_at").maybeSingle();
     if (error) return json(422, { error: "Publication failed. Confirm the source verification and all required vacancy details." });
     if (!published) return json(409, { error: "This vacancy is no longer a draft. Reload the workspace." });
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_published", entity_type: "job", entity_id: id, details: { expires_at: published.expires_at } });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_published", entity_type: "job", entity_id: id, details: { expires_at: published.expires_at } });
+    if (auditError) return json(503, { error: "Publication succeeded, but its audit record failed. Stop further actions and report this immediately." });
     return json(200, { job: published, message: "Vacancy published after recorded source review." });
   }
 
@@ -137,7 +147,8 @@ Deno.serve(async (req) => {
     const { data: closed, error } = await admin.from("jobs").update({ status: "closed" }).eq("id", id).eq("status", "published").select("id,slug,status").maybeSingle();
     if (error) return json(422, { error: "Could not close this vacancy." });
     if (!closed) return json(409, { error: "Only currently published vacancies can be closed." });
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_closed", entity_type: "job", entity_id: id, details: {} });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "vacancy_closed", entity_type: "job", entity_id: id, details: {} });
+    if (auditError) return json(503, { error: "Vacancy was closed, but its audit record failed. Stop further actions and report this immediately." });
     return json(200, { job: closed, message: "Vacancy closed and removed from public search." });
   }
   return json(422, { error: "Unsupported action." });
