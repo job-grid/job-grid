@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="description" content="Restricted Job Grid candidate document register for authorized recruitment staff." />
+<title>Candidate Documents — Job Grid Staff</title>
+<link rel="stylesheet" href="/styles/tokens.css" />
+<link rel="stylesheet" href="/styles/global.css" />
+<link rel="stylesheet" href="/styles/vacancies.css" />
+<script type="module" src="/scripts/components.js"></script>
+<script type="module" src="/scripts/main.js"></script>
+<script type="module" src="/scripts/staff-documents.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a><div id="top"></div><job-grid-header></job-grid-header>
+<main id="main" class="section-wrap section-space">
+<p class="eyebrow">Restricted staff workspace</p>
+<h1>Candidate documents.</h1>
+<p class="section-description">A register of CVs attached to candidate applications. Only authorized staff can access documents. Links are temporary and must not be shared.</p>
+<div class="catalogue-notice" role="note"><strong>Confidential information</strong><span>This page is not public. Candidate documents remain in private storage; the register never exposes storage paths or permanent file URLs.</span></div>
+<section id="documents-login-panel" class="catalogue-notice">
+<strong>Staff sign-in</strong>
+<form id="documents-login-form" class="vacancy-filters">
+<div class="filter-field"><label for="documents-email">Staff email</label><input id="documents-email" type="email" autocomplete="username" required maxlength="254" /></div>
+<div class="filter-field"><label for="documents-password">Password</label><input id="documents-password" type="password" autocomplete="current-password" required /></div>
+<div class="filter-actions"><button class="button button-primary" type="submit">Sign in</button></div>
+</form>
+<p id="documents-login-status" role="status" aria-live="polite"></p>
+</section>
+<section id="documents-workspace" hidden>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+<p id="documents-summary" role="status"></p><button id="documents-refresh" class="button button-secondary" type="button">Refresh register</button><button id="documents-sign-out" class="button button-secondary" type="button">Sign out</button>
+</div>
+<div class="vacancy-filters" style="margin-bottom:1.2rem">
+<div class="filter-field"><label for="documents-search">Search candidates</label><input id="documents-search" type="search" maxlength="160" placeholder="Name, email, application ID" /></div>
+<div class="filter-field"><label for="documents-status-filter">Application status</label><select id="documents-status-filter"><option value="">All statuses</option><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="shortlisted">Shortlisted</option><option value="matched">Matched</option><option value="referred">Referred</option><option value="interview">Interview</option><option value="placed">Placed</option><option value="rejected">Rejected</option><option value="withdrawn">Withdrawn</option></select></div>
+</div>
+<div id="candidate-documents-list" class="vacancy-grid" aria-live="polite"></div>
+</section>
+<p><a href="/staff.html">← Recruitment review workspace</a></p>
+</main><job-grid-footer></job-grid-footer>
+</body></html>
