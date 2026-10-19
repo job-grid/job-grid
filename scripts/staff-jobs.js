@@ -80,8 +80,8 @@ $("#bulk-publish-button").addEventListener("click",async()=>{
   const button=$("#bulk-publish-button");button.disabled=true;$("#bulk-selection-status").textContent="Publishing selected vacancies…";
   try {
     const result=await call("POST",{action:"bulk_publish",ids,expires_at:expiry.toISOString()});
-    $("#bulk-selection-status").textContent="Bulk approval finished: "+result.published+" published, "+result.failed+" failed. "+(result.errors?.length?result.errors.map(e=>e.title+": "+e.error).join(" | "):"");
     await loadJobs();
+    $("#bulk-selection-status").textContent="Bulk approval finished: "+result.published+" published, "+result.failed+" failed. "+(result.errors?.length?result.errors.map(e=>e.title+": "+e.error).join(" | "):"");
   } catch(e){$("#bulk-selection-status").textContent=e.message;}
   finally{button.disabled=false;}
 });
