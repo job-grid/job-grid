@@ -114,7 +114,7 @@ begin
       checked_by = excluded.checked_by,
       updated_at = excluded.updated_at;
     insert into public.audit_logs(actor_id, action, entity_type, entity_id, details)
-    values (p_actor_id, 'vacancy_source_verified', 'job', p_job_id, jsonb_build_object('source_reference', p_source_reference));
+    values (p_actor_id, 'vacancy_source_verified', 'job', p_job_id, jsonb_build_object('verification_status', 'verified'));
     return jsonb_build_object('id', v_job.id, 'slug', v_job.slug, 'status', v_job.status);
   elsif p_action = 'publish' then
     if p_expires_at is null or p_expires_at <= now() then
