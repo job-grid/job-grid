@@ -19,11 +19,13 @@
       .document-fees-hero h1{max-width:850px;font-size:clamp(2.2rem,5vw,4rem);line-height:1.08}
       .document-fees-intro{max-width:760px;font-size:1.1rem;line-height:1.75}
       .document-fees-content{padding-block:clamp(2.5rem,6vw,5rem)}
-      .fees-table-wrap{overflow-x:auto;border:1px solid #dce4ef;border-radius:16px;background:#fff}
-      .fees-table{width:100%;border-collapse:collapse;min-width:320px}
-      .fees-table th,.fees-table td{padding:1rem 1.1rem;text-align:left;border-bottom:1px solid #e8edf4}
-      .fees-table th{background:#f4f7fb;font-weight:700}
-      .fees-table td:last-child,.fees-table th:last-child{text-align:right;white-space:nowrap;font-weight:700}
+      .document-fees-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:1rem;margin-block:1.5rem}
+      .document-fee-card{display:flex;align-items:flex-start;gap:1rem;padding:1.25rem;border:1px solid #dce4ef;border-radius:16px;background:#fff;box-shadow:0 6px 20px rgba(20,47,93,.06);min-width:0}
+      .document-fee-icon{display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;border-radius:14px;background:#edf4ff;color:#124ac8}
+      .document-fee-icon svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .document-fee-copy{min-width:0}
+      .document-fee-copy h3{margin:0 0 .5rem;font-size:1.05rem;line-height:1.35}
+      .document-fee-price{margin:0;font-weight:750;font-size:1.05rem;color:#102d68}
       .fees-note{padding:1rem 1.2rem;border-left:4px solid #e0ad35;background:#fff8e8;border-radius:8px;line-height:1.7}
       .fees-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:1rem;margin-block:1.5rem}
       .fees-card{padding:1.25rem;border:1px solid #dce4ef;border-radius:14px;background:#fff}
@@ -63,21 +65,43 @@
         <p class="eyebrow">Estimated costs in Kenya shillings</p>
         <h2 id="fees-heading">Overseas job documents and fees</h2>
         <p class="section-description">These amounts are reproduced from the supplied poster and should be treated as estimates, not official or guaranteed quotations.</p>
-        <div class="fees-table-wrap">
-          <table class="fees-table">
-            <thead><tr><th scope="col">Document or service</th><th scope="col">Estimated fee</th></tr></thead>
-            <tbody>
-              <tr><td>Passport</td><td>KSh 12,500</td></tr>
-              <tr><td>Consultant letter</td><td>KSh 5,000</td></tr>
-              <tr><td>NEA clearance</td><td>KSh 5,000</td></tr>
-              <tr><td>CV and cover letter</td><td>KSh 1,000</td></tr>
-              <tr><td>Health certificate — Western countries</td><td>KSh 31,060</td></tr>
-              <tr><td>Health certificate — Gulf countries</td><td>KSh 12,500</td></tr>
-              <tr><td>Police clearance</td><td>KSh 1,050</td></tr>
-              <tr><td>IELTS</td><td>KSh 35,000</td></tr>
-              <tr><td>Document attestation</td><td>KSh 3,500</td></tr>
-            </tbody>
-          </table>
+        <div class="document-fees-grid" aria-label="Estimated document fees">
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M6.5 15c1.4-2 3.6-2 5 0M14 9h3M14 13h3"/></svg></span>
+            <div class="document-fee-copy"><h3>Passport</h3><p class="document-fee-price">KSh 12,500</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h7M9 16h7"/></svg></span>
+            <div class="document-fee-copy"><h3>Consultant letter</h3><p class="document-fee-price">KSh 5,000</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m8 12 2 2 5-5M8 7h3"/></svg></span>
+            <div class="document-fee-copy"><h3>NEA clearance</h3><p class="document-fee-price">KSh 5,000</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h7M9 16h5"/></svg></span>
+            <div class="document-fee-copy"><h3>CV and cover letter</h3><p class="document-fee-price">KSh 1,000</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11z"/><path d="M12 8v7M8.5 11.5h7"/></svg></span>
+            <div class="document-fee-copy"><h3>Health certificate — Western countries</h3><p class="document-fee-price">KSh 31,060</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11z"/><path d="M12 8v7M8.5 11.5h7"/></svg></span>
+            <div class="document-fee-copy"><h3>Health certificate — Gulf countries</h3><p class="document-fee-price">KSh 12,500</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></svg></span>
+            <div class="document-fee-copy"><h3>Police clearance</h3><p class="document-fee-price">KSh 1,050</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></span>
+            <div class="document-fee-copy"><h3>IELTS</h3><p class="document-fee-price">KSh 35,000</p></div>
+          </article>
+          <article class="document-fee-card">
+            <span class="document-fee-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 14h8l2 4H6zM10 14V9a2 2 0 1 1 4 0v5M5 21h14"/></svg></span>
+            <div class="document-fee-copy"><h3>Document attestation</h3><p class="document-fee-price">KSh 3,500</p></div>
+          </article>
         </div>
         <h2>Estimated total documentation costs</h2>
         <div class="fees-grid">
