@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     if (!sourceUrl || sourceUrl.protocol !== "https:" || !sourceUrl.hostname || sourceUrl.username !== "" || sourceUrl.password !== "") return json(422, { error: "Record the official HTTPS source you checked." });
     const { data: job, error } = await admin.rpc("staff_vacancy_transition", { p_action: "verify_source", p_actor_id: userId, p_job_id: id, p_source_reference: source, p_expires_at: null });
     if (error) return json(error.code === "23514" ? 409 : 503, { error: error.message || "Could not atomically record source verification and its audit entry." });
-    return json(200, { job, message: "Source review and audit entry recorded atomically. A different publisher must still publish the vacancy." });
+    return json(200, { job, message: "Source review and audit entry recorded atomically. An authorized publisher can now publish after this verification." });
   }
 
   if (action === "publish") {
