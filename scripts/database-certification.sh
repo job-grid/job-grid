@@ -309,3 +309,38 @@ END;
 "
 echo "PASS: final catalog preservation, four isolated synthetic jobs, provenance, audit and publication history"
 echo "DATABASE CERTIFICATION RESULT: PASS for isolated PostgreSQL 17 migration and synthetic permission/publication tests"
+
+
+echo "== Apply staff vacancy source-verification migration in isolation =="
+psqlx -q -f supabase/migrations/20261018100000_staff_vacancy_publishing.sql
+
+echo "== Test private staff source-verification publication guard =="
+psqlx -q -c "INSERT INTO public.jobs (title,slug,employer_name,description,category_slug,skill_level,employment_type,country_code,status) VALUES ('Staff guard synthetic listing','staff-guard-synthetic-listing','Synthetic Employer','Isolated publication guard test.','health-care-caregiving','skilled','full_time','CA','draft');"
+
+expect_failure "staff migration blocks publication without private source verification" "Vacancy cannot be published without recorded HTTPS source verification" \
+  "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
+
+psqlx -q -c "INSERT INTO auth.users (id) VALUES ('11111111-1111-4111-8111-111111111111') ON CONFLICT (id) DO NOTHING;"
+psqlx -q -c "INSERT INTO public.staff_job_source_verifications (job_id,source_reference,verification_status,checked_at,checked_by) SELECT id,'https://employer.synthetic.example/jobs/1','verified',now(),'11111111-1111-4111-8111-111111111111' FROM public.jobs WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "UPDATE public.jobs SET status='published', published_at=now(), expires_at=now()+interval '7 days' WHERE slug='staff-guard-synthetic-listing';"
+expect_failure "published source evidence is immutable" "Source verification evidence for a published vacancy is immutable" \
+  "UPDATE public.staff_job_source_verifications SET verification_status='unverified', checked_at=NULL, checked_by=NULL WHERE job_id=(SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing');"
+echo "PASS: private source evidence is required for publication and cannot be changed while published"
+
+# Exercise atomic state transition + audit RPC on isolated synthetic data.
+psqlx -q -c "INSERT INTO auth.users (id) VALUES ('22222222-2222-4222-8222-222222222222') ON CONFLICT (id) DO NOTHING;"
+psqlx -q -c "UPDATE public.jobs SET status='closed' WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "UPDATE public.staff_job_source_verifications SET verification_status='verified', checked_at=now(), checked_by='11111111-1111-4111-8111-111111111111' WHERE job_id=(SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing');"
+psqlx -q -c "UPDATE public.jobs SET status='draft', published_at=NULL, expires_at=NULL WHERE slug='staff-guard-synthetic-listing';"
+psqlx -q -c "SELECT public.staff_vacancy_transition('publish', '11111111-1111-4111-8111-111111111111', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, now()+interval '7 days');"
+psqlx -q -c "SELECT public.staff_vacancy_transition('close', '22222222-2222-4222-8222-222222222222', (SELECT id FROM public.jobs WHERE slug='staff-guard-synthetic-listing'), NULL, NULL);"
+echo "PASS: publish and close transitions use the transactional audit RPC"
+
+# Prove draft, private evidence and audit roll back together if the audit insert fails.
+psqlx -q -c "CREATE OR REPLACE FUNCTION public.test_fail_staff_draft_audit() RETURNS trigger LANGUAGE plpgsql AS \$test\$ BEGIN IF NEW.action='vacancy_draft_saved' AND NEW.details->>'slug'='staff-draft-rollback-test' THEN RAISE EXCEPTION 'forced audit failure for rollback test'; END IF; RETURN NEW; END; \$test\$;"
+psqlx -q -c "CREATE TRIGGER test_fail_staff_draft_audit BEFORE INSERT ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION public.test_fail_staff_draft_audit();"
+expect_failure "atomic draft save rolls back when audit insert fails" "forced audit failure for rollback test" "SELECT public.staff_vacancy_save_draft('22222222-2222-4222-8222-222222222222', NULL, '{\"title\":\"Rollback Synthetic Listing\",\"slug\":\"staff-draft-rollback-test\",\"employer_name\":\"Synthetic Employer\",\"description\":\"Rollback test only.\",\"category_slug\":\"health-care-caregiving\",\"skill_level\":\"skilled\",\"employment_type\":\"full_time\",\"workplace_type\":\"on_site\",\"country_code\":\"CA\",\"sponsorship_status\":\"requires_verification\"}'::jsonb, 'https://employer.synthetic.example/jobs/rollback');"
+psqlx -q -c "DROP TRIGGER test_fail_staff_draft_audit ON public.audit_logs; DROP FUNCTION public.test_fail_staff_draft_audit();"
+psqlx -q -c "DO \$test\$ BEGIN IF EXISTS (SELECT 1 FROM public.jobs WHERE slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'draft row survived failed audit transaction'; END IF; IF EXISTS (SELECT 1 FROM public.staff_job_source_verifications v JOIN public.jobs j ON j.id=v.job_id WHERE j.slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'private evidence survived failed audit transaction'; END IF; END; \$test\$;"
+echo "PASS: draft and private evidence roll back when the audit write fails"
+
