@@ -139,6 +139,33 @@ Deno.serve(async (req) => {
     return json(200, { job: published, message: "Vacancy published and audit entry committed atomically." });
   }
 
+  if (action === "bulk_publish") {
+    if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can bulk-publish vacancies." });
+    const rawIds = Array.isArray(body.ids) ? body.ids : [];
+    const ids = [...new Set(rawIds.filter((value): value is string => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value)))];
+    if (!ids.length || ids.length > 50 || ids.length !== rawIds.length) return json(422, { error: "Select between 1 and 50 unique valid vacancy IDs." });
+    const expiresAt = text(body.expires_at, 40);
+    const parsedExpiry = Date.parse(expiresAt);
+    if (!Number.isFinite(parsedExpiry) || parsedExpiry <= Date.now()) return json(422, { error: "Choose a future expiry date for the selected vacancies." });
+    const published: Array<{id:string;title:string}> = [];
+    const errors: Array<{id:string;title:string;error:string}> = [];
+    for (const jobId of ids) {
+      const { data: jobRow } = await admin.from("jobs").select("id,title").eq("id", jobId).maybeSingle();
+      const title = jobRow?.title ?? jobId;
+      const { data: result, error } = await admin.rpc("staff_vacancy_transition", {
+        p_action: "publish", p_actor_id: userId, p_job_id: jobId,
+        p_source_reference: null, p_expires_at: new Date(parsedExpiry).toISOString(),
+      });
+      if (error) errors.push({ id: jobId, title, error: error.message || "Publication failed." });
+      else published.push({ id: jobId, title: typeof result?.slug === "string" ? title : title });
+    }
+    return json(200, {
+      published: published.length, failed: errors.length,
+      jobs: published, errors,
+      message: "Bulk approval finished. Each successful publication and its audit entry committed atomically.",
+    });
+  }
+
   if (action === "close") {
     if (!roles.some((role) => publishRoles.includes(role))) return json(403, { error: "Only an authorized publisher or system administrator can close vacancies." });
     const { data: closed, error } = await admin.rpc("staff_vacancy_transition", { p_action: "close", p_actor_id: userId, p_job_id: id, p_source_reference: null, p_expires_at: null });
