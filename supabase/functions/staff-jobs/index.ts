@@ -97,7 +97,14 @@ Deno.serve(async (req) => {
       application_url: text(body.application_url, 2000) || null, application_instructions: text(body.application_instructions, 4000) || null,
       is_featured: body.is_featured === true, status: "draft", published_at: null, expires_at: null,
     };
-    if (payload.application_url && !payload.application_url.startsWith("https://")) return json(422, { error: "Application URL must use HTTPS." });
+    if (payload.application_url) {
+      let applicationUrl: URL | null = null;
+      try { applicationUrl = new URL(payload.application_url); } catch { /* validated below */ }
+      if (!applicationUrl || applicationUrl.protocol !== "https:" || !applicationUrl.hostname ||
+          applicationUrl.username !== "" || applicationUrl.password !== "") {
+        return json(422, { error: "Application URL must be a valid HTTPS URL without embedded credentials." });
+      }
+    }
     const { data: saved, error: saveError } = await admin.rpc("staff_vacancy_save_draft", {
       p_actor_id: userId,
       p_job_id: id && /^[0-9a-f-]{36}$/i.test(id) ? id : null,
