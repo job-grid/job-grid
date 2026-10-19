@@ -24,9 +24,15 @@ function fillForm(job) {
 }
 function renderJobs() {
   const list=$("#jobs-list");
+  const canPublish=roles.some(r=>["publisher","system_admin"].includes(r));
+  const verifiedDrafts=jobs.filter(j=>j.status==="draft"&&j.source_verification_status==="verified");
   $("#jobs-summary").textContent=jobs.length+" recent vacancies loaded. Drafts are private; only publisher/system administrator roles can publish.";
+  $("#bulk-publish-toolbar").hidden=!canPublish||verifiedDrafts.length===0;
+  $("#bulk-select-all").checked=false;
+  $("#bulk-select-all").disabled=verifiedDrafts.length===0;
+  $("#bulk-selection-status").textContent=verifiedDrafts.length+" verified draft(s) available for bulk approval.";
   if (!jobs.length) { list.innerHTML='<p class="vacancy-empty">No vacancies yet. Create the first genuine vacancy draft above.</p>'; return; }
-  list.innerHTML=jobs.map(job => '<article class="vacancy-card" data-job="'+esc(job.id)+'"><div class="vacancy-meta"><span class="vacancy-tag">'+esc(job.status)+'</span><span class="vacancy-tag">'+esc(job.source_verification_status||"unverified")+'</span></div><h3>'+esc(job.title)+'</h3><p class="vacancy-employer">'+esc(job.employer_name)+' · '+esc(job.country_code)+'</p><p class="vacancy-description">'+esc(job.source_reference||"No source recorded")+'</p><p class="vacancy-description">Expiry: '+esc(job.expires_at||"Not published")+'</p><div class="filter-actions">'+(job.status==="draft"?'<button class="button button-secondary edit-job" type="button">Edit draft</button><button class="button button-secondary verify-job" type="button">I checked this official source</button>':"")+(job.status==="draft"&&roles.some(r=>["publisher","system_admin"].includes(r))?'<button class="button button-primary publish-job" type="button">Publish</button>':"")+(job.status==="published"&&roles.some(r=>["publisher","system_admin"].includes(r))?'<button class="button button-secondary close-job" type="button">Close vacancy</button>':"")+'</div><p class="job-feedback" role="status" aria-live="polite"></p></article>').join("");
+  list.innerHTML=jobs.map(job => '<article class="vacancy-card" data-job="'+esc(job.id)+'"><div class="vacancy-meta">'+(canPublish&&job.status==="draft"&&job.source_verification_status==="verified"?'<label class="bulk-job-choice"><input class="bulk-job-checkbox" type="checkbox" value="'+esc(job.id)+'" aria-label="Select '+esc(job.title)+' for bulk approval" /> Select for bulk approval</label>':"")+'<span class="vacancy-tag">'+esc(job.status)+'</span><span class="vacancy-tag">'+esc(job.source_verification_status||"unverified")+'</span></div><h3>'+esc(job.title)+'</h3><p class="vacancy-employer">'+esc(job.employer_name)+' · '+esc(job.country_code)+'</p><p class="vacancy-description">'+esc(job.source_reference||"No source recorded")+'</p><p class="vacancy-description">Expiry: '+esc(job.expires_at||"Not published")+'</p><div class="filter-actions">'+(job.status==="draft"?'<button class="button button-secondary edit-job" type="button">Edit draft</button><button class="button button-secondary verify-job" type="button">I checked this official source</button>':"")+(job.status==="draft"&&canPublish?'<button class="button button-primary publish-job" type="button">Publish</button>':"")+(job.status==="published"&&canPublish?'<button class="button button-secondary close-job" type="button">Close vacancy</button>':"")+'</div><p class="job-feedback" role="status" aria-live="polite"></p></article>').join("");
   for(const card of list.querySelectorAll("[data-job]")) {
     const id=card.dataset.job, job=jobs.find(j=>j.id===id), feedback=card.querySelector(".job-feedback");
     card.querySelector(".edit-job")?.addEventListener("click",()=>fillForm(job));
@@ -42,7 +48,7 @@ function renderJobs() {
       const entered=prompt("Enter vacancy expiry date and time in your local time (YYYY-MM-DDTHH:MM). Check the employer deadline. Suggested: "+suggested.toISOString().slice(0,16),suggested.toISOString().slice(0,16));
       if(!entered) return;
       const expiry=new Date(entered);
-      if(!Number.isFinite(expiry.getTime())) { feedback.textContent="Enter a valid expiry date and time."; return; }
+      if(!Number.isFinite(expiry.getTime())||expiry.getTime()<=Date.now()) { feedback.textContent="Enter a valid future expiry date and time."; return; }
       try { const result=await call("POST",{action:"publish",id,expires_at:expiry.toISOString()}); feedback.textContent=result.message; await loadJobs(); }
       catch(e){feedback.textContent=e.message;}
     });
@@ -52,7 +58,33 @@ function renderJobs() {
       catch(e){feedback.textContent=e.message;}
     });
   }
+  $("#bulk-select-all").onchange=(event)=>{
+    for(const checkbox of list.querySelectorAll(".bulk-job-checkbox")) checkbox.checked=event.target.checked;
+    updateBulkSelectionStatus();
+  };
+  for(const checkbox of list.querySelectorAll(".bulk-job-checkbox")) checkbox.addEventListener("change",updateBulkSelectionStatus);
 }
+function updateBulkSelectionStatus() {
+  const count=document.querySelectorAll("#jobs-list .bulk-job-checkbox:checked").length;
+  $("#bulk-selection-status").textContent=count+" verified draft(s) selected for bulk approval.";
+}
+$("#bulk-publish-button").addEventListener("click",async()=>{
+  const ids=Array.from(document.querySelectorAll("#jobs-list .bulk-job-checkbox:checked")).map(box=>box.value);
+  if(!ids.length){$("#bulk-selection-status").textContent="Select at least one verified draft.";return;}
+  const suggested=new Date(Date.now()+30*86400000);suggested.setMinutes(suggested.getMinutes()-suggested.getTimezoneOffset());
+  const entered=prompt("Enter one expiry date/time for all "+ids.length+" selected vacancies (local time YYYY-MM-DDTHH:MM). Check each employer deadline. Suggested: "+suggested.toISOString().slice(0,16),suggested.toISOString().slice(0,16));
+  if(!entered)return;
+  const expiry=new Date(entered);
+  if(!Number.isFinite(expiry.getTime())||expiry.getTime()<=Date.now()){ $("#bulk-selection-status").textContent="Enter a valid future expiry date and time.";return; }
+  if(!confirm("Approve and publish "+ids.length+" verified vacancies now? Each vacancy will be published separately with its own audit entry. The same expiry date/time will apply to all selected vacancies."))return;
+  const button=$("#bulk-publish-button");button.disabled=true;$("#bulk-selection-status").textContent="Publishing selected vacancies…";
+  try {
+    const result=await call("POST",{action:"bulk_publish",ids,expires_at:expiry.toISOString()});
+    await loadJobs();
+    $("#bulk-selection-status").textContent="Bulk approval finished: "+result.published+" published, "+result.failed+" failed. "+(result.errors?.length?result.errors.map(e=>e.title+": "+e.error).join(" | "):"");
+  } catch(e){$("#bulk-selection-status").textContent=e.message;}
+  finally{button.disabled=false;}
+});
 async function loadJobs() {
   $("#jobs-list").innerHTML='<p class="vacancy-empty">Loading vacancy records…</p>';
   try {
