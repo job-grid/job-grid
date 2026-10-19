@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     return json(200, { job: saved, message: "Draft and private source evidence saved atomically; vacancy remains unpublished." });
   }
 
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(422, { error: "Choose a valid vacancy first." });
+  if (action !== "bulk_publish" && (!id || !/^[0-9a-f-]{36}$/i.test(id))) return json(422, { error: "Choose a valid vacancy first." });
   if (action === "verify_source") {
     const source = text(body.source_reference, 2000);
     let sourceUrl: URL | null = null;
