@@ -35,13 +35,23 @@ Deno.serve(async (req) => {
   if (!roles.some((role) => allowedRoles.includes(role))) return json(403, { error: "This account does not have vacancy-review permission." });
 
   if (req.method === "GET") {
-    const [{ data: jobs, error: jobsError }, { data: categories, error: categoriesError }, { data: countries, error: countriesError }] = await Promise.all([
+    const [{ data: jobs, error: jobsError }, { data: categories, error: categoriesError }, { data: countries, error: countriesError }, { data: verifications, error: verificationError }] = await Promise.all([
       admin.from("jobs").select(jobFields).order("created_at", { ascending: false }).limit(100),
       admin.from("job_categories").select("slug,name").eq("is_active", true).order("sort_order", { ascending: true }),
       admin.from("country_options").select("code,name").order("name", { ascending: true }),
+      admin.from("staff_job_source_verifications").select("job_id,source_reference,verification_status"),
     ]);
-    if (jobsError || categoriesError || countriesError) return json(503, { error: "Could not load vacancy workspace data." });
-    return json(200, { jobs: jobs ?? [], categories: categories ?? [], countries: countries ?? [], roles });
+    if (jobsError || categoriesError || countriesError || verificationError) return json(503, { error: "Could not load vacancy workspace data." });
+    const evidenceByJob = new Map((verifications ?? []).map((evidence) => [evidence.job_id, evidence]));
+    const workspaceJobs = (jobs ?? []).map((job) => {
+      const evidence = evidenceByJob.get(job.id);
+      return {
+        ...job,
+        source_reference: evidence?.source_reference ?? null,
+        source_verification_status: evidence?.verification_status ?? "unverified",
+      };
+    });
+    return json(200, { jobs: workspaceJobs, categories: categories ?? [], countries: countries ?? [], roles });
   }
 
   let body: Record<string, unknown>;
