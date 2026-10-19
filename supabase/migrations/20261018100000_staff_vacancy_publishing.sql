@@ -130,9 +130,6 @@ begin
        or v_evidence.source_reference !~ '^https://[^[:space:]]+$' then
       raise exception 'Only a draft with recorded official-source verification can be published' using errcode = '23514';
     end if;
-    if v_evidence.checked_by = p_actor_id then
-      raise exception 'A different authorized staff member must publish after the source review' using errcode = '23514';
-    end if;
     update public.jobs set status = 'published', published_at = now(), expires_at = p_expires_at
     where id = p_job_id returning * into v_job;
     insert into public.audit_logs(actor_id, action, entity_type, entity_id, details)
