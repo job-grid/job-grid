@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
   if (req.method === "GET") {
     const { data, error } = await admin.from("candidate_applications")
-      .select("id,job_id,full_name,email,phone,country_code,city,experience_summary,skills,cv_storage_path,status,submitted_at,updated_at")
+      .select("id,job_id,full_name,email,phone,country_code,city,preferred_destinations,experience_summary,skills,cv_storage_path,status,submitted_at,updated_at")
       .order("submitted_at", { ascending: false }).limit(100);
     if (error) return json(503, { error: "Could not load applications." });
     return json(200, { applications: data ?? [], roles });
