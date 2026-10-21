@@ -62,6 +62,10 @@ async function loadApplications() {
       <div class="vacancy-meta"><span class="vacancy-tag">${esc(app.status.replaceAll("_"," "))}</span><span class="vacancy-tag">Country: ${esc(app.country_code)}</span></div>
       <h2>${esc(app.full_name)}</h2><p class="vacancy-employer">${esc(app.email)} · ${esc(app.phone)}</p>
       <p><strong>Location:</strong> ${esc([app.city,app.country_code].filter(Boolean).join(", "))}</p>
+      <p><strong>Preferred work destinations</strong></p><p class="vacancy-description">${esc((app.preferred_destinations || []).length ? app.preferred_destinations.map(destination => {
+        const countryName = destination.country_code;
+        return destination.city ? destination.city + ", " + countryName : countryName + " (flexible city)";
+      }).join(" · ") : "Not specified")}</p>
       <p><strong>Experience / preferences</strong></p><p class="vacancy-description">${esc(app.experience_summary)}</p>
       <p><strong>Skills and qualifications</strong></p><p class="vacancy-description">${esc(app.skills)}</p>
       <p class="vacancy-description">Submitted: ${esc(new Date(app.submitted_at).toLocaleString())} · Application ID: ${esc(app.id)}</p>
