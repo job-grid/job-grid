@@ -23,7 +23,7 @@ BEGIN
   IF p_actor_id IS NULL OR p_submission_id IS NULL THEN
     RAISE EXCEPTION 'Staff actor and submission ID are required' USING ERRCODE = '22023';
   END IF;
-  IF p_action NOT IN ('reject', 'accept_as_draft') THEN
+  IF p_action IS NULL OR p_action NOT IN ('reject', 'accept_as_draft') THEN
     RAISE EXCEPTION 'Unsupported submission review action' USING ERRCODE = '22023';
   END IF;
   v_note := NULLIF(left(btrim(coalesce(p_review_note, '')), 3000), '');
