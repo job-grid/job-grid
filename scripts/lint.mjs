@@ -31,7 +31,7 @@ const checks = [
   [submissionReviewMigration.includes("FOR UPDATE") && submissionReviewMigration.includes("v_submission.status <> 'pending'"), "Review transaction locks each pending submission against duplicate review"],
   [submissionReviewMigration.includes("staff_vacancy_save_draft") && submissionReviewMigration.includes("v_submission.source_reference"), "Accepted submissions use existing draft workflow and preserve source evidence"],
   [submissionReviewMigration.includes("ARRAY['publisher','system_admin']") && submissionReviewMigration.includes("status = 'accepted_as_draft'") && submissionReviewMigration.includes("'published_at', NULL"), "Draft acceptance is role-gated and explicitly unpublished"],
-  [staffSubmissionFunction.includes("admin.auth.getUser(token)") && staffSubmissionFunction.includes("staff_roles") && staffSubmissionFunction.includes("staff_job_submission_review"), "Staff review endpoint validates session and staff role before actions"],
+  [staffSubmissionFunction.includes("db.auth.getUser(token)") && staffSubmissionFunction.includes("staff_roles") && staffSubmissionFunction.includes("staff_job_submission_review"), "Staff review endpoint validates session and staff role before actions"],
 ];
 let failed = false;
 for (const [passed, description] of checks) {
