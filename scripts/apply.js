@@ -59,30 +59,52 @@ if (form) {
     syncDestinations();
   }
 
-  addDestination.addEventListener("click", () => addDestinationRow());
-  // Render the first destination row immediately so the form never shows an empty section while the country catalogue loads.
-  addDestinationRow();
-  fetch(SUPABASE_URL + "/rest/v1/country_options?select=code,name&order=name.asc", {
-    headers: { Accept: "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
-  }).then(async (response) => {
-    if (!response.ok) throw new Error("Country list unavailable.");
-    countries = await response.json();
-    country.replaceChildren(new Option("Choose your country", ""));
-    for (const item of countries) country.add(new Option(item.name, item.code));
-    if (countries.some((item) => item.code === "KE")) country.value = "KE";
-    for (const row of destinationRows()) {
-      const select = row.querySelector(".destination-country");
-      const selectedCode = select.value;
-      select.replaceChildren(new Option("Choose destination country", ""));
-      for (const item of countries) select.add(new Option(item.name, item.code));
-      select.value = selectedCode;
+  // Keep the control responsive. If the catalogue request fails, clicking it retries the request.
+  addDestination.addEventListener("click", () => {
+    if (!countries.length) {
+      loadCountries();
+      return;
     }
-    syncDestinations();
-  }).catch(() => {
-    country.replaceChildren(new Option("Country list unavailable — refresh to retry", ""));
-    status.textContent = "We could not load the country list. Please refresh and try again.";
-    addDestination.disabled = true;
+    addDestinationRow();
   });
+
+  // Render a destination row immediately so the section is never empty during loading.
+  addDestinationRow();
+
+  async function loadCountries() {
+    addDestination.disabled = true;
+    addDestination.textContent = "Loading countries…";
+    try {
+      const response = await fetch(SUPABASE_URL + "/rest/v1/country_options?select=code,name&order=name.asc", {
+        headers: { Accept: "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
+      });
+      if (!response.ok) throw new Error("Country list unavailable.");
+      const rows = await response.json();
+      if (!Array.isArray(rows) || !rows.length) throw new Error("Country list unavailable.");
+      countries = rows;
+      country.replaceChildren(new Option("Choose your country", ""));
+      for (const item of countries) country.add(new Option(item.name, item.code));
+      if (countries.some((item) => item.code === "KE")) country.value = "KE";
+      for (const row of destinationRows()) {
+        const select = row.querySelector(".destination-country");
+        const selectedCode = select.value;
+        select.replaceChildren(new Option("Choose destination country", ""));
+        for (const item of countries) select.add(new Option(item.name, item.code));
+        select.value = selectedCode;
+      }
+      syncDestinations();
+      status.textContent = "";
+      addDestination.textContent = "Add another country";
+      addDestination.disabled = false;
+    } catch {
+      country.replaceChildren(new Option("Country list unavailable — click to retry", ""));
+      status.textContent = "We could not load the country list. Click “Retry country list” to try again.";
+      addDestination.textContent = "Retry country list";
+      addDestination.disabled = false;
+    }
+  }
+
+  loadCountries();
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
