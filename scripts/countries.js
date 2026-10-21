@@ -8,14 +8,10 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"
 
 function countryFlag(code, name) {
   const normalized = String(code ?? "").toLowerCase();
-  if (!/^[a-z]{2}$/.test(normalized)) {
-    return '<span class="country-flag-fallback" role="img" aria-label="' + escapeHtml(name) + ' destination">🌐</span>';
-  }
-  // Use actual flag images so the result does not depend on emoji font support.
-  // If a flag asset is unavailable, show a neutral globe instead of broken-image text.
-  const safeName = escapeHtml(name);
-  return '<img class="country-flag-image" src="https://flagcdn.com/w80/' + normalized + '.png" alt="' + safeName + ' flag" width="54" height="36" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false">' +
-    '<span class="country-flag-fallback" role="img" aria-label="' + safeName + ' destination" hidden>🌐</span>';
+  if (!/^[a-z]{2}$/.test(normalized)) return "";
+  // Render only the flag image. A second fallback element was appearing below
+  // valid flags in production despite CSS hidden-state rules.
+  return '<img class="country-flag-image" src="https://flagcdn.com/w80/' + normalized + '.png" alt="' + escapeHtml(name) + ' flag" width="54" height="36" loading="lazy" decoding="async" onerror="this.hidden=true">';
 }
 
 let countries = [];
