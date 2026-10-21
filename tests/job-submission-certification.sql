@@ -49,7 +49,7 @@ BEGIN
   END IF;
   IF (SELECT status FROM public.jobs WHERE id=accepted_id) <> 'draft'
      OR (SELECT published_at FROM public.jobs WHERE id=accepted_id) IS NOT NULL
-     OR EXISTS (SELECT 1 FROM public.publication_records WHERE job_id=accepted_id AND unpublished_at IS NULL) THEN
+     OR NOT EXISTS (SELECT 1 FROM public.staff_job_source_verifications WHERE job_id=accepted_id AND verification_status='unverified') THEN
     RAISE EXCEPTION 'Accepted manual submission was not kept unpublished';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.audit_logs WHERE actor_id='22222222-2222-4222-8222-222222222222'
