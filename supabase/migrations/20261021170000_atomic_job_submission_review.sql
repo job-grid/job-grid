@@ -55,7 +55,7 @@ BEGIN
         reviewed_by = p_actor_id, reviewed_at = now()
     WHERE id = p_submission_id;
     INSERT INTO public.audit_logs(actor_id, action, entity_type, entity_id, details)
-    VALUES (p_actor_id, 'job_submission_rejected', 'job_submission', p_submission_id,
+    VALUES (p_actor_id, 'job_submission_rejected', 'job_submission', p_submission_id::text,
             jsonb_build_object('review_note', v_note));
     RETURN jsonb_build_object('ok', true, 'status', 'rejected', 'job_id', NULL);
   END IF;
@@ -98,7 +98,7 @@ BEGIN
   WHERE id = p_submission_id;
 
   INSERT INTO public.audit_logs(actor_id, action, entity_type, entity_id, details)
-  VALUES (p_actor_id, 'job_submission_accepted_as_draft', 'job_submission', p_submission_id,
+  VALUES (p_actor_id, 'job_submission_accepted_as_draft', 'job_submission', p_submission_id::text,
           jsonb_build_object('job_id', v_job_id, 'review_note', v_note));
 
   RETURN jsonb_build_object('ok', true, 'status', 'accepted_as_draft', 'job_id', v_job_id);
