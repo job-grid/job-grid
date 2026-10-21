@@ -70,8 +70,18 @@ Deno.serve(async (req) => {
   if (countryError || !country) return json(422, { error: "Select a valid country." });
 
   if (jobId) {
-    const { data: job, error: jobError } = await db.from("jobs").select("id").eq("id", jobId).eq("status", "published").not("published_at", "is", null).lte("published_at", new Date().toISOString()).gt("expires_at", new Date().toISOString()).maybeSingle();
-    if (jobError || !job) return json(422, { error: "This vacancy is no longer accepting applications. You can submit a general candidate profile instead." });
+    const { data: job, error: jobError } = await db.from("jobs")
+      .select("id,status,published_at,expires_at")
+      .eq("id", jobId)
+      .eq("status", "published")
+      .maybeSingle();
+    const now = Date.now();
+    const publishedAt = job?.published_at ? Date.parse(job.published_at) : null;
+    const expiresAt = job?.expires_at ? Date.parse(job.expires_at) : null;
+    const eligible = !!job &&
+      (!job.published_at || (Number.isFinite(publishedAt) && publishedAt <= now)) &&
+      (!job.expires_at || (Number.isFinite(expiresAt) && expiresAt > now));
+    if (jobError || !eligible) return json(422, { error: "This vacancy is no longer accepting applications. You can submit a general candidate profile instead." });
   }
 
   const safeName = crypto.randomUUID() + "." + extension;
