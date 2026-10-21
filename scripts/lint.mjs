@@ -8,6 +8,9 @@ const locationPicker = await readFile(new URL("../scripts/location-picker.js", i
 const build = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
 const submitJobPage = await readFile(new URL("../submit-job.html", import.meta.url), "utf8");
 const staffSubmissionPage = await readFile(new URL("../staff-job-submissions.html", import.meta.url), "utf8");
+const submissionTableMigration = await readFile(new URL("../supabase/migrations/20261021150000_create_private_job_submissions.sql", import.meta.url), "utf8");
+const submissionReviewMigration = await readFile(new URL("../supabase/migrations/20261021170000_atomic_job_submission_review.sql", import.meta.url), "utf8");
+const staffSubmissionFunction = await readFile(new URL("../supabase/functions/staff-job-submissions/index.ts", import.meta.url), "utf8");
 const checks = [
   [html.includes('<html lang="en">'), "HTML language is declared"],
   [html.includes('href="#main"'), "Skip navigation link exists"],
@@ -24,6 +27,11 @@ const checks = [
   [build.includes('"submit-job.js"') && build.includes('"staff-job-submissions.js"'), "Manual submission scripts are included in production build"],
   [submitJobPage.includes('id="submit-job-form"') && submitJobPage.includes('name="source_reference"'), "Public manual job form includes required source evidence"],
   [staffSubmissionPage.includes('meta name="robots" content="noindex,nofollow"') && staffSubmissionPage.includes('id="submission-workspace"'), "Staff submission workspace is noindex and has a protected workspace"],
+  [submissionTableMigration.includes("ENABLE ROW LEVEL SECURITY") && submissionTableMigration.includes("REVOKE ALL ON TABLE public.job_submissions FROM PUBLIC, anon, authenticated"), "Job submissions table is private to trusted service access"],
+  [submissionReviewMigration.includes("FOR UPDATE") && submissionReviewMigration.includes("v_submission.status <> 'pending'"), "Review transaction locks each pending submission against duplicate review"],
+  [submissionReviewMigration.includes("staff_vacancy_save_draft") && submissionReviewMigration.includes("v_submission.source_reference"), "Accepted submissions use existing draft workflow and preserve source evidence"],
+  [submissionReviewMigration.includes("ARRAY['publisher','system_admin']") && submissionReviewMigration.includes("status = 'accepted_as_draft'") && submissionReviewMigration.includes("'published_at', NULL"), "Draft acceptance is role-gated and explicitly unpublished"],
+  [staffSubmissionFunction.includes("admin.auth.getUser(token)") && staffSubmissionFunction.includes("staff_roles") && staffSubmissionFunction.includes("staff_job_submission_review"), "Staff review endpoint validates session and staff role before actions"],
 ];
 let failed = false;
 for (const [passed, description] of checks) {
