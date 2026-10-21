@@ -27,25 +27,16 @@ Deno.serve(async req => {
  try{body=await req.json();}catch{return json(400,{error:"Invalid request."});}
  const id=text(body.id,36), action=text(body.action,30), note=text(body.review_note,3000)||null;
  if(!/^[0-9a-f-]{36}$/i.test(id)) return json(422,{error:"Choose a valid submission."});
- const {data:s,error:readError}=await db.from("job_submissions").select("*").eq("id",id).maybeSingle();
- if(readError) return json(503,{error:"Could not load submission."});
- if(!s||s.status!=="pending") return json(409,{error:"Submission has already been reviewed."});
- if(action==="reject"){
-  const {data:updated,error}=await db.from("job_submissions").update({status:"rejected",review_note:note,reviewed_by:auth.user.id,reviewed_at:new Date().toISOString()}).eq("id",id).eq("status","pending").select("id").maybeSingle();
-  if(error||!updated) return json(409,{error:"Could not reject this submission; refresh and check its status."});
-  await db.from("audit_logs").insert({actor_id:auth.user.id,action:"job_submission_rejected",entity_type:"job_submission",entity_id:id,details:{review_note:note}});
-  return json(200,{ok:true,message:"Rejected. No public vacancy was created."});
+ if(!["reject","accept_as_draft"].includes(action)) return json(422,{error:"Unsupported review action."});
+ const {data:result,error:reviewError}=await db.rpc("staff_job_submission_review",{
+  p_actor_id:auth.user.id,p_submission_id:id,p_action:action,p_review_note:note
+ });
+ if(reviewError){
+  if(reviewError.code==="42501") return json(403,{error:reviewError.message});
+  if(reviewError.code==="23514") return json(409,{error:reviewError.message});
+  if(reviewError.code==="22023") return json(422,{error:reviewError.message});
+  return json(503,{error:reviewError.message||"Review transaction failed. Refresh before retrying."});
  }
- if(action==="accept_as_draft"){
-  const slug=s.title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-  const payload={title:s.title,slug,employer_name:s.employer_name,description:s.description,requirements:s.requirements,category_slug:s.category_slug,skill_level:s.skill_level,employment_type:s.employment_type,workplace_type:s.workplace_type,country_code:s.country_code,region:s.region,city:s.city,salary_min:s.salary_min,salary_max:s.salary_max,salary_currency:s.salary_currency,salary_period:s.salary_period,sponsorship_status:"not_stated",application_url:s.application_url,application_instructions:s.application_instructions,is_featured:false,status:"draft",published_at:null,expires_at:null};
-  const {data:saved,error:saveError}=await db.rpc("staff_vacancy_save_draft",{p_actor_id:auth.user.id,p_job_id:null,p_payload:payload,p_source_reference:s.source_reference});
-  if(saveError) return json(saveError.code==="23514"?409:422,{error:saveError.message||"Could not create a private draft."});
-  const jobId=typeof saved?.id==="string"?saved.id:null;
-  const {data:updated,error:updateError}=await db.from("job_submissions").update({status:"accepted_as_draft",review_note:note,reviewed_by:auth.user.id,reviewed_at:new Date().toISOString(),created_job_id:jobId}).eq("id",id).eq("status","pending").select("id").maybeSingle();
-  if(updateError||!updated) return json(503,{error:"Private draft created but queue status did not update. Do not retry; contact an administrator."});
-  await db.from("audit_logs").insert({actor_id:auth.user.id,action:"job_submission_accepted_as_draft",entity_type:"job_submission",entity_id:id,details:{job_id:jobId,review_note:note}});
-  return json(200,{ok:true,message:"Accepted as an unpublished draft. Verify the official source in Vacancy Management; a publisher must then publish it."});
- }
- return json(422,{error:"Unsupported review action."});
+ if(action==="reject") return json(200,{ok:true,message:"Rejected. No public vacancy was created."});
+ return json(200,{ok:true,message:"Accepted as an unpublished draft. Verify the official source in Vacancy Management; a publisher must then publish it.",job_id:result?.job_id??null});
 });
