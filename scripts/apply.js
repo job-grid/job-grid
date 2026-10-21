@@ -60,6 +60,8 @@ if (form) {
   }
 
   addDestination.addEventListener("click", () => addDestinationRow());
+  // Render the first destination row immediately so the form never shows an empty section while the country catalogue loads.
+  addDestinationRow();
   fetch(SUPABASE_URL + "/rest/v1/country_options?select=code,name&order=name.asc", {
     headers: { Accept: "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
   }).then(async (response) => {
@@ -68,7 +70,14 @@ if (form) {
     country.replaceChildren(new Option("Choose your country", ""));
     for (const item of countries) country.add(new Option(item.name, item.code));
     if (countries.some((item) => item.code === "KE")) country.value = "KE";
-    addDestinationRow();
+    for (const row of destinationRows()) {
+      const select = row.querySelector(".destination-country");
+      const selectedCode = select.value;
+      select.replaceChildren(new Option("Choose destination country", ""));
+      for (const item of countries) select.add(new Option(item.name, item.code));
+      select.value = selectedCode;
+    }
+    syncDestinations();
   }).catch(() => {
     country.replaceChildren(new Option("Country list unavailable — refresh to retry", ""));
     status.textContent = "We could not load the country list. Please refresh and try again.";
