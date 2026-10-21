@@ -65,7 +65,7 @@ BEGIN
     NULL,
     jsonb_build_object(
       'title', v_submission.title,
-      'slug', trim(both '-' from regexp_replace(lower(translate(v_submission.title, 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇç', 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuCc')), '[^a-z0-9]+', '-', 'g')),
+      'slug', coalesce(nullif(trim(both '-' from regexp_replace(lower(translate(v_submission.title, 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇç', 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuCc')), '[^a-z0-9]+', '-', 'g')), ''), 'job') || '-' || substr(v_submission.id::text, 1, 8),
       'employer_name', v_submission.employer_name,
       'description', v_submission.description,
       'requirements', v_submission.requirements,
