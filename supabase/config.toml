@@ -11,3 +11,11 @@ verify_jwt = true
 # Vacancy management requires a valid Supabase Auth JWT and an explicit staff role.
 [functions.staff-jobs]
 verify_jwt = true
+
+# Manual job submissions are public intake only; the function validates input and stores it privately.
+[functions.job-submissions]
+verify_jwt = false
+
+# Staff review of private manual job submissions requires an authenticated staff role.
+[functions.staff-job-submissions]
+verify_jwt = true

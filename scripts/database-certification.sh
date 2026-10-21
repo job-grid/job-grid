@@ -344,3 +344,10 @@ psqlx -q -c "DROP TRIGGER test_fail_staff_draft_audit ON public.audit_logs; DROP
 psqlx -q -c "DO \$test\$ BEGIN IF EXISTS (SELECT 1 FROM public.jobs WHERE slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'draft row survived failed audit transaction'; END IF; IF EXISTS (SELECT 1 FROM public.staff_job_source_verifications v JOIN public.jobs j ON j.id=v.job_id WHERE j.slug='staff-draft-rollback-test') THEN RAISE EXCEPTION 'private evidence survived failed audit transaction'; END IF; END; \$test\$;"
 echo "PASS: draft and private evidence roll back when the audit write fails"
 
+
+# Exercise PR #99 manual job intake and staff review only in this isolated database.
+echo "== Apply manual job-submission migrations in isolation =="
+psqlx -q -f supabase/migrations/20261021150000_create_private_job_submissions.sql
+psqlx -q -f supabase/migrations/20261021170000_atomic_job_submission_review.sql
+echo "== Certify private manual submission and staff review workflow =="
+psqlx -q -f tests/job-submission-certification.sql

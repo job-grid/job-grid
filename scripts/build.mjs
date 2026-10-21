@@ -4,14 +4,14 @@ const output = new URL("../dist/", import.meta.url);
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
-for (const name of ["index.html", "job-types.html", "vacancies.html", "countries.html", "country.html", "for-employers.html", "apply.html", "staff.html", "staff-jobs.html", "overseas-jobs-documents-and-fees.html", "country-costs-and-processing-times.html"]) {
+for (const name of ["index.html", "job-types.html", "vacancies.html", "countries.html", "country.html", "for-employers.html", "submit-job.html", "apply.html", "staff.html", "staff-jobs.html", "staff-job-submissions.html", "overseas-jobs-documents-and-fees.html", "country-costs-and-processing-times.html"]) {
   await cp(new URL(`../${name}`, import.meta.url), new URL(name, output));
 }
 await cp(new URL("../styles", import.meta.url), new URL("styles/", output), { recursive: true });
 
 // Only browser-facing modules belong in the public static output.
 await mkdir(new URL("scripts/", import.meta.url), { recursive: true });
-for (const name of ["components.js", "main.js", "location-picker.js", "job-types.js", "vacancies.js", "countries.js", "country.js", "apply.js", "staff.js", "staff-jobs.js", "supabase-config.js"]) {
+for (const name of ["components.js", "main.js", "location-picker.js", "job-types.js", "vacancies.js", "countries.js", "country.js", "apply.js", "staff.js", "staff-jobs.js", "submit-job.js", "staff-job-submissions.js", "supabase-config.js"]) {
   await cp(new URL(`../scripts/${name}`, import.meta.url), new URL(`scripts/${name}`, output));
 }
 

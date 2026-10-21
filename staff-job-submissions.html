@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Manual Job Submissions — Job Grid Staff</title>
+<link rel="stylesheet" href="/styles/tokens.css"><link rel="stylesheet" href="/styles/global.css"><link rel="stylesheet" href="/styles/vacancies.css">
+<script type="module" src="/scripts/components.js"></script><script type="module" src="/scripts/main.js"></script><script type="module" src="/scripts/staff-job-submissions.js"></script>
+</head>
+<body><a class="skip-link" href="#main">Skip to content</a><div id="top"></div><job-grid-header></job-grid-header>
+<main id="main" class="section-wrap section-space">
+<p class="eyebrow">Restricted staff workspace</p><h1>Manual job submissions</h1>
+<p class="section-description">Review employer details and source evidence. Accepting a submission creates a private draft only. Verify the source and publish separately in Vacancy Management.</p>
+<section id="submission-login" class="catalogue-notice"><strong>Staff sign-in</strong>
+<form id="submission-login-form" class="vacancy-filters">
+<div class="filter-field"><label for="submission-email">Staff email</label><input id="submission-email" type="email" required autocomplete="username"></div>
+<div class="filter-field"><label for="submission-password">Password</label><input id="submission-password" type="password" required autocomplete="current-password"></div>
+<div class="filter-actions"><button class="button button-primary" type="submit">Sign in</button></div>
+</form><p id="submission-login-status" role="status" aria-live="polite"></p></section>
+<section id="submission-workspace" hidden>
+<div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap"><p id="submission-summary" role="status"></p><div class="filter-actions"><a class="button button-secondary" href="/staff-jobs.html">Vacancy Management</a><button id="submission-refresh" class="button button-secondary" type="button">Refresh</button><button id="submission-sign-out" class="button button-secondary" type="button">Sign out</button></div></div>
+<div id="submission-list" class="vacancy-grid" aria-live="polite"></div></section>
+</main><job-grid-footer></job-grid-footer></body></html>
