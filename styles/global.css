@@ -246,3 +246,35 @@ p { color: var(--color-text-muted); }
   outline-offset: 2px;
   border-color: var(--color-primary);
 }
+
+
+/* Follow-up visual hardening for country flags and destination cost cards. */
+.country-flag .country-flag-fallback[hidden],
+.country-flag img[hidden] {
+  display: none !important;
+  visibility: hidden !important;
+}
+.country-flag {
+  position: relative;
+}
+.country-flag-image:not([hidden]) + .country-flag-fallback[hidden] {
+  display: none !important;
+}
+@media (min-width: 741px) {
+  .cost-regions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+  .cost-region h2 {
+    font-size: clamp(1.65rem, 2.3vw, 2.25rem);
+    line-height: 1.16;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+}
+@media (max-width: 740px) {
+  .cost-region h2 {
+    font-size: clamp(1.55rem, 6vw, 2rem);
+    line-height: 1.2;
+  }
+}
