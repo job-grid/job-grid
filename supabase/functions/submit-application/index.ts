@@ -31,9 +31,25 @@ Deno.serve(async (req) => {
   const phone = clean(form.get("phone"), 40);
   const countryCode = clean(form.get("country_code"), 2).toUpperCase();
   const city = clean(form.get("city"), 120);
+  const rawDestinations = clean(form.get("preferred_destinations"), 10000);
   const experience = clean(form.get("experience_summary"), 6000);
   const skills = clean(form.get("skills"), 3000);
   const jobId = clean(form.get("job_id"), 80);
+  let preferredDestinations: Array<{ country_code: string; city: string }> = [];
+  try {
+    const parsed = JSON.parse(rawDestinations || "[]");
+    if (!Array.isArray(parsed) || parsed.length > 20) throw new Error("invalid destinations");
+    preferredDestinations = parsed.map((item) => {
+      if (!item || typeof item !== "object") throw new Error("invalid destination");
+      const destinationCode = typeof item.country_code === "string" ? item.country_code.trim().toUpperCase() : "";
+      const destinationCity = typeof item.city === "string" ? item.city.trim().slice(0, 120) : "";
+      if (!/^[A-Z]{2}$/.test(destinationCode)) throw new Error("invalid destination country");
+      return { country_code: destinationCode, city: destinationCity };
+    });
+    if (new Set(preferredDestinations.map((item) => item.country_code)).size !== preferredDestinations.length) throw new Error("duplicate destination country");
+  } catch {
+    return json(422, { error: "Choose valid preferred destination countries. Each country can be selected once." });
+  }
   const consent = form.get("consent") === "on";
   const cv = form.get("cv");
 
@@ -68,6 +84,13 @@ Deno.serve(async (req) => {
 
   const { data: country, error: countryError } = await db.from("country_options").select("code").eq("code", countryCode).maybeSingle();
   if (countryError || !country) return json(422, { error: "Select a valid country." });
+  if (preferredDestinations.length) {
+    const codes = preferredDestinations.map((item) => item.country_code);
+    const { data: validCountries, error: destinationError } = await db.from("country_options").select("code").in("code", codes);
+    if (destinationError || (validCountries ?? []).length !== new Set(codes).size) {
+      return json(422, { error: "One or more preferred destination countries are not valid. Please select them from the country list." });
+    }
+  }
 
   if (jobId) {
     const { data: job, error: jobError } = await db.from("jobs")
@@ -99,6 +122,7 @@ Deno.serve(async (req) => {
     phone,
     country_code: countryCode,
     city: city || null,
+    preferred_destinations: preferredDestinations,
     experience_summary: experience,
     skills,
     cv_storage_path: path,
