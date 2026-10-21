@@ -27,9 +27,22 @@
       .document-fee-copy h3{margin:0 0 .5rem;font-size:1.05rem;line-height:1.35}
       .document-fee-price{margin:0;font-weight:750;font-size:1.05rem;color:#102d68}
       .fees-note{padding:1rem 1.2rem;border-left:4px solid #e0ad35;background:#fff8e8;border-radius:8px;line-height:1.7}
-      .fees-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:1rem;margin-block:1.5rem}
-      .fees-card{padding:1.25rem;border:1px solid #dce4ef;border-radius:14px;background:#fff}
-      .fees-card h3{margin-top:0}
+      .fees-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:1.25rem;margin-block:1.5rem}
+      .fees-card{position:relative;display:flex;flex-direction:column;gap:.75rem;min-width:0;overflow:hidden;padding:clamp(1.25rem,3vw,1.75rem);border:1px solid #d8e3f2;border-radius:20px;background:linear-gradient(145deg,#fff 0%,#f7faff 100%);box-shadow:0 12px 30px rgba(20,47,93,.08)}
+      .fees-card:before{position:absolute;inset:0 auto 0 0;width:5px;background:#155eef;content:""}
+      .fees-card:nth-child(2):before{background:#087f69}
+      .fees-card-heading{display:flex;align-items:center;gap:.85rem}
+      .fees-total-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:#eaf1ff;color:#124ac8}
+      .fees-card:nth-child(2) .fees-total-icon{background:#e5f7f1;color:#087f69}
+      .fees-total-icon svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .fees-total-label{margin:0;color:#52627a;font-size:.78rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+      .fees-card h3{margin:.2rem 0 0;font-size:1.15rem;line-height:1.35;color:#172b4d}
+      .fees-total-amount{margin:.25rem 0 0;color:#102d68;font-size:clamp(1.8rem,4vw,2.35rem);font-weight:850;letter-spacing:-.035em;line-height:1.15}
+      .fees-total-caption{margin:0;color:#52627a;font-size:.92rem;line-height:1.6}
+      .fees-card-detail{margin:0;padding-top:.85rem;border-top:1px solid #e0e8f3;color:#35445b;font-size:.95rem;line-height:1.7}
+      .fees-card-note{margin:0;padding:.75rem .85rem;border-radius:10px;background:#edf4ff;color:#29456f;font-size:.88rem;line-height:1.6}
+      .fees-card:nth-child(2) .fees-card-note{background:#eaf8f3;color:#1d5c4e}
+      @media (max-width:480px){.fees-card{padding:1.1rem}.fees-total-icon{flex-basis:44px;width:44px;height:44px}}
       .fees-links{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.25rem}
     </style>
     <script type="module" src="/scripts/components.js"></script>
@@ -104,16 +117,27 @@
           </article>
         </div>
         <h2>Estimated total documentation costs</h2>
-        <div class="fees-grid">
+        <p class="section-description">Use these figures for planning only. Your actual total depends on the documents required for your destination and the charges confirmed by each issuing authority or provider.</p>
+        <div class="fees-grid" aria-label="Estimated total documentation costs by destination">
           <article class="fees-card">
-            <h3>Western countries and other destinations</h3>
-            <p><strong>KSh 94,110</strong></p>
-            <p>The poster states this total for the listed documents where the higher health-certificate estimate and IELTS fee apply.</p>
+            <div class="fees-card-heading">
+              <span class="fees-total-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5M8 17h3"/></svg></span>
+              <div><p class="fees-total-label">Estimated document budget</p><h3>Western countries and other destinations</h3></div>
+            </div>
+            <p class="fees-total-amount">KSh 94,110</p>
+            <p class="fees-total-caption">Poster-listed total where the higher health-certificate estimate and IELTS fee apply.</p>
+            <p class="fees-card-detail">Includes the listed document costs, with the Western-country health certificate and IELTS estimate.</p>
+            <p class="fees-card-note">Confirm which documents apply to your destination before paying.</p>
           </article>
           <article class="fees-card">
-            <h3>Gulf countries</h3>
-            <p><strong>KSh 40,550 — calculated from listed fees</strong></p>
-            <p>This adds the listed Gulf health certificate, passport, consultant letter, NEA clearance, CV and cover letter, police clearance and document attestation, excluding IELTS.</p>
+            <div class="fees-card-heading">
+              <span class="fees-total-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7v5c0 4.5-3.4 7.6-8 9-4.6-1.4-8-4.5-8-9V7z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
+              <div><p class="fees-total-label">Estimated document budget</p><h3>Gulf countries</h3></div>
+            </div>
+            <p class="fees-total-amount">KSh 40,550</p>
+            <p class="fees-total-caption">Calculated from the document fees listed on this page, excluding IELTS.</p>
+            <p class="fees-card-detail">Adds the Gulf health certificate, passport, consultant letter, NEA clearance, CV and cover letter, police clearance and document attestation.</p>
+            <p class="fees-card-note">This is a calculation from the listed items, not an official or guaranteed quotation.</p>
           </article>
         </div>
         <h2>Which documents may be needed for overseas employment?</h2>
