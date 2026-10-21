@@ -4,7 +4,7 @@ const output = new URL("../dist/", import.meta.url);
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
-for (const name of ["index.html", "job-types.html", "vacancies.html", "countries.html", "country.html", "for-employers.html", "apply.html", "staff.html", "staff-jobs.html", "overseas-jobs-documents-and-fees.html"]) {
+for (const name of ["index.html", "job-types.html", "vacancies.html", "countries.html", "country.html", "for-employers.html", "apply.html", "staff.html", "staff-jobs.html", "overseas-jobs-documents-and-fees.html", "country-costs-and-processing-times.html"]) {
   await cp(new URL(`../${name}`, import.meta.url), new URL(name, output));
 }
 await cp(new URL("../styles", import.meta.url), new URL("styles/", output), { recursive: true });
