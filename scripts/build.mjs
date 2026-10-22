@@ -21,4 +21,5 @@ await cp(new URL("../public/data/", import.meta.url), new URL("data/", output), 
 // Serve the official owner-supplied PNG at the site root.
 await cp(new URL("../public/job-grid-logo.png", import.meta.url), new URL("job-grid-logo.png", output));
 await import("./generate-occupation-pages.mjs");
+await import("./generate-country-pages.mjs");
 console.log("Static site built in dist/. This build does not deploy or connect to any backend.");
