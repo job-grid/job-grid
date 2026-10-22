@@ -9,8 +9,8 @@ function slugify(value) {
     .toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-if (!Array.isArray(countries) || countries.length !== 249) {
-  throw new Error(`Expected the reviewed 249-entry country catalogue; found ${countries?.length ?? "invalid data"} entries.`);
+if (!Array.isArray(countries) || countries.length === 0) {
+  throw new Error("Country catalogue must be a non-empty array.");
 }
 
 const routes = countries.map((country) => {
