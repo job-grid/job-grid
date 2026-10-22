@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
 
 const params = new URLSearchParams(window.location.search);
-const code = (params.get("code") || "").toUpperCase();
+const code = (params.get("code") || document.querySelector("[data-country-code]")?.dataset.countryCode || "").toUpperCase();
 const title = document.querySelector("#country-title");
 const description = document.querySelector("#country-description");
 const status = document.querySelector("#country-job-status");
