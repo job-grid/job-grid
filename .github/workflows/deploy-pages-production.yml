@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in / /job-types.html /vacancies.html /countries.html /country.html /for-employers.html /apply.html /staff.html /jobs-in-kenya/ /sitemap.xml; do
+          for path in / /job-types.html /vacancies.html /countries.html /country.html /for-employers.html /apply.html /staff.html /sitemap.xml; do
             status="$(curl --location --silent --show-error --output /tmp/job-grid-response.html --write-out '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://jobs-grid.co.ke$path")"
             if [ "$status" != "200" ]; then
               echo "Live smoke test failed: $path returned HTTP $status"
@@ -112,6 +112,11 @@ jobs:
             fi
             echo "PASS $path HTTP $status"
           done
+
+      - name: Verify every live country SEO route and sitemap entry
+        env:
+          BASE_URL: https://jobs-grid.co.ke
+        run: node scripts/verify-country-pages.mjs
 
       - name: Verify public Supabase catalog connectivity
         shell: bash
