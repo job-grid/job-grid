@@ -9,3 +9,6 @@
 .destination-row .remove-destination{white-space:nowrap;min-height:46px}
 #add-destination{width:100%;margin:.25rem 0 .5rem}
 @media(max-width:700px){.destination-row{grid-template-columns:1fr;gap:.65rem}.destination-row .remove-destination{width:100%}}
+
+/* Respect the HTML hidden attribute even when component classes set display:grid. */
+[hidden]{display:none!important}
