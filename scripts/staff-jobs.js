@@ -28,8 +28,13 @@ async function loadTitleCatalogue() {
     titleChoice.replaceChildren(new Option("Choose a job title",""));
     for (const item of titleCatalogue) titleChoice.add(new Option(item.title,item.title));
     titleChoice.add(new Option("Other — enter a title manually","__custom__"));
+    const existingTitle = customTitleInput.value.trim();
+    if (existingTitle) {
+      const match = titleCatalogue.find(item => item.title.toLocaleLowerCase() === existingTitle.toLocaleLowerCase());
+      titleChoice.value = match ? match.title : "__custom__";
+    }
   } catch {
-    titleChoice.replaceChildren(new Option("Other — enter a title manually","__custom__"));
+    titleChoice.replaceChildren(new Option("Job title catalogue unavailable — enter manually","__custom__"));
     titleChoice.value = "__custom__";
   }
   syncTitleChoice();
@@ -44,9 +49,11 @@ function syncTitleChoice() {
     if (selected.categorySlug && [...$("#job-category").options].some(o=>o.value===selected.categorySlug)) $("#job-category").value = selected.categorySlug;
     if (!$("#job-id").value) $("#job-slug").value = slugify(selected.title);
   } else if (custom) {
+    if (!customTitleInput.value.trim() || !$("#job-id").value) customTitleInput.value = "";
+    if (!$("#job-id").value) $("#job-slug").value = customTitleInput.value.trim() ? slugify(customTitleInput.value) : "";
+  } else if (!titleChoice.value) {
     customTitleInput.value = "";
-    if (!$("#job-id").value) $("#job-slug").value = "";
-  } else customTitleInput.value = "";
+  }
 }
 titleChoice.addEventListener("change", syncTitleChoice);
 customTitleInput.addEventListener("input",()=>{if(!$("#job-id").value) $("#job-slug").value=slugify(customTitleInput.value);});
@@ -55,9 +62,13 @@ loadTitleCatalogue();
 function formPayload() {
   return { id:$("#job-id").value || undefined, title:$("#job-title").value.trim(), slug:$("#job-slug").value.trim(), employer_name:$("#job-employer").value.trim(), country_code:$("#job-country").value, city:$("#job-city").value.trim(), region:$("#job-region").value.trim(), category_slug:$("#job-category").value, skill_level:$("#job-skill").value, employment_type:$("#job-employment").value, workplace_type:$("#job-workplace").value, source_reference:$("#job-source").value.trim(), application_url:$("#job-application-url").value.trim(), description:$("#job-description").value.trim(), requirements:$("#job-requirements").value.trim(), application_instructions:$("#job-application-instructions").value.trim(), sponsorship_status:$("#job-sponsorship").value, salary_min:$("#job-salary-min").value, salary_max:$("#job-salary-max").value, salary_currency:$("#job-salary-currency").value.trim().toUpperCase(), salary_period:$("#job-salary-period").value, is_featured:$("#job-featured").checked };
 }
-function clearForm() { $("#job-form").reset(); $("#job-id").value=""; $("#job-form-heading").textContent="Create vacancy draft"; $("#job-form-status").textContent=""; $("#job-slug").readOnly=false; }
+function clearForm() { $("#job-form").reset(); $("#job-id").value=""; $("#job-form-heading").textContent="Create vacancy draft"; $("#job-form-status").textContent=""; $("#job-slug").readOnly=false; syncTitleChoice(); }
 function fillForm(job) {
-  $("#job-id").value=job.id; $("#job-title").value=job.title; $("#job-slug").value=job.slug; $("#job-employer").value=job.employer_name; $("#job-country").value=job.country_code; $("#job-city").value=job.city||""; $("#job-region").value=job.region||""; $("#job-category").value=job.category_slug; $("#job-skill").value=job.skill_level; $("#job-employment").value=job.employment_type; $("#job-workplace").value=job.workplace_type; $("#job-source").value=job.source_reference||""; $("#job-application-url").value=job.application_url||""; $("#job-description").value=job.description; $("#job-requirements").value=job.requirements||""; $("#job-application-instructions").value=job.application_instructions||""; $("#job-sponsorship").value=job.sponsorship_status||"not_stated"; $("#job-salary-min").value=job.salary_min??""; $("#job-salary-max").value=job.salary_max??""; $("#job-salary-currency").value=job.salary_currency||""; $("#job-salary-period").value=job.salary_period||""; $("#job-featured").checked=job.is_featured===true; $("#job-form-heading").textContent="Edit draft: "+job.title; $("#job-slug").readOnly=true; $("#job-form-status").textContent="Editing draft. Saving resets its source review, so verify it again before publishing."; window.scrollTo({top:0,behavior:"smooth"});
+  $("#job-id").value=job.id; $("#job-title").value=job.title;
+  const knownTitle = titleCatalogue.find(item => item.title.toLocaleLowerCase() === String(job.title||"").toLocaleLowerCase());
+  titleChoice.value = knownTitle ? knownTitle.title : "__custom__";
+  syncTitleChoice();
+  $("#job-title").value=job.title; $("#job-slug").value=job.slug; $("#job-employer").value=job.employer_name; $("#job-country").value=job.country_code; $("#job-city").value=job.city||""; $("#job-region").value=job.region||""; $("#job-category").value=job.category_slug; $("#job-skill").value=job.skill_level; $("#job-employment").value=job.employment_type; $("#job-workplace").value=job.workplace_type; $("#job-source").value=job.source_reference||""; $("#job-application-url").value=job.application_url||""; $("#job-description").value=job.description; $("#job-requirements").value=job.requirements||""; $("#job-application-instructions").value=job.application_instructions||""; $("#job-sponsorship").value=job.sponsorship_status||"not_stated"; $("#job-salary-min").value=job.salary_min??""; $("#job-salary-max").value=job.salary_max??""; $("#job-salary-currency").value=job.salary_currency||""; $("#job-salary-period").value=job.salary_period||""; $("#job-featured").checked=job.is_featured===true; $("#job-form-heading").textContent="Edit draft: "+job.title; $("#job-slug").readOnly=true; $("#job-form-status").textContent="Editing draft. Saving resets its source review, so verify it again before publishing."; window.scrollTo({top:0,behavior:"smooth"});
 }
 function renderJobs() {
   const list=$("#jobs-list");
