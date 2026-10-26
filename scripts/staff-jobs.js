@@ -15,6 +15,43 @@ async function call(method = "GET", body = null) {
 }
 function signedOut(message="") { session=null; $("#jobs-workspace").hidden=true; $("#jobs-login-panel").hidden=false; $("#jobs-login-status").textContent=message; $("#jobs-list").replaceChildren(); }
 function slugify(s) { return s.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+const titleChoice = $("#job-title-choice");
+const customTitleField = $("#custom-job-title-field");
+const customTitleInput = $("#job-title");
+let titleCatalogue = [];
+async function loadTitleCatalogue() {
+  try {
+    const response = await fetch("/data/job-types.json", {headers:{Accept:"application/json"}});
+    if (!response.ok) throw new Error("catalogue unavailable");
+    const data = await response.json();
+    titleCatalogue = (Array.isArray(data.roles) ? data.roles : []).filter(row => Array.isArray(row) && typeof row[0] === "string" && row[0].trim()).map(row => ({title:row[0].trim(), categorySlug:typeof row[1] === "string" ? row[1] : ""})).sort((a,b)=>a.title.localeCompare(b.title));
+    titleChoice.replaceChildren(new Option("Choose a job title",""));
+    for (const item of titleCatalogue) titleChoice.add(new Option(item.title,item.title));
+    titleChoice.add(new Option("Other — enter a title manually","__custom__"));
+  } catch {
+    titleChoice.replaceChildren(new Option("Other — enter a title manually","__custom__"));
+    titleChoice.value = "__custom__";
+  }
+  syncTitleChoice();
+}
+function syncTitleChoice() {
+  const custom = titleChoice.value === "__custom__";
+  customTitleField.hidden = !custom;
+  customTitleInput.required = custom;
+  const selected = titleCatalogue.find(item => item.title === titleChoice.value);
+  if (selected) {
+    customTitleInput.value = selected.title;
+    if (selected.categorySlug && [...$("#job-category").options].some(o=>o.value===selected.categorySlug)) $("#job-category").value = selected.categorySlug;
+    if (!$("#job-id").value) $("#job-slug").value = slugify(selected.title);
+  } else if (custom) {
+    customTitleInput.value = "";
+    if (!$("#job-id").value) $("#job-slug").value = "";
+  } else customTitleInput.value = "";
+}
+titleChoice.addEventListener("change", syncTitleChoice);
+customTitleInput.addEventListener("input",()=>{if(!$("#job-id").value) $("#job-slug").value=slugify(customTitleInput.value);});
+loadTitleCatalogue();
+
 function formPayload() {
   return { id:$("#job-id").value || undefined, title:$("#job-title").value.trim(), slug:$("#job-slug").value.trim(), employer_name:$("#job-employer").value.trim(), country_code:$("#job-country").value, city:$("#job-city").value.trim(), region:$("#job-region").value.trim(), category_slug:$("#job-category").value, skill_level:$("#job-skill").value, employment_type:$("#job-employment").value, workplace_type:$("#job-workplace").value, source_reference:$("#job-source").value.trim(), application_url:$("#job-application-url").value.trim(), description:$("#job-description").value.trim(), requirements:$("#job-requirements").value.trim(), application_instructions:$("#job-application-instructions").value.trim(), sponsorship_status:$("#job-sponsorship").value, salary_min:$("#job-salary-min").value, salary_max:$("#job-salary-max").value, salary_currency:$("#job-salary-currency").value.trim().toUpperCase(), salary_period:$("#job-salary-period").value, is_featured:$("#job-featured").checked };
 }
