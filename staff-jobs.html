@@ -17,7 +17,7 @@
 <section class="catalogue-notice"><h2 id="job-form-heading">Create vacancy draft</h2><p>Use an official HTTPS source. Saving creates a private draft only.</p>
 <form id="job-form" class="vacancy-filters">
 <input id="job-id" type="hidden" />
-<div class="filter-field"><label for="job-title">Job title *</label><input id="job-title" required maxlength="180" /></div>
+<div class="filter-field"><label for="job-title-choice">Choose job title *</label><select id="job-title-choice" required><option value="">Loading job titles…</option></select></div><div class="filter-field" id="custom-job-title-field" hidden><label for="job-title">Enter job title *</label><input id="job-title" maxlength="180" /></div>
 <div class="filter-field"><label for="job-slug">URL slug *</label><input id="job-slug" required maxlength="220" pattern="[a-z0-9]+(-[a-z0-9]+)*" /></div>
 <div class="filter-field"><label for="job-employer">Employer name *</label><input id="job-employer" required maxlength="200" /></div>
 <div class="filter-field"><label for="job-country">Country *</label><select id="job-country" required><option value="">Choose country</option></select></div>
