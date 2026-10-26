@@ -22,6 +22,8 @@ test("document register relies on authenticated staff endpoint and never exposes
   assert.match(staff, /auth\.getUser\(token\)/);
   assert.match(staff, /staff_roles/);
   assert.match(staff, /createSignedUrl\(application\.cv_storage_path, 60\)/);
+  assert.match(staff, /has_cv: Boolean\(cv_storage_path\)/);
+  assert.match(staff, /\(\{ cv_storage_path, \.\.\.application \}\)/);
 });
 
 test("static build includes the documents page and its browser module", () => {

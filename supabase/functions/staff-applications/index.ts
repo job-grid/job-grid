@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
       .select("id,job_id,full_name,email,phone,country_code,city,preferred_destinations,experience_summary,skills,cv_storage_path,status,submitted_at,updated_at")
       .order("submitted_at", { ascending: false }).limit(100);
     if (error) return json(503, { error: "Could not load applications." });
-    return json(200, { applications: data ?? [], roles });
+    const applications = (data ?? []).map(({ cv_storage_path, ...application }) => ({ ...application, has_cv: Boolean(cv_storage_path) }));
+    return json(200, { applications, roles });
   }
 
   if (!roles.some((role) => ["reviewer", "publisher", "system_admin"].includes(role))) {

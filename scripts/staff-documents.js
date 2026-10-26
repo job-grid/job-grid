@@ -100,7 +100,7 @@ async function loadDocuments() {
   try {
     const data = await staffCall();
     if (generation !== requestGeneration || !session) return;
-    applications = (data.applications || []).filter(app => app.cv_storage_path);
+    applications = (data.applications || []).filter(app => app.has_cv);
     loginPanel.hidden = true;
     workspace.hidden = false;
     render();
