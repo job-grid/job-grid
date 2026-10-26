@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
       .select("id,job_id,full_name,email,phone,country_code,city,preferred_destinations,experience_summary,skills,cv_storage_path,status,submitted_at,updated_at")
       .order("submitted_at", { ascending: false }).limit(100);
     if (error) return json(503, { error: "Could not load applications." });
-    return json(200, { applications: data ?? [], roles });
+    const applications = (data ?? []).map(({ cv_storage_path, ...application }) => ({ ...application, has_cv: Boolean(cv_storage_path) }));
+    return json(200, { applications, roles });
   }
 
   if (!roles.some((role) => ["reviewer", "publisher", "system_admin"].includes(role))) {
@@ -53,10 +54,11 @@ Deno.serve(async (req) => {
   if (action === "cv") {
     if (!roles.includes("reviewer") && !roles.includes("system_admin")) return json(403, { error: "Reviewer permission is required to access candidate CVs." });
     const { data: application, error } = await admin.from("candidate_applications").select("cv_storage_path").eq("id", id).maybeSingle();
-    if (error || !application) return json(404, { error: "Application not found." });
+    if (error || !application?.cv_storage_path) return json(404, { error: "Candidate CV not found." });
     const { data, error: signError } = await admin.storage.from("candidate-cvs").createSignedUrl(application.cv_storage_path, 60);
     if (signError || !data?.signedUrl) return json(503, { error: "Could not create a secure CV link." });
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "candidate_cv_accessed", entity_type: "candidate_application", entity_id: id, details: { expires_in_seconds: 60 } });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "candidate_cv_accessed", entity_type: "candidate_application", entity_id: id, details: { expires_in_seconds: 60 } });
+    if (auditError) return json(503, { error: "Secure CV access could not be audited. Please try again." });
     return json(200, { url: data.signedUrl });
   }
 
