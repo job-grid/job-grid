@@ -80,11 +80,25 @@ function render() {
       const button = event.currentTarget;
       button.disabled = true;
       feedback.textContent = "Requesting secure access…";
+      // Open the tab directly inside the click event so browser popup blockers
+      // do not prevent the later navigation after the authenticated request.
+      const opened = window.open("about:blank", "_blank");
+      if (opened) opened.opener = null;
+      if (!opened) {
+        feedback.textContent = "Your browser blocked the document tab. Allow pop-ups and try again.";
+        button.disabled = false;
+        return;
+      }
       try {
         const result = await staffCall("POST", { action: "cv", id });
-        const opened = window.open(result.url, "_blank", "noopener,noreferrer");
-        feedback.textContent = opened ? "Secure link expires in 60 seconds." : "Your browser blocked the document tab. Allow pop-ups and try again.";
+        if (typeof result.url !== "string" || !result.url.startsWith(SUPABASE_URL + "/storage/v1/object/sign/candidate-cvs/")) {
+          opened.close();
+          throw new Error("The server returned an invalid secure CV link.");
+        }
+        opened.location.replace(result.url);
+        feedback.textContent = "Secure link expires in 60 seconds.";
       } catch (error) {
+        if (!opened.closed) opened.close();
         feedback.textContent = error instanceof Error ? error.message : "Could not open this document.";
       } finally {
         button.disabled = false;
