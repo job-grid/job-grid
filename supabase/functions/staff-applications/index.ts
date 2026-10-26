@@ -54,10 +54,11 @@ Deno.serve(async (req) => {
   if (action === "cv") {
     if (!roles.includes("reviewer") && !roles.includes("system_admin")) return json(403, { error: "Reviewer permission is required to access candidate CVs." });
     const { data: application, error } = await admin.from("candidate_applications").select("cv_storage_path").eq("id", id).maybeSingle();
-    if (error || !application) return json(404, { error: "Application not found." });
+    if (error || !application?.cv_storage_path) return json(404, { error: "Candidate CV not found." });
     const { data, error: signError } = await admin.storage.from("candidate-cvs").createSignedUrl(application.cv_storage_path, 60);
     if (signError || !data?.signedUrl) return json(503, { error: "Could not create a secure CV link." });
-    await admin.from("audit_logs").insert({ actor_id: userId, action: "candidate_cv_accessed", entity_type: "candidate_application", entity_id: id, details: { expires_in_seconds: 60 } });
+    const { error: auditError } = await admin.from("audit_logs").insert({ actor_id: userId, action: "candidate_cv_accessed", entity_type: "candidate_application", entity_id: id, details: { expires_in_seconds: 60 } });
+    if (auditError) return json(503, { error: "Secure CV access could not be audited. Please try again." });
     return json(200, { url: data.signedUrl });
   }
 
