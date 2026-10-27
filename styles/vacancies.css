@@ -10,5 +10,9 @@
 #add-destination{width:100%;margin:.25rem 0 .5rem}
 @media(max-width:700px){.destination-row{grid-template-columns:1fr;gap:.65rem}.destination-row .remove-destination{width:100%}}
 
-/* Respect the HTML hidden attribute even when component classes set display:grid. */
+/* Staff vacancy form controls: consistent accessible input styling and hidden-field behavior. */
 [hidden]{display:none!important}
+#job-form textarea{width:100%;min-height:3.25rem;padding:.75rem .85rem;border:1px solid var(--color-border);border-radius:.65rem;background:#fff;color:var(--color-text);font:inherit;line-height:1.55;resize:vertical}
+#job-form textarea:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+#job-form .filter-field input[type="checkbox"]{width:1.25rem;min-height:1.25rem;accent-color:var(--color-primary)}
+#job-form .filter-field:has(input[type="checkbox"]){align-content:center}
