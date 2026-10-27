@@ -42,6 +42,7 @@ async function loadTitleCatalogue() {
 function syncTitleChoice() {
   const custom = titleChoice.value === "__custom__";
   customTitleField.hidden = !custom;
+  customTitleField.style.display = custom ? "grid" : "none";
   customTitleInput.required = custom;
   const selected = titleCatalogue.find(item => item.title === titleChoice.value);
   if (selected) {
